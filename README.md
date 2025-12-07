@@ -1,0 +1,2 @@
+Pattern:
+Holonic Protocol Sentinel: a U.System holon that, via a TEVB‑framed executable episteme of ACP, acts as a passive proxy between Client and Agent to generate TA/VA/LA evidence for their conformance.
