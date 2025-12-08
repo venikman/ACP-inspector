@@ -43,6 +43,7 @@ module Protocol =
         | SessionAlreadyExists of SessionId
         | PromptAlreadyInFlight of SessionId
         | NoPromptInFlight of SessionId
+        // TODO: add ACP/JSON-RPC error code mapping once spec version is pinned; emit ValidationFinding when unknown codes encountered.
 
     /// A tiny internal DSL: one pure transition function plus an initial phase.
     type Spec<'phase,'message> =

@@ -104,10 +104,10 @@ Modeling guidelines:
        - Methods like `authenticate`, `new_session`, `session/prompt`, etc.
      - `AcpSentiel.Protocol.Client`:
        - Methods like `fs/read_text_file`, and any other client‑side services.
-   - Each method should have:
-     - A clear **request type**.
-     - A clear **response type** or event stream model.
-   - Do **not** invent new ACP methods or fields; if something is not in the spec, treat it as an **extension**, clearly marked as such.
+  - Each method should have:
+    - A clear **request type**.
+    - A clear **response type** or event stream model.
+  - Do **not** invent new ACP methods or fields; if something is not in the spec, treat it as an **extension**, clearly marked as such.
 
 3. **Session and state machines**
    - Represent sessions as explicit state machines:
@@ -129,6 +129,15 @@ Modeling guidelines:
      - Opaque `Map<string, JsonElement>` or similar.
      - Non‑normative for validation, unless the project later defines explicit rules.
    - Avoid relying on `_meta` content for protocol correctness.
+
+## 6. Additional guardrails (keep in sync with AGENT_ACP_SENTIEL.md)
+
+- **Spec pin:** Note the ACP spec version/date we target in code comments and docs; update when the upstream spec revs.
+- **Stdio framing defaults:** Assume UTF‑8, LF line endings, and bounded message size/timeouts; document deviations explicitly.
+- **Error codes:** Maintain a single ACP/JSON‑RPC error code map; emit `ValidationFinding` for unknown codes (until verified).
+- **_meta handling:** Preserve `_meta` passthrough; never let it affect validation unless a rule explicitly allows it.
+- **Profiles:** Add validation rules with a profile/flag (e.g., strict vs compat) instead of hard‑coding severity.
+- **Testing definition of done:** New protocol type → round‑trip test; new transition → valid + invalid path tests; new sentinel rule → example test that emits the expected findings.
 
 ---
 

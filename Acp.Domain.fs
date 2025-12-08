@@ -142,6 +142,7 @@ module Domain =
         | Resource of ResourceLink
         /// Escape hatch for content kinds not modeled yet (images, audio, embedded contexts, ...).
         | Other of kind : string * raw : obj
+        // TODO: _meta pass-through: ensure raw metadata is preserved when present; validation must remain agnostic unless explicitly enabled.
 
     // -------------
     // Prompt turns

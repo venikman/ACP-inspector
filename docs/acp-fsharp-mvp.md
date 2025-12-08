@@ -21,8 +21,17 @@ Intentionally *not* modeled yet:
 - Full MCP configuration surface
 - Terminal / filesystem JSON-RPC methods
 - Error codes and JSON-RPC request IDs
+- `_meta` pass-through preservation and explicit opacity rules
+- Transport framing defaults (UTF-8, LF, message size/timeout guardrails)
 
 All of those can be added as more record/union cases that stay inside the same design.
+
+### Near-term required adds
+
+- ACP/JSON-RPC error code map (single source, surfaced in validation when unknown/unsupported). // TODO: needs spec verification (ACP version pin)
+- `_meta` handling: preserve on encode/decode, never use for validation unless a rule opts in.
+- Transport defaults: document stdio framing assumptions (UTF-8, LF) and max payload guidance for the runtime layer.
+- Testing minima: every new type gets a round-trip test; every new state transition gets valid + invalid path coverage; every new sentinel rule gets an example-based test that asserts expected `ValidationFinding` output.
 
 ## Design
 
