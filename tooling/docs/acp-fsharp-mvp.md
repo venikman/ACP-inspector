@@ -1,18 +1,24 @@
 # ACP F# Domain Model (MVP)
 
+- ArtifactId: ACP-FSHARP-MVP-001
+- Family: ToolingReference
+- Type: U.MethodDescription (Design-time domain model)
+- Scope: Initialize, sessions, prompt turns, updates, cancels, permissions
+- Status: MVP
+
 This module provides a *design-time* F# domain model and a small state machine for the Agent Client Protocol (ACP).  
-It focuses on initialization, session setup, prompt turns, updates, cancellation, and permission requests. :contentReference[oaicite:33]{index=33}
+It focuses on initialization, session setup, prompt turns, updates, cancellation, and permission requests.
 
 ## Scope
 
 Covered:
 
-- `initialize` request/response, including client and agent capabilities :contentReference[oaicite:34]{index=34}  
-- `session/new` and `session/load` (+ session IDs and basic MCP server wiring) :contentReference[oaicite:35]{index=35}  
-- `session/prompt` and `stopReason` (`EndTurn`, `MaxTokens`, `MaxTurnRequests`, `Refusal`, `Cancelled`) :contentReference[oaicite:36]{index=36}  
-- `session/update` as a typed union (plan entries, message chunks, tool call updates, status text) :contentReference[oaicite:37]{index=37}  
-- `session/cancel` and the requirement to return `Cancelled` for cancelled turns :contentReference[oaicite:38]{index=38}  
-- `session/request_permission` with typed permission options and tool call context :contentReference[oaicite:39]{index=39}  
+- `initialize` request/response, including client and agent capabilities  
+- `session/new` and `session/load` (+ session IDs and basic MCP server wiring)  
+- `session/prompt` and `stopReason` (`EndTurn`, `MaxTokens`, `MaxTurnRequests`, `Refusal`, `Cancelled`)  
+- `session/update` as a typed union (plan entries, message chunks, tool call updates, status text)  
+- `session/cancel` and the requirement to return `Cancelled` for cancelled turns  
+- `session/request_permission` with typed permission options and tool call context  
 
 Intentionally *not* modeled yet:
 
@@ -52,7 +58,7 @@ All of those can be added as more record/union cases that stay inside the same d
   - `AgentToClientMessage`
   - `Message = FromClient | FromAgent`
 
-JSON-RPC 2.0 and raw JSON handling are intentionally out of scope; another layer converts raw messages into these types. :contentReference[oaicite:40]{index=40}
+JSON-RPC 2.0 and raw JSON handling are intentionally out of scope; another layer converts raw messages into these types.
 
 ### 2. Spec / state machine (`Acp.Protocol`)
 

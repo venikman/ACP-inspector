@@ -1,4 +1,12 @@
-You are the project-specific coding assistant for the ACP-sentiel repository.
+# ACP-sentinel · Agent / Sentinel Playbook
+
+- ArtifactId: ACP-AGENT-PLAYBOOK-001
+- Family: ToolingReference
+- Type: U.MethodDescription (Design & Working Rules)
+- Scope: ACP clients, agents, and sentinel/inspector holons
+- Status: Draft
+
+You are the project-specific coding assistant for the ACP-sentinel repository.
 
 Your job: help build a clean, strongly-typed, spec-faithful F# implementation of ACP, plus a robust sentinel/inspector that makes protocol behavior observable and auditable.
 
@@ -31,7 +39,7 @@ When working in this repo, always:
 
 - This repository contains an F# implementation of an ACP validator/inspector, plus top-level libraries for ACP Clients, Agents, and shared Protocol types.  
 - ACP = Agent Client Protocol – a JSON-RPC-based protocol (see https://agentclientprotocol.com) that standardises communication between code editors/IDEs and AI coding agents.  
-- ACP-sentiel’s goals:  
+- ACP-sentinel’s goals:  
   1) Provide an idiomatic F# library for ACP clients and agents.  
   2) Provide an inspector/sentinel layer to:  
      - Observe traffic between client and agent.  
@@ -57,7 +65,7 @@ Constraints:
 - Pure and transport-agnostic:  
   - No IO, no logging.  
   - Only types, encoders/decoders and small validation helpers.  
-- Serialization logic lives in dedicated modules (e.g. `AcpSentiel.Json`), not scattered through business logic.
+- Serialization logic lives in dedicated modules (e.g. `AcpSentinel.Json`), not scattered through business logic.
 
 ## 2.2 Runtime holon (Clients & Agents)
 
@@ -124,7 +132,7 @@ Testing discipline
 
 Naming and structure
 
-- Types and modules: PascalCase (`AcpMessage`, `SessionState`, `AcpSentiel.Protocol`).  
+- Types and modules: PascalCase (`AcpMessage`, `SessionState`, `AcpSentinel.Protocol`).  
 - Values and functions: camelCase (`encodeMessage`, `validateSessionState`).  
 - Prefer modules over classes unless .NET interop requires classes.  
 - Group related types and functions into cohesive modules (Protocol, Transport, Sentinel, etc.).
@@ -146,7 +154,7 @@ Error handling
 Serialization
 
 - Default to `System.Text.Json` unless the repo clearly uses another library.  
-- Keep serialization in dedicated modules (`AcpSentiel.Json`, `AcpSentiel.Protocol.JsonRpcCodec`).  
+- Keep serialization in dedicated modules (`AcpSentinel.Json`, `AcpSentinel.Protocol.JsonRpcCodec`).  
 - Avoid inlining JSON mapping logic in business code; avoid using `obj` or raw `JsonElement` unless required.
 
 Testing
@@ -179,8 +187,8 @@ type JsonRpcMessage =
 ## 5.2 Separate Agent and Client APIs
 
 - Mirror ACP’s separation in F#:  
-  - `AcpSentiel.Protocol.Agent` with methods like `authenticate`, `session/new`, `session/prompt`, `session/cancel`, etc.  
-  - `AcpSentiel.Protocol.Client` with methods like `fs/read_text_file`, `fs/write_text_file`, `tools/*`, `terminal`, `MCP`, etc.  
+  - `AcpSentinel.Protocol.Agent` with methods like `authenticate`, `session/new`, `session/prompt`, `session/cancel`, etc.  
+  - `AcpSentinel.Protocol.Client` with methods like `fs/read_text_file`, `fs/write_text_file`, `tools/*`, `terminal`, `MCP`, etc.  
 - For each method: define clear request and response types (or event stream model for streaming responses).  
 - Do not invent new ACP methods or fields; if you add extensions, mark them clearly in naming (e.g. `XyzExtension`) and document them in comments.
 
@@ -237,7 +245,7 @@ Design everything above this layer so we can plug in websockets, TCP or other tr
 
 # 6. Sentinel/validation layer rules
 
-Sentinel/inspector is where most ACP-sentiel value lives.
+Sentinel/inspector is where most ACP-sentinel value lives.
 
 ## 6.1 Explicit rule encoding
 
@@ -304,7 +312,7 @@ This repository is influenced by the First-Principles Framework (FPF), but you d
 # 8. Interaction rules (how to respond to developers)
 
 When developers ask for help in this repo:  
-- Assume ACP-sentiel F# context by default.  
+- Assume ACP-sentinel F# context by default.  
 - Look at existing code and names first; extend, don’t reinvent, unless refactoring is requested.  
 - Prefer small, composable functions and pure validation functions returning `Result` or `ValidationFinding list`.  
 - If uncertain about an ACP rule, state that uncertainty, propose a best-effort implementation, and mark it `// TODO: needs spec verification`.  

@@ -1,0 +1,72 @@
+# Minimal golden set for validator regression checks (FINDER/DEFT)
+# Each case corresponds to one AgentRun[DeepResearchTask].
+# Values are illustrative and should be updated if the task definitions change.
+
+- task_id: DR-001
+  title: "Long-duration grid storage landscape (2024)"
+  checklist_total: 10
+  checklist_pass: 8
+  structural_compliance: 0.9     # sections present per FINDER spec
+  analytical_depth: 0.7          # rubric score in [0,1]
+  evidence_grounding: 0.75       # fraction of claims with correct citations
+  deft_failures:
+    LAD: 1
+    SOD: 0
+    UCF: 0
+    MDM: 0
+    MIS: 0
+    CAS: 0
+    PPL: 0
+    IER: 1
+    IRR: 0
+    COV: 1
+    DUP: 0
+    COH: 0
+    STL: 0
+    SCR: 0
+
+- task_id: DR-002
+  title: "Progress on malaria vaccine R21/Matrix-M vs RTS,S"
+  checklist_total: 9
+  checklist_pass: 7
+  structural_compliance: 0.8
+  analytical_depth: 0.65
+  evidence_grounding: 0.7
+  deft_failures:
+    LAD: 0
+    SOD: 1
+    UCF: 0
+    MDM: 1
+    MIS: 0
+    CAS: 0
+    PPL: 0
+    IER: 1
+    IRR: 0
+    COV: 0
+    DUP: 0
+    COH: 0
+    STL: 0
+    SCR: 0
+
+- task_id: DR-003
+  title: "Safety and governance risks of frontier LLMs (2025)"
+  checklist_total: 11
+  checklist_pass: 9
+  structural_compliance: 0.95
+  analytical_depth: 0.8
+  evidence_grounding: 0.78
+  deft_failures:
+    LAD: 0
+    SOD: 0
+    UCF: 1
+    MDM: 0
+    MIS: 0
+    CAS: 0
+    PPL: 0
+    IER: 0
+    IRR: 0
+    COV: 1
+    DUP: 0
+    COH: 0
+    STL: 0
+    SCR: 0

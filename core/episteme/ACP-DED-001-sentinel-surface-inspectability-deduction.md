@@ -1,12 +1,13 @@
 # ACP-DED-001 · Sentinel-Surface Inspectability · Deductive Consequences
 
+- ArtifactId: ACP-DED-001
+- Family: ConceptualCore
+- Type: U.Deduction
+- AssuranceLevel: L0 (Analytic, unvalidated)
+- LifecycleState: Shape
+
 ## Artifact Header
 
-- ArtifactId: ACP-DED-001
-- Title: Sentinel-Surface Inspectability · Deductive Consequences
-- Type: U.Deduction (Deduction)
-- AssuranceLevel: L0 (Analytic, unvalidated)
-- Lifecycle State: Shape (Deductive consequences, pre-evidence)
 - Parent Episteme: ACP-HYP-001 · Sentinel-Surface Inspectability
 - Parent Context: ACP-Inspector / ACP governance stack
 - Created via Pattern: B.5.3 Deductive Loop (from U.Episteme to concrete predictions)

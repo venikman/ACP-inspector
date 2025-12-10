@@ -1,12 +1,13 @@
 # ACP-HYP-001 · Sentinel‑Surface Inspectability
 
-## 0. Artifact Header
-
 - ArtifactId: ACP-HYP-001
-- Title: Sentinel‑Surface Inspectability
+- Family: ConceptualCore
 - Type: U.Episteme (Hypothesis)
 - AssuranceLevel: L0 (Unsubstantiated)
-- Lifecycle State: Exploration (Abductive hypothesis, pre‑deduction)
+- LifecycleState: Explore
+
+## 0. Artifact Header
+
 - Parent Context: ACP‑Inspector / ACP governance stack
 - Created via Pattern: B.5.2 Abductive Loop
 - Primary Conformance Targets: CC-B5.2.1 · CC-B5.2.2 · CC-B5.2.3 · CC-B5.2.4

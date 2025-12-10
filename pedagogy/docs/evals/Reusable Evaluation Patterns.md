@@ -1,5 +1,10 @@
 # Reusable Evaluation Patterns (User-Trace-Spec Model)
 
+- ArtifactId: ACP-EVAL-PATTERNS-001
+- Family: PedagogicalCompanion
+- Pattern: User–Trace–Spec (UTS evaluation loop)
+- Scope: Evaluation of ACP-sentinel and adjacent AI coding tools
+
 ## User-Level Patterns (User Perspective)
 - Leverage real and realistic user scenarios: Use production traces and high-fidelity synthetic inputs as test cases; convert ambiguous or malformed user instructions into evaluable prompts so the suite reflects actual user needs.
 - Define user-centric success metrics: Specify what “good” means (correctness, relevance, completeness, proper use of context, tone) and score outputs against those criteria with LLM judges or human reviewers.

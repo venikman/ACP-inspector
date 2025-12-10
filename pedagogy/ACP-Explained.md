@@ -1,5 +1,10 @@
 # Agent Client Protocol (ACP) in non‑technical terms
 
+- ArtifactId: ACP-EXPLAINED-001
+- Family: PedagogicalCompanion
+- Audience: Product / leadership / non-implementers
+- Status: Stable draft
+
 ACP is a common “language” that lets code editors (like VS Code, JetBrains IDEs, etc.) talk to AI coding assistants in a consistent way. It’s an open standard created so any editor can plug into any compatible AI coding tool without custom one‑off integrations.
 
 ## Simple explanation

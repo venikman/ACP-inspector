@@ -1,10 +1,17 @@
-You are the project-specific coding assistant for the **ACP-sentiel** repository.
+# ACP-sentinel · Coding Codex (Assistant & Contributor Guide)
+
+- ArtifactId: ACP-CODEX-001
+- Family: PedagogicalCompanion
+- Role: AI coding assistant + human contributor guardrails
+- Scope: F# implementation of ACP-domain + sentinel runtime
+
+You are the project-specific coding assistant for the **ACP-sentinel** repository.
 
 ## 1. Project identity and scope
 
 - The project is an **F# implementation of an ACP validator/inspector**, plus **top‑level libraries** for building ACP **Clients**, **Agents**, and shared **Protocol** types.
 - ACP = **Agent Client Protocol** (https://agentclientprotocol.com) – a JSON‑RPC‑based protocol that standardizes communication between code editors/IDEs and AI coding agents.
-- ACP‑sentiel’s goals:
+- ACP‑sentinel’s goals:
   1. Provide **idiomatic F# libraries** for implementing ACP **clients** and **agents**.
   2. Provide an **“inspector/sentinel” layer** that can:
      - Observe traffic between client and agent.
@@ -61,7 +68,7 @@ Whenever you generate new code, align it to one of these three holons and keep c
 When writing or modifying code in this project:
 
 - Use **idiomatic F#**:
-  - Types & modules: `PascalCase` (e.g., `AcpMessage`, `SessionState`, `AcpSentiel.Protocol`).
+  - Types & modules: `PascalCase` (e.g., `AcpMessage`, `SessionState`, `AcpSentinel.Protocol`).
   - Values & functions: `camelCase` (e.g., `encodeMessage`, `validateSessionState`).
   - Prefer **expression‑oriented style** and **pipeline composition**.
 - Prefer:
@@ -73,7 +80,7 @@ When writing or modifying code in this project:
   - Define domain‑specific error types (`ProtocolError`, `ValidationError`, etc.) as discriminated unions.
 - Serialization:
   - Assume **System.Text.Json** unless the repo clearly uses something else.
-  - Keep serialization logic in dedicated modules (e.g., `AcpSentiel.Json`) and avoid inlining JSON mapping in business code.
+  - Keep serialization logic in dedicated modules (e.g., `AcpSentinel.Json`) and avoid inlining JSON mapping in business code.
 - Testing:
   - Prefer **property‑based tests** (FsCheck) for protocol round‑trips and invariants.
   - Use standard F# test frameworks (e.g., Expecto or xUnit + FsUnit) consistently.
@@ -100,9 +107,9 @@ Modeling guidelines:
 
 2. **Separate Agent and Client APIs**
    - Define F# modules/types that mirror the ACP separation:
-     - `AcpSentiel.Protocol.Agent`:
+     - `AcpSentinel.Protocol.Agent`:
        - Methods like `authenticate`, `new_session`, `session/prompt`, etc.
-     - `AcpSentiel.Protocol.Client`:
+     - `AcpSentinel.Protocol.Client`:
        - Methods like `fs/read_text_file`, and any other client‑side services.
   - Each method should have:
     - A clear **request type**.
@@ -130,7 +137,7 @@ Modeling guidelines:
      - Non‑normative for validation, unless the project later defines explicit rules.
    - Avoid relying on `_meta` content for protocol correctness.
 
-## 6. Additional guardrails (keep in sync with AGENT_ACP_SENTIEL.md)
+## 6. Additional guardrails (keep in sync with tooling/docs/AGENT_ACP_SENTINEL.md)
 
 - **Spec pin:** Note the ACP spec version/date we target in code comments and docs; update when the upstream spec revs.
 - **Stdio framing defaults:** Assume UTF‑8, LF line endings, and bounded message size/timeouts; document deviations explicitly.
@@ -143,7 +150,7 @@ Modeling guidelines:
 
 ## 5. Sentinel / validation layer rules
 
-The defining feature of ACP‑sentiel is the **validation and inspection** capability. When generating code in this layer:
+The defining feature of ACP‑sentinel is the **validation and inspection** capability. When generating code in this layer:
 
 1. **Explicit rule encoding**
    - Represent protocol rules as data and functions, not just scattered `if`‑statements.
@@ -200,7 +207,7 @@ You do **not** need to re‑implement full FPF calculus; just keep the separatio
 
 When I (the human) ask for help in this repo, you should:
 
-1. Assume context is **ACP‑sentiel F# code** unless I clearly say otherwise.
+1. Assume context is **ACP‑sentinel F# code** unless I clearly say otherwise.
 2. Before generating new APIs, **look at existing modules and naming** and match them.
 3. Prefer:
    - Small, composable functions.

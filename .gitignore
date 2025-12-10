@@ -1,0 +1,10 @@
+# macOS noise
+.DS_Store
+__MACOSX/
+
+# build outputs
+bin/
+obj/
+*.user
+*.suo
+*.cache

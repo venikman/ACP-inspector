@@ -2,10 +2,15 @@ namespace Acp
 
 open System
 
-[<RequireQualifiedAccess>]
 module Protocol =
 
     open Domain
+    open Domain.PrimitivesAndParties
+    open Domain.Initialization
+    open Domain.SessionSetup
+    open Domain.Prompting
+    open Domain.Messaging
+    open Domain.SessionContext
 
     // -------------
     // State & errors
@@ -16,25 +21,23 @@ module Protocol =
     type TurnState =
         | Idle of lastStopReason : StopReason option
         | PromptInFlight of cancelled : bool
+        /// Invariant:
+        /// - At most one prompt is in-flight per session.
+        /// - `PromptInFlight cancelled = true` means a cancel has been requested;
+        ///   the agent must still surface the final `CancelledTurnOutcome`.
 
-    type SessionState =
-        { sessionId : SessionId
-          turnState : TurnState }
+    type SessionState = SessionContext.SessionState<TurnState>
 
-    /// Initialization + session table once the connection is ready. :contentReference[oaicite:30]{index=30}
-    type InitializedContext =
-        { clientInit : InitializeParams
-          agentInit  : InitializeResult
-          sessions   : Map<SessionId, SessionState> }
+    /// Initialization + session table once the connection is ready.
+    type InitializedContext = SessionContext.InitializedContext<TurnState>
 
-    /// High-level protocol phase for a single JSON-RPC stream. :contentReference[oaicite:31]{index=31}
+    /// High-level protocol phase for a single JSON-RPC stream.
     [<RequireQualifiedAccess>]
     type Phase =
         | AwaitingInitialize
         | WaitingForInitializeResult of clientInit : InitializeParams
         | Ready of InitializedContext
 
-    [<RequireQualifiedAccess>]
     type ProtocolError =
         | UnexpectedMessage of phase : Phase * message : Message
         | DuplicateInitialize
@@ -45,16 +48,41 @@ module Protocol =
         | NoPromptInFlight of SessionId
         // TODO: add ACP/JSON-RPC error code mapping once spec version is pinned; emit ValidationFinding when unknown codes encountered.
 
-    /// A tiny internal DSL: one pure transition function plus an initial phase.
-    type Spec<'phase,'message> =
-        { initial : 'phase
-          step    : 'phase -> 'message -> Result<'phase, ProtocolError> }
+    module ProtocolError =
+        let code = function
+            | ProtocolError.UnexpectedMessage _ -> "ACP.PROTOCOL.UNEXPECTED_MESSAGE"
+            | ProtocolError.DuplicateInitialize -> "ACP.PROTOCOL.DUPLICATE_INITIALIZE"
+            | ProtocolError.InitializeResultWithoutRequest -> "ACP.PROTOCOL.INIT_RESULT_WITHOUT_REQUEST"
+            | ProtocolError.UnknownSession _ -> "ACP.PROTOCOL.UNKNOWN_SESSION"
+            | ProtocolError.SessionAlreadyExists _ -> "ACP.PROTOCOL.SESSION_ALREADY_EXISTS"
+            | ProtocolError.PromptAlreadyInFlight _ -> "ACP.PROTOCOL.PROMPT_ALREADY_IN_FLIGHT"
+            | ProtocolError.NoPromptInFlight _ -> "ACP.PROTOCOL.NO_PROMPT_IN_FLIGHT"
 
-    [<RequireQualifiedAccess>]
+        let describe = function
+            | ProtocolError.UnexpectedMessage (phase, message) ->
+                sprintf "Unexpected message %A in phase %A" message phase
+            | ProtocolError.DuplicateInitialize ->
+                "initialize was called more than once"
+            | ProtocolError.InitializeResultWithoutRequest ->
+                "initialize result observed without a pending initialize request"
+            | ProtocolError.UnknownSession sid ->
+                sprintf "Unknown session %s" (SessionId.value sid)
+            | ProtocolError.SessionAlreadyExists sid ->
+                sprintf "Session %s already exists" (SessionId.value sid)
+            | ProtocolError.PromptAlreadyInFlight sid ->
+                sprintf "Prompt already in flight for session %s" (SessionId.value sid)
+            | ProtocolError.NoPromptInFlight sid ->
+                sprintf "No prompt in flight for session %s" (SessionId.value sid)
+
+    /// A tiny internal DSL: one pure transition function plus an initial phase.
+    type Spec<'phase,'message,'error> =
+        { initial : 'phase
+          step    : 'phase -> 'message -> Result<'phase,'error> }
+
     module Spec =
 
         /// Fold a message trace through a Spec.
-        let run (spec : Spec<'p,'m>) (messages : seq<'m>) =
+        let run (spec : Spec<'p,'m,'e>) (messages : seq<'m>) =
             ((Ok spec.initial), messages)
             ||> Seq.fold (fun acc msg ->
                 acc |> Result.bind (fun phase -> spec.step phase msg))
@@ -79,7 +107,7 @@ module Protocol =
     ///   - at most one prompt in flight per session
     ///   - cancel only allowed while a prompt is in flight
     ///   - request_permission only allowed while a prompt is in flight
-    let spec : Spec<Phase, Message> =
+    let spec : Spec<Phase, Message, ProtocolError> =
         let step phase message =
             match phase, message with
 
@@ -174,7 +202,7 @@ module Protocol =
                     | TurnState.Idle _ ->
                         let s' =
                             { s with
-                                turnState = TurnState.PromptInFlight cancelled = false }
+                                turnState = TurnState.PromptInFlight false }
                         let sessions' = ctx.sessions |> Map.add s.sessionId s'
                         Ok (Phase.Ready { ctx with sessions = sessions' })
                     | TurnState.PromptInFlight _ ->
@@ -208,14 +236,14 @@ module Protocol =
                     | TurnState.PromptInFlight _ ->
                         let s' =
                             { s with
-                                turnState = TurnState.PromptInFlight cancelled = true }
+                                turnState = TurnState.PromptInFlight true }
                         let sessions' = ctx.sessions |> Map.add s.sessionId s'
                         Ok (Phase.Ready { ctx with sessions = sessions' })
                     | TurnState.Idle _ ->
                         Error (ProtocolError.NoPromptInFlight s.sessionId)
 
             // session/update: allowed whenever the session exists.
-            // This covers both prompt streaming and session/load replay. :contentReference[oaicite:32]{index=32}
+            // This covers both prompt streaming and session/load replay.
             | Phase.Ready ctx,
               Message.FromAgent (AgentToClientMessage.SessionUpdate u) ->
                 match ctx.sessions |> Map.tryFind u.sessionId with
@@ -236,10 +264,6 @@ module Protocol =
                         Ok (Phase.Ready ctx)
                     | TurnState.Idle _ ->
                         Error (ProtocolError.NoPromptInFlight s.sessionId)
-
-            // Fallthrough: any other combination is unexpected in this MVP spec.
-            | Phase.Ready _, _ ->
-                Error (ProtocolError.UnexpectedMessage (phase, message))
 
         { initial = Phase.AwaitingInitialize
           step    = step }

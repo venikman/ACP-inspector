@@ -1,4 +1,4 @@
-# First Principles Framework — Core Conceptual Specification
+# First Principles Framework (FPF) — Core Conceptual Specification
 by Anatoly Levenchuk and assortment of LLMs.
 September 2025
 
@@ -6,23 +6,23 @@ September 2025
 
  **Preface (non-normative)**
 
-| ID & Title | Status | Concise content reminder — “what belongs here” |
-| :--- | :--- | :--- |
-| FPF is a first principle based architecture decisions for transdiciplinary SoTA methods of evolving holons: systems, epistemes, communities. | full text | FPF serves the Engineer, Researcher, and Manager by providing a generative pattern language for constructing and evolving thought, designed as an "operating system for thought". |
-| Creativity in Open-Ended Evolution and Assurance* | full text | FPF integrates assurance (audits, evidence) and creativity (generating novel ideas) as complementary engines for responsible innovation, providing a structured choreography for creative work from abduction to operation. |
-| Navigating Uncertainty: Building Closed Worlds within an Open World | full text | Explains how FPF reconciles Open-World and Closed-World assumptions, using Bounded Contexts to create reliable 'islands of closure' for engineering decisions within an inherently open world. |
-| FPF as an Evolutionary Architecture for Thought | full text | Positions FPF as an architecture for the reasoning process itself, designed to sustain key characteristics like auditability, evolvability, and falsifiability by applying architectural thinking to the dynamics of reasoning. |
-| Architectural Characteristic of Thought | full text | Details the key characteristics of rigorous thought (e.g., Auditability, Evolvability, Composability) and the specific FPF mechanisms designed to preserve them. |
-| Beyond Cognitive Biases: FPF as a Generative Architecture for Thought | full text | Contrasts FPF's generative, structural approach to avoiding cognitive errors with the traditional corrective, diagnostic approach of hunting for biases, framing FPF as a scaffold that makes errors harder to commit. |
-| Thinking Through Writing: The FPF Discipline of Conceptual Work | full text | Describes how FPF uses a discipline of "thinking through writing" with conceptual forms (Cards, Tables, Records) to make thought tangible, shareable, and auditable, while remaining tool-agnostic. |
-| Descriptive Ontologies vs. A Thinking-Oriented Architecture | full text | Differentiates FPF's goal of orchestrating reasoning from classical ontologies' goal of cataloging existence, emphasizing FPF's focus on objectives, trust, and dynamics. |
-| The "Bitter Lesson" trajectory — compute, data, and freedom over hand‑tuned rules (FPF stance) | full text | How FPF operationalizes the contemporary trend: prefer general models + data + compute + minimal constraints; autonomy budgets; rule‑of‑constraints vs instruction‑of‑procedure; continuous adaptation. |
-| From Flat Documents to High-Dimensional Truth: The Multi-View Architecture | full text | Shows how FPF replaces flat documents with a multi-view architecture: epistemes as slot graphs, engineering views as projections, and MVPK as typed publication surfaces that keep dashboards lawfully tethered to work and evidence. |
-| The “big storylines” unique to FPF (load‑bearing commitments) | full text | Lists the nine core, load-bearing commitments that define FPF's unique architectural and philosophical stance, from its holonic kernel to its explicit treatment of creativity and assurance. |
-| Transdisciplinarity as a Meta‑Theory of Thinking | full text | Explains how FPF treats transdisciplinarity as a meta-theory for designing reasoning, using architheories as generative scaffolds grounded in physical reality to bridge disciplinary silos. |
-| FPF as a Culinary Architecture for Collective Thought: Why We Formalize “Obvious” Ideas | full text | Uses the 'culinary architecture' analogy to explain FPF's role in synthesizing 'obvious' ideas into a robust framework for complex, generative problems. |
-| Intellect Stack (informative Overview) | full text | Presents a five-layer pedagogical map of cognitive skills (Structure → Knowledge → Action → Strategy → Governance) and links them to FPF architheories. |
-| Purpose, Scope, and Explicit Non‑Goals | full text | Clarifies FPF's mission as a generative scaffold for thought, its scope as tool-agnostic normative patterns, and what it explicitly is not (e.g., a domain encyclopedia or a specific methodology). |
+| ID & Title                                                                                                                                   | Status    | Concise content reminder — “what belongs here”                                                                                                                                                                                        |
+| :------------------------------------------------------------------------------------------------------------------------------------------- | :-------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| FPF is a first principle based architecture decisions for transdiciplinary SoTA methods of evolving holons: systems, epistemes, communities. | full text | FPF serves the Engineer, Researcher, and Manager by providing a generative pattern language for constructing and evolving thought, designed as an "operating system for thought".                                                     |
+| Creativity in Open-Ended Evolution and Assurance*                                                                                            | full text | FPF integrates assurance (audits, evidence) and creativity (generating novel ideas) as complementary engines for responsible innovation, providing a structured choreography for creative work from abduction to operation.           |
+| Navigating Uncertainty: Building Closed Worlds within an Open World                                                                          | full text | Explains how FPF reconciles Open-World and Closed-World assumptions, using Bounded Contexts to create reliable 'islands of closure' for engineering decisions within an inherently open world.                                        |
+| FPF as an Evolutionary Architecture for Thought                                                                                              | full text | Positions FPF as an architecture for the reasoning process itself, designed to sustain key characteristics like auditability, evolvability, and falsifiability by applying architectural thinking to the dynamics of reasoning.       |
+| Architectural Characteristic of Thought                                                                                                      | full text | Details the key characteristics of rigorous thought (e.g., Auditability, Evolvability, Composability) and the specific FPF mechanisms designed to preserve them.                                                                      |
+| Beyond Cognitive Biases: FPF as a Generative Architecture for Thought                                                                        | full text | Contrasts FPF's generative, structural approach to avoiding cognitive errors with the traditional corrective, diagnostic approach of hunting for biases, framing FPF as a scaffold that makes errors harder to commit.                |
+| Thinking Through Writing: The FPF Discipline of Conceptual Work                                                                              | full text | Describes how FPF uses a discipline of "thinking through writing" with conceptual forms (Cards, Tables, Records) to make thought tangible, shareable, and auditable, while remaining tool-agnostic.                                   |
+| Descriptive Ontologies vs. A Thinking-Oriented Architecture                                                                                  | full text | Differentiates FPF's goal of orchestrating reasoning from classical ontologies' goal of cataloging existence, emphasizing FPF's focus on objectives, trust, and dynamics.                                                             |
+| The "Bitter Lesson" trajectory — compute, data, and freedom over hand‑tuned rules (FPF stance)                                               | full text | How FPF operationalizes the contemporary trend: prefer general models + data + compute + minimal constraints; autonomy budgets; rule‑of‑constraints vs instruction‑of‑procedure; continuous adaptation.                               |
+| From Flat Documents to High-Dimensional Truth: The Multi-View Architecture                                                                   | full text | Shows how FPF replaces flat documents with a multi-view architecture: epistemes as slot graphs, engineering views as projections, and MVPK as typed publication surfaces that keep dashboards lawfully tethered to work and evidence. |
+| The “big storylines” unique to FPF (load‑bearing commitments)                                                                                | full text | Lists the nine core, load-bearing commitments that define FPF's unique architectural and philosophical stance, from its holonic kernel to its explicit treatment of creativity and assurance.                                         |
+| Transdisciplinarity as a Meta‑Theory of Thinking                                                                                             | full text | Explains how FPF treats transdisciplinarity as a meta-theory for designing reasoning, using architheories as generative scaffolds grounded in physical reality to bridge disciplinary silos.                                          |
+| FPF as a Culinary Architecture for Collective Thought: Why We Formalize “Obvious” Ideas                                                      | full text | Uses the 'culinary architecture' analogy to explain FPF's role in synthesizing 'obvious' ideas into a robust framework for complex, generative problems.                                                                              |
+| Intellect Stack (informative Overview)                                                                                                       | full text | Presents a five-layer pedagogical map of cognitive skills (Structure → Knowledge → Action → Strategy → Governance) and links them to FPF architheories.                                                                               |
+| Purpose, Scope, and Explicit Non‑Goals                                                                                                       | full text | Clarifies FPF's mission as a generative scaffold for thought, its scope as tool-agnostic normative patterns, and what it explicitly is not (e.g., a domain encyclopedia or a specific methodology).                                   |
 
 **Part A · Kernel Architecture Cluster**
 
@@ -20574,6 +20574,11 @@ Each characteristic is specified per **MM‑CHR (C.16)** with: **name**, **inten
 * MinInterFamilyDistance (polarity ↑) — min distance between selected families in DescriptorMap; unit: per DistanceDef; window: declared.
 * AliasRisk (polarity ↓) — collinearity/near‑duplicate risk indicator for contextual signatures; unit: score (0–1) with policy id.
 
+
+**Lexical special case (F.18 naming).**  
+For **lexical CandidateSets** used by Name Cards (F.18), **Diversity_P SHALL be computed over head-term families, not over raw strings**. Variants that share the same lexical head (e.g., “Reference plane”, “Plane of reference”, “Planar reference”) **MUST** be treated as one family for coverage and distance; only candidates with distinct heads contribute to lexical Diversity_P. This aligns lexical use of Diversity_P with `FamilyCoverage` / `AliasRisk` and prevents inflating diversity by near-synonyms of a single head.
+
+
 #### 5.6 · `AttributionIntegrity` — “Did we credit sources and licences correctly?”
 
 * **Intent.** Discourage “novelty theft”; ensure **recombination** is **lawful and transparent**.
@@ -21360,6 +21365,11 @@ The following **lens profiles** are **illustrative heuristics**. Contexts MAY re
 
 **Illumination & Diversity_P.** Illumination is a **gauge over Diversity_P** (coverage/QD‑score). It informs exploration health and tie‑breaks; it is **not** a dominance characteristic by default.
 
+When **Name Cards** (F.18) use NQD-CAL for lexical search, the underlying `DescriptorMap` and `Diversity_P` **MUST** follow the **head-term family** discipline:  
+– group label candidates into families by lexical head (base noun/verb, ignoring minor prepositions and inflection);  
+– compute Diversity_P and any illumination/coverage gauges over these families (cf. `FamilyCoverage`, `AliasRisk`), not over individual string variants.  
+This requirement prevents treating small morphological tweaks of one head as a “diverse” frontier and keeps lexical NQD-fronts honest.
+
 **Baseline profile (informative, context‑local template).**
 `EmitterPolicy#NQD-Default-2025`:
     class=`UCB`, explore_share=`0.3–0.5`, temperature `τ=moderate`,
@@ -21730,7 +21740,7 @@ Define a **portable minimal set** of CHR **slots**. Each slot is **CHR-typed** (
 **CC-C.21-1 (CHR typing).** Every DHC slot **MUST** declare **Characteristic + Scale/Unit/Polarity**, with CSLC legality proved before any aggregation.
 **CC-C.21-2 (Freshness).** Published values MUST carry Γ_time selector and freshness window; stale rows escalate to {degrade|abstain} in **G.4 Acceptance**.
 **CC-C.21-3 (Plane).** ReferencePlane declared; cross‑plane re‑use publishes **CL^plane** (policy id) alongside CL; both penalties route to **R_eff**.
-**CC‑C.21‑4 (DesignRunTag).** Every DHC row SHALL declare **Stance ∈ {design, run}**; design‑ и run‑characteristics **not mixing** in one value/aggregate.
+**CC‑C.21‑4 (DesignRunTag).** Every DHC row SHALL declare **DesignRunTag ∈ {design, run}**; design‑ и run‑characteristics **not mixing** in one value/aggregate.
 **CC-C.21-5 (Lane tags).** Each value **MUST** tag **TA/VA/LA** lanes of contributing evidence.
 **CC-C.21-6 (Ordinal discipline).** **StandardisationLevel** is ordinal; **no means**, **no z-scores**.
 **CC-C.21-7 (Scope).** All computations declare **TargetSlice**; **USM** membership is decidable and deterministic.
@@ -34333,12 +34343,14 @@ When a label changes, or two labels consolidate or split, record it on the Name 
 
 #### 4.2 The Six P‑practices (normative process)
 
-**P1 — Candidate set (*NQD‑front* of seed‑words).**
-Do **not** pick a label “in one shot”. Build a **small, non‑dominated candidate set** (an *NQD‑front*, typically 5–10 items) by seeding and varying along:
- **Traditions** — mathematics, physics, engineering, computer science, systems thinking, management, etc. with their typical contexts and situations; use maximum diversity here;
+**P1 — Candidate set (*NQD-front* of seed-words).**
+Do **not** pick a label “in one shot”. Build a **small, non-dominated candidate set** (an *NQD-front*, typically 5–10 items) by seeding and varying along:
+**Traditions** — mathematics, physics, engineering, computer science, systems thinking, management, etc. with their typical contexts and situations; use maximum diversity here;
  **Novelty/Familiarity** — from careful **reuse** of established terms to sharper **neologisms** from recent SoTA traditions;  
- **Lexical form** — root/morpheme choice, readability/pronounceability, inflection/declension, transparency.
-Use the **Novelty–Quality–Diversity** discipline from **Part G** to maintain only **non‑dominated** candidates; when appropriate, you may implement this via **Γ_nqd.generate (G.18)**. Record the **seeds** and the short rationale in the Card’s notes. Choose final **Unified Tech**/**Plain** labels **from this frontier**; if a strong candidate is discarded, briefly note why.
+ **Lexical form** — distinct **head terms** and morpheme families, readability/pronounceability, inflection/declension, transparency.
+Use the **Novelty–Quality–Diversity** discipline from **Part G** to maintain only **non-dominated** candidates; when appropriate, you may implement this via **Γ_nqd.generate (G.18)**. Record the **seeds** and the short rationale in the Card’s notes. Choose final **Unified Tech**/**Plain** labels **from this frontier**; if a strong candidate is discarded, briefly note why.
+
+For the purposes of **Diversity_P**, group candidates into **head-term families** (same base noun/verb + minor prepositions or case endings). Variants such as *“Reference plane”*, *“Plane of reference”* and *“Referred plane”* **count as one family**, not three distinct candidates. An NQD-front with multiple near-clones from one family **does not** satisfy the diversity requirement. Aim for **≥ 3 distinct head-term families** in the CandidateSet; if the front ends up with fewer families (e.g. due to a very narrow domain or strong AliasRisk on other heads), the Name Card **MUST** record a brief rationale in the NQD-front notes.
 
 **Lexical Q‑axes for the NQD‑front**
 When P1 uses **NQD‑CAL (C.18)**, treat the **Quality vector** over candidates as part of the same archive as C.18’s **NQD‑frontier**. Recommended axes (all **ordinal; no arithmetic means**):
@@ -34393,10 +34405,11 @@ To prevent “post-hoc justification” of intuitively chosen labels, every **Na
   the home Context(s), using the lexical Q-tuple `{SemanticFidelity, CognitiveErgonomics, OperationalAffordance,
   AliasRisk}` together with **Novelty (N)** and **Diversity_P** (per A.0 / C.17–C.18 / B.5.2.1).  
   – The Card SHALL record:  
-    – a minimal **CandidateSet** (the labels actually evaluated);  
+    – a minimal **CandidateSet** (the labels actually evaluated), with **head-term family** tags for each candidate;  
     – the resulting **NQD-front** of **non-dominated candidates** over ⟨Q-tuple, N, Diversity_P⟩;  
     – a short **selection note** explaining why the chosen Tech/Plain pair was picked from that front
       (e.g., “better CognitiveErgonomics at equal SemanticFidelity”).  
+ 
   – A single-element NQD-front is permitted only if the Card records a brief rationale why **no alternative candidate
     survived** the lexical and NQD filters (e.g., legacy constraints, strong AliasRisk on all other options).
 
@@ -34767,9 +34780,10 @@ Letting a Plain label or alias accumulate extra meanings absent in the underlyin
 
 **CC‑F18‑13 (Lexical Pareto discipline).** When a Name Card uses **NQD‑CAL (C.18)** to score label candidates, the **chosen Unified Tech label** **SHALL** lie on the **Pareto frontier** of the lexical Q‑tuple `{SemanticFidelity, CognitiveErgonomics, OperationalAffordance, AliasRisk}` (per **C.16** ordinal discipline and P1’s NQD‑front definition), unless an explicit exception is recorded. If authors deliberately select a dominated candidate (e.g., to honour legacy regulation or user muscle memory), the Name Card’s notes **MUST** state the reason for stepping off the frontier.
 
-**CC-F18-13 (NQD-front surfaced).**  
-When a Name Card is in **MintNew** mode, the **candidate label set** and the resulting **NQD-front of non-dominated label candidates** over the lexical Q-tuple `{SemanticFidelity, CognitiveErgonomics, OperationalAffordance, AliasRisk}` **SHALL** be explicitly recorded on the Card (at least as a small table or list), together with the NQD evidence hooks (`DescriptorMapRef`, `DistanceDefRef`, and a brief `Diversity_P` / coverage summary). A single-element front is permitted
-only if the Card records why no alternative candidates survived the filters.
+**CC-F18-13 (NQD-front surfaced, with honest diversity).**  
+When a Name Card is in **MintNew** mode, the **candidate label set** and the resulting **NQD-front of non-dominated label candidates** over the lexical Q-tuple `{SemanticFidelity, CognitiveErgonomics, OperationalAffordance, AliasRisk}` **SHALL** be explicitly recorded on the Card (at least as a small table or list), together with the NQD evidence hooks (`DescriptorMapRef`, `DistanceDefRef`, and a brief `Diversity_P` / coverage summary).  
+Each candidate **SHALL** carry a **head-term family** tag; morphological or prepositional variants built on the same head (e.g. “X plane”, “plane of X”, “planar X”) **MAY NOT** be counted as distinct for Diversity_P. The Card **SHALL** indicate how many distinct head-term families are represented on the NQD-front.  
+An NQD-front with fewer than **three** head-term families is permitted **only** if the Card records why no lexically more diverse alternatives survived the SemanticFidelity / AliasRisk filters (e.g., very narrow domain, frozen legacy idiom).
 
 **CC-F18-14 (Selection from the front only).**  
 The **Unified Tech** and **Plain** labels published on the UTS row for a unified concept **SHALL** be drawn from the currently recorded **NQD-front** on the Name Card. Publishing a Tech/Plain pair that is **not** on that front (or that is dominated with respect to the declared lexical Q-axes plus NQD) is **non-conformant**, except in explicit **DocumentLegacy** mode as defined in §5.1.
@@ -34811,6 +34825,7 @@ Every Name Card **SHALL** declare its `CardMode ∈ {MintNew, DocumentLegacy}`. 
 
 > Each example shows **how the Protocol steers naming** so engineers and managers can communicate without hidden Cross‑context leaks.  
 > **Card hygiene shown explicitly:** each example **states the Kind and the Purpose/use‑domain** and **chooses Tech/Plain labels from a small NQD‑frontier** (seed set diversified by traditions, novelty/familiarity, and lexical form; see Part G (G.18)).
+> **Head-term diversity:** each example **MUST** also state the **distinct head-term families** represented in its NQD candidate set (lexical “roots” such as *Recipe*, *Run*, *Episode*, not prepositional/morphological variants). This prevents faking Diversity_P with near-clones of one head.
 
 ### Example 1 — *MethodDescription* vs *Work* (recipe vs run)
 
@@ -34823,9 +34838,16 @@ Every Name Card **SHALL** declare its `CardMode ∈ {MintNew, DocumentLegacy}`. 
 * **NQD‑front (seed candidates):**  
   *design‑time:* *Procedure*, *ProcessModel*, *MethodSpec*, *WorkflowDefinition*, *Recipe*, *MethodScript*  
   *run‑time:* *Run*, *Execution*, *Enactment*, *ActivityInstance*, *Job*, *Episode*
+* **Head-term families used (design/run):**  
+  *design-time heads:* {Procedure, ProcessModel, MethodSpec, WorkflowDefinition, Recipe, MethodScript}  
+  *run-time heads:* {Run, Execution, Enactment, ActivityInstance, Job, Episode}
 * **Chosen from frontier (Unified Tech / Plain):**  
   `U.MethodDescription` / “recipe”; `U.Work` / “run”.  
-  *Discarded highlights:* **Procedure** (collides with governance “procedure/policy”); **Execution** (overloaded in CS/security); **Enactment** (speech‑act nuance).
+  *Discarded highlights:* **Procedure** (collides with governance “procedure/policy”); **Execution** (overloaded in CS/security); 
+* **Anti-pattern (for illustration only, non-conformant).**  
+ > *Bad CandidateSet (lexically narrow):* {“Reference plane”, “Plane of reference”, “Planar reference”, “Ref. plane v2”}.  
+ > All four are one **head-term family** (*plane*). Even if Diversity_P over raw strings looks high (four labels), **head-term diversity is 1**, so this set **fails** the F.18 diversity intent. A conformant Card would either: (a) add labels with other heads (e.g., *Layer*, *Track*, *Band*), or (b) explicitly record why other heads are rejected (AliasRisk, domain idiom) and accept low lexical Diversity_P with a rationale.
+* **Enactment** (speech‑act nuance).
 * **Bridges:** recipe↔run **related**, not identical; loss note “control‑flow vs. execution.”
 * **Why it matters:** Managers can schedule **Work** while authors improve the **MethodDescription**—no category errors. The NQD‑front preserves tradition‑diverse, lexically stable options until a reasoned choice is made. (F.11/F.16; F.17 rows.)
 
