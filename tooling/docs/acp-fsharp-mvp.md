@@ -39,6 +39,12 @@ All of those can be added as more record/union cases that stay inside the same d
 - Transport defaults: document stdio framing assumptions (UTF-8, LF) and max payload guidance for the runtime layer.
 - Testing minima: every new type gets a round-trip test; every new state transition gets valid + invalid path coverage; every new sentinel rule gets an example-based test that asserts expected `ValidationFinding` output.
 
+### Validation harness (current)
+
+- `Acp.Validation.runWithValidation` executes the protocol spec, returning `finalPhase`, `SessionTrace`, and a `ValidationFinding list`; pass `?stopOnFirstError=false` to keep folding after an error.
+- `Validation.FromProtocol` now assigns subjects (`Session`, `MessageAt`, `Connection`) and trace indices so findings anchor to sessions and message positions.
+- `Validation.PromptOutcome.classify` derives `PromptTurnOutcome` from the trace/final phase, distinguishing user cancel vs. protocol/domain errors.
+
 ## Design
 
 ### 1. Domain layer (`Acp.Domain`)
