@@ -30,58 +30,37 @@ We align with the E.4 **Artefact Architecture**:
 
 ## Repository layout
 
-**Conceptual Core**
+**Holon map (top level)** — see also `tooling/docs/repo-map.md` for a printable map.
 
-- `vendor/FPF-Spec.md`  
-  Vendored FPF specification (source of FPF terminology and patterns).
+- Holon 1 · Conceptual Core → `vendor/` (FPF spec), `core/` (UTS, episteme).
+- Holon 2 · Tooling Reference → `src/` (domain/protocol/runtime/validation), `tooling/` (implementation-facing docs/playbooks), `tests/` (executable evidence and golden cases), `core/roadmap/` (+ submodule `core/roadmap/sub-ACP`) as implementation slices.
+- Holon 3 · Pedagogical Companion → `pedagogy/` (explainers, onboarding, eval patterns).
 
-- `core/UTS.md`  
-  Unified Term Sheet for ACP concepts (per F.17).
+**Conceptual Core (Holon 1)**
 
-- `core/episteme/ACP-HYP-001-sentinel-surface-inspectability.md`  
-  Hypothesis about deriving assurance from a "sentinel surface".
+- `vendor/FPF-Spec.md` — vendored FPF specification (terminology + patterns).
+- `core/UTS.md` — Unified Term Sheet for ACP concepts (per F.17).
+- `core/episteme/*` — hypotheses/deductions (e.g., sentinel-surface inspectability).
+- `core/roadmap/*` — roadmap and slice planning (kept in-repo for auditability).
 
-- `core/episteme/ACP-DED-001-sentinel-surface-inspectability-deduction.md`  
-  Deductive consequences and testable theorems derived from ACP-HYP-001.
+**Tooling Reference (Holon 2)**
 
-**Tooling Reference**
+- `src/Acp.Domain.fs` — F# domain model: protocol versions, sessions, capabilities, messages, tool calls, etc.
+- `src/Acp.Protocol.fs` — protocol state machine (initialize → sessions → prompt turns → updates → cancel).
+- `src/Acp.Validation.fs` — validation lanes/findings, protocol-error bridge, `runWithValidation` helper.
+- `src/Acp.RuntimeAdapter.fs` — runtime boundary: `validateInbound`/`validateOutbound` with profile-aware checks.
+- `tooling/docs/acp-fsharp-mvp.md` — MVP domain model and state machine narrative.
+- `tooling/docs/runtime-integration.md` — adapter contract, lane semantics, JS/TS mirroring guidance.
+- `tooling/docs/error-reporting.md` — Problem Details (RFC 9457) surface with ACP/FPF extensions and telemetry hooks.
+- `tooling/docs/project-rules.md` — repo conventions: lanes/labels, branch naming, PR checklist, testing minima.
+- `tooling/docs/AGENT_ACP_SENTINEL.md` — agent/sentinel playbook: holons, working style, validation rules.
+- `tests/` — protocol/runtime/sentinel tests and `golden/` fixtures.
 
-- `src/Acp.Domain.fs`  
-  F# domain model: protocol versions, sessions, capabilities, messages, tool calls, etc.
+**Pedagogical Companion (Holon 3)**
 
-- `src/Acp.Protocol.fs`  
-  F# state machine describing per-connection lifecycle (initialize -> sessions -> prompt turns -> updates -> cancel).
-
-- `src/Acp.Validation.fs`  
-  Sentinel surface: validation lanes/findings, protocol-error bridge, and `runWithValidation` helper that yields trace + findings (optionally continuing after errors).
-
-- `src/Acp.RuntimeAdapter.fs`  
-  Integration boundary for runtimes: `validateInbound` / `validateOutbound` apply profile-aware validation at decode/encode edges.
-
-- `tooling/docs/acp-fsharp-mvp.md`  
-  Narrative description of the MVP domain model and protocol state machine.
-
-- `tooling/docs/runtime-integration.md`  
-  Adapter contract for runtimes: where to call validation, lane semantics, JS/TS mirroring guidance.
-- `tooling/docs/error-reporting.md`  
-  Problem Details (RFC 9457) error surface with ACP/FPF extensions and telemetry hooks.
-
-- `tooling/docs/project-rules.md`  
-  Repo conventions: lanes/labels, branch naming, PR checklist, testing minima.
-
-- `tooling/docs/AGENT_ACP_SENTINEL.md`  
-  Agent / sentinel playbook: three-holon structure, working style, F# constraints, validation rules.
-
-**Pedagogical Companion**
-
-- `pedagogy/ACP-Explained.md`  
-  Non-technical explanation of ACP, with an exec-ready summary.
-
-- `pedagogy/docs/evals/Reusable Evaluation Patterns.md`  
-  User-Trace-Spec evaluation patterns for AI coding agents and ACP-based systems.
-
-- `pedagogy/CODING.md`  
-  Coding codex for AI assistants and contributors working in this repo.
+- `pedagogy/ACP-Explained.md` — non-technical explanation of ACP with exec-ready summary.
+- `pedagogy/docs/evals/Reusable Evaluation Patterns.md` — UTS-style evaluation patterns for AI coding agents.
+- `pedagogy/CODING.md` — coding codex for assistants/contributors working in this repo.
 
 ---
 
