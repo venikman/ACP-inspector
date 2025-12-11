@@ -10,6 +10,71 @@ It aims to give you:
 
 Normative behavior follows the published ACP spec and schema. This repo adds a First Principles Framework (FPF) view on assurance and observability.
 
+## Who benefits (and how)
+
+- **Agent platform teams** — drop-in ACP reference that keeps protocol drift low while you ship fast; the sentinel layer catches malformed turns before they hit production.
+- **Runtime integrators** — `Acp.RuntimeAdapter` bridges ACP to your process/stdio boundary; JS/TS mirroring guidance lives in `tooling/docs/runtime-integration.md` so you can keep polyglot stacks aligned.
+- **Risk, SRE, and governance** — validation lanes plus golden tests (`tests/`) give repeatable evidence for change control, regressions, and incident postmortems.
+- **Enterprise engineering & compliance** — typed protocol core + auditable validation findings reduce vendor risk, ease security reviews, and support regulated change windows.
+- **Applied AI researchers & prototypers** — a fully typed F# core and UTS let you explore ACP variants with safety rails and auditable deductions.
+- **Educators & onboarding leads** — the Pedagogical Companion (`pedagogy/`) distills ACP and sentinel rules into exec-friendly explainers and evaluation patterns.
+
+### Typical scenarios
+
+- You need to enforce ACP correctness at the IO boundary of an LLM agent runner and want ready-made `validateInbound` / `validateOutbound` gates.
+- You’re adding a new tool/capability to an ACP agent and want protocol-safe fixtures plus validation findings instead of hand-rolled checks.
+- You’re mirroring ACP into another language/runtime and need a canonical model + tests to prevent semantic drift.
+- You’re onboarding teammates or stakeholders and need short, high-signal explainers that match the implementation.
+
+## 60-second getting started
+
+1) Prereqs: .NET 10 SDK. From repo root: `dotnet build src/ACP.fsproj` (restores + builds).
+2) Quick probe via F# Interactive (from `src/` after build):
+
+```fsharp
+#r "bin/Debug/net10.0/ACP.dll"
+open Acp
+open Acp.Domain
+open Acp.Domain.PrimitivesAndParties
+open Acp.Domain.Capabilities
+open Acp.Domain.Messaging
+open Acp.RuntimeAdapter
+
+let session = SessionId "demo-001"
+
+let inbound =
+    RuntimeAdapter.validateInbound session None
+        { rawByteLength = None
+          message =
+            Message.FromClient(
+                ClientToAgentMessage.Initialize
+                    { protocolVersion = 1
+                      clientCapabilities =
+                        { fs = { readTextFile = true; writeTextFile = false }
+                          terminal = false }
+                      clientInfo = None }) }
+        false
+
+let outbound =
+    RuntimeAdapter.validateOutbound session None
+        { rawByteLength = None
+          message =
+            Message.FromAgent(
+                AgentToClientMessage.InitializeResult
+                    { negotiatedVersion = 1
+                      agentCapabilities =
+                        { loadSession = true
+                          mcpCapabilities = { http = false; sse = false }
+                          promptCapabilities = { audio = false; image = false; embeddedContext = false } }
+                      agentInfo = None }) }
+        false
+
+printfn "Inbound findings: %A" inbound.findings
+printfn "Outbound findings: %A" outbound.findings
+```
+
+3) Want to wire it into a runtime? See [`tooling/docs/runtime-integration.md`](tooling/docs/runtime-integration.md). Need an exec-friendly explainer for stakeholders? See [`pedagogy/ACP-Explained.md`](pedagogy/ACP-Explained.md).
+
 ---
 
 ## FPF anchor
