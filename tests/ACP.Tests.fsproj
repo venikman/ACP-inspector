@@ -7,6 +7,7 @@
   <ItemGroup>
     <Compile Include="Acp.Validation.Tests.fs" />
     <Compile Include="Acp.RuntimeAdapter.Tests.fs" />
+    <Compile Include="Acp.Eval.Tests.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../src/ACP.fsproj" />

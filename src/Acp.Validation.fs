@@ -18,6 +18,7 @@ module Validation =
         | Session       // Session/turn invariants (R3, R4, R16)
         | ToolSurface   // Tool call execution & resources (R13–R15)
         | Transport     // Stdio framing, timeouts, truncation (R19)
+        | Eval          // Eval judges (LLM/code) running alongside sentinel
         | Implementation // Agent/client local checks (logging, perf, etc.)
 
     [<RequireQualifiedAccess>]
@@ -363,12 +364,15 @@ module Validation =
         (spec             : Spec<Phase, Message, ProtocolError>)
         (messages         : Message list)
         (stopOnFirstError : bool)
-        (profile          : RuntimeProfile option) : SpecRunResult<Phase> =
+        (profile          : RuntimeProfile option)
+        (evalProfile      : Eval.EvalProfile option) : SpecRunResult<Phase> =
 
         let mutable trace = SessionTrace.empty sessionId
         let mutable findings : ValidationFinding list = []
         let mutable phaseResult : Result<Phase, ProtocolError> = Ok spec.initial
         let mutable continueProcessing = true
+
+        let evalProfile = defaultArg evalProfile Eval.defaultProfile
 
         let validateContentBlocks traceIndex (msg: Message) (blocks : Prompting.ContentBlock list) =
             match profile with
@@ -397,9 +401,29 @@ module Validation =
             | Message.FromAgent (AgentToClientMessage.RequestPermission rp) -> validateContentBlocks traceIndex msg rp.toolCall.content
             | _ -> ()
 
+        let addEvalFindings (msg : Message) =
+            // Eval findings are advisory; map to Eval lane.
+            let evalFindings = Eval.runPromptChecks evalProfile msg
+            let mapped =
+                evalFindings
+                |> List.map (fun ef ->
+                    { lane       = Lane.Eval
+                      severity   =
+                        match ef.severity with
+                        | Eval.EvalSeverity.Info -> Severity.Info
+                        | Eval.EvalSeverity.Warning -> Severity.Warning
+                        | Eval.EvalSeverity.Error -> Severity.Error
+                      subject    = Subject.Connection
+                      failure    = Some { code = ef.code; message = ef.message; subject = Subject.Connection }
+                      sessionId  = None
+                      traceIndex = None
+                      note       = Some (sprintf "judge=%A" ef.judge) })
+            findings <- findings @ mapped
+
         for (idx, msg) in messages |> List.indexed do
             trace <- SessionTrace.append msg trace
             validateMessageContent idx msg
+            addEvalFindings msg
 
             if continueProcessing then
                 match phaseResult with

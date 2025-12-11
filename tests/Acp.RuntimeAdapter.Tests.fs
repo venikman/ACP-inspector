@@ -10,6 +10,7 @@ open Acp.Domain.Prompting
 open Acp.Domain.Messaging
 open Acp.Protocol
 open Acp.Validation
+open Acp.Eval
 open Acp.RuntimeAdapter
 
 module RuntimeAdapterTests =
@@ -39,7 +40,7 @@ module RuntimeAdapterTests =
             { rawByteLength = Some 10
               message = Message.FromClient (ClientToAgentMessage.Initialize initParams) }
 
-        let result = validateInbound sid (Some profile) frame true
+        let result = validateInboundWithEval sid (Some profile) None frame true
 
         let transportFinding =
             result.findings
@@ -61,9 +62,26 @@ module RuntimeAdapterTests =
             { rawByteLength = Some 4
               message = Message.FromClient (ClientToAgentMessage.Initialize initParams) }
 
-        let result = validateInbound sid (Some profile) frame true
+        let result = validateInboundWithEval sid (Some profile) None frame true
 
         Assert.True(result.findings.IsEmpty)
         match result.phase with
         | Ok (Phase.WaitingForInitializeResult _) -> ()
         | other -> failwithf "unexpected phase %A" other
+
+    [<Fact>]
+    let ``custom eval profile allows empty prompt`` () =
+        let evalProfile =
+            { defaultProfile with requireNonEmptyInstruction = false }
+
+        let frame : InboundFrame =
+            { rawByteLength = None
+              message = Message.FromClient (ClientToAgentMessage.SessionPrompt { sessionId = sid; content = [] }) }
+
+        let result = validateInboundWithEval sid None (Some evalProfile) frame true
+
+        let evalFindings =
+            result.findings
+            |> List.filter (fun f -> f.lane = Lane.Eval)
+
+        Assert.True(evalFindings.IsEmpty)

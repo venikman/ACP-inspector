@@ -12,8 +12,12 @@ open Acp.Protocol
 
 let session = SessionId "demo-hello-001"
 
+// Example: override eval profile to allow empty prompt text (for demo only).
+let evalProfile =
+    { Eval.defaultProfile with requireNonEmptyInstruction = false }
+
 let inbound =
-    RuntimeAdapter.validateInbound session None
+    RuntimeAdapter.validateInboundWithEval session None (Some evalProfile)
         { rawByteLength = None
           message =
             Message.FromClient(

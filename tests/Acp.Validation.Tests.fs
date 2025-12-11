@@ -115,7 +115,7 @@ module ValidationTests =
     [<Fact>]
     let ``happy path produces Ready phase and no findings`` () =
         let sid = SessionId "s-1"
-        let result = runWithValidation sid spec (mkHappyTrace sid) true None
+        let result = runWithValidation sid spec (mkHappyTrace sid) true None None
         Assert.True(result.findings.IsEmpty)
         match result.finalPhase with
         | Ok (Phase.Ready ctx) ->
@@ -129,7 +129,7 @@ module ValidationTests =
         let badThenInit : Message list =
             [ Message.FromClient (ClientToAgentMessage.SessionPrompt { sessionId = sid; content = [ ContentBlock.Text "oops" ] })
               Message.FromClient (ClientToAgentMessage.Initialize initParams) ]
-        let result = runWithValidation sid spec badThenInit false None
+        let result = runWithValidation sid spec badThenInit false None None
         Assert.Equal(2, result.trace.messages.Length)
         Assert.Equal(1, result.findings.Length)
         match result.finalPhase with
@@ -147,7 +147,7 @@ module ValidationTests =
               Message.FromClient (ClientToAgentMessage.SessionPrompt { sessionId = sid; content = [ ContentBlock.Text "hi" ] })
               Message.FromClient (ClientToAgentMessage.SessionCancel { sessionId = sid })
               Message.FromAgent  (AgentToClientMessage.SessionPromptResult { sessionId = sid; stopReason = StopReason.Cancelled }) ]
-        let result = runWithValidation sid spec trace true None
+        let result = runWithValidation sid spec trace true None None
         let outcome = classify sid result.trace result.finalPhase result.findings
         Assert.Equal(PromptTurnOutcome.CancelledByUser, outcome)
 
@@ -155,7 +155,7 @@ module ValidationTests =
     let ``cancelled turn with Cancelled stopReason yields no Session-lane errors`` () =
         let sid = SessionId "s-cancel-ok"
 
-        let result = runWithValidation sid spec (mkCancelledTraceGood sid) true None
+        let result = runWithValidation sid spec (mkCancelledTraceGood sid) true None None
 
         match result.finalPhase with
         | Ok (Phase.Ready ctx) ->
@@ -172,7 +172,7 @@ module ValidationTests =
     let ``cancelled turn with non-cancel stopReason yields Session-lane error`` () =
         let sid = SessionId "s-cancel-bad"
 
-        let result = runWithValidation sid spec (mkCancelledTraceBad sid) true None
+        let result = runWithValidation sid spec (mkCancelledTraceBad sid) true None None
 
         let sessionFindings =
             result.findings |> List.filter (fun f -> f.lane = Lane.Session)
@@ -189,7 +189,7 @@ module ValidationTests =
     let ``sequential prompts yield no Session-lane concurrency errors`` () =
         let sid = SessionId "s-seq"
 
-        let result = runWithValidation sid spec (mkSequentialPromptsTraceGood sid) true None
+        let result = runWithValidation sid spec (mkSequentialPromptsTraceGood sid) true None None
 
         let sessionFindings =
             result.findings
@@ -206,7 +206,7 @@ module ValidationTests =
     let ``concurrent prompts yield MULTIPLE_PROMPTS_IN_FLIGHT Session-lane error`` () =
         let sid = SessionId "s-concurrent"
 
-        let result = runWithValidation sid spec (mkConcurrentPromptsTraceBad sid) true None
+        let result = runWithValidation sid spec (mkConcurrentPromptsTraceBad sid) true None None
 
         let sessionFindings =
             result.findings |> List.filter (fun f -> f.lane = Lane.Session)
@@ -226,7 +226,7 @@ module ValidationTests =
     let ``result without prompt yields RESULT_WITHOUT_PROMPT Session-lane error`` () =
         let sid = SessionId "s-result-no-prompt"
 
-        let result = runWithValidation sid spec (mkResultWithoutPromptTraceBad sid) true None
+        let result = runWithValidation sid spec (mkResultWithoutPromptTraceBad sid) true None None
 
         let sessionFindings =
             result.findings |> List.filter (fun f -> f.lane = Lane.Session)
@@ -247,7 +247,7 @@ module ValidationTests =
         let sid = SessionId "s-protoerr"
         let badMessages : Message list =
             [ Message.FromClient (ClientToAgentMessage.SessionPrompt { sessionId = sid; content = [ ContentBlock.Text "hi before init" ] }) ]
-        let result = runWithValidation sid spec badMessages true None
+        let result = runWithValidation sid spec badMessages true None None
         let outcome = classify sid result.trace result.finalPhase result.findings
         match outcome with
         | PromptTurnOutcome.DomainError (DomainErrorOutcome.ProtocolViolation (code, _)) ->

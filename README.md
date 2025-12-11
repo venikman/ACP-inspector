@@ -75,6 +75,15 @@ printfn "Outbound findings: %A" outbound.findings
 
 3) Want to wire it into a runtime? See [`tooling/docs/runtime-integration.md`](tooling/docs/runtime-integration.md). Need an exec-friendly explainer for stakeholders? See [`pedagogy/ACP-Explained.md`](pedagogy/ACP-Explained.md).
 
+### Running tests with a TRX report
+
+```bash
+# from repo root
+DOTNET_BIN=/usr/local/share/dotnet/dotnet tooling/scripts/run-tests.sh
+# writes tests/TestResults.trx and prints the console summary
+```
+If `DOTNET_BIN` is unset, the script auto-chooses `/usr/local/share/dotnet/dotnet` when present; otherwise it falls back to `dotnet` on PATH (must be SDK 10 for net10.0).
+
 ---
 
 ## FPF anchor
