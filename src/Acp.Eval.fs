@@ -165,6 +165,13 @@ module Eval =
 
                 findings |> Seq.toList
 
+    let private collectFSharpFindingsFromContent (profile: EvalProfile) (blocks: ContentBlock list) =
+        blocks
+        |> List.choose (function
+            | ContentBlock.Text t -> Some t
+            | _ -> None)
+        |> List.collect (fsharpLexFindings profile)
+
     /// Run prompt-level checks that do not require external context.
     let runPromptChecks (profile: EvalProfile) (msg: Message) : EvalFinding list =
         if not profile.enableCodeJudge then
@@ -181,12 +188,7 @@ module Eval =
                     else
                         []
 
-                let fsharpFindings =
-                    p.content
-                    |> List.choose (function
-                        | ContentBlock.Text t -> Some t
-                        | _ -> None)
-                    |> List.collect (fsharpLexFindings profile)
+                let fsharpFindings = collectFSharpFindingsFromContent profile p.content
 
                 baseFindings @ fsharpFindings
             | Message.FromAgent(AgentToClientMessage.SessionUpdate u) ->
@@ -201,12 +203,7 @@ module Eval =
                         else
                             []
 
-                    let fsharpFindings =
-                        tc.content
-                        |> List.choose (function
-                            | ContentBlock.Text t -> Some t
-                            | _ -> None)
-                        |> List.collect (fsharpLexFindings profile)
+                    let fsharpFindings = collectFSharpFindingsFromContent profile tc.content
 
                     baseFindings @ fsharpFindings
                 | _ -> []
@@ -220,12 +217,7 @@ module Eval =
                     else
                         []
 
-                let fsharpFindings =
-                    rp.toolCall.content
-                    |> List.choose (function
-                        | ContentBlock.Text t -> Some t
-                        | _ -> None)
-                    |> List.collect (fsharpLexFindings profile)
+                let fsharpFindings = collectFSharpFindingsFromContent profile rp.toolCall.content
 
                 baseFindings @ fsharpFindings
             | _ -> []

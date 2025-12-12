@@ -126,7 +126,7 @@ module FSharpTokenizerTests =
     [<Fact>]
     let ``handles triple quoted and interpolated strings`` () =
         let input =
-            "let a = \"\"\"hi\"\"\" let b = $\"yo\" let c = $@\"c:\\temp\\file.txt\""
+            "let a = \"\"\"hi\"\"\" let b = $\"yo\" let c = $@\"c:\\temp\\file.txt\" let d = $\"\"\"zap\"\"\""
 
         let actual = tokenize input |> stripNoise
 
@@ -136,10 +136,11 @@ module FSharpTokenizerTests =
                 | Token.StringLit s -> Some s
                 | _ -> None)
 
-        Assert.Equal(3, strings.Length)
+        Assert.Equal(4, strings.Length)
         Assert.Equal<string>("\"\"\"hi\"\"\"", strings.[0])
         Assert.Equal<string>("$\"yo\"", strings.[1])
         Assert.Equal<string>("$@\"c:\\temp\\file.txt\"", strings.[2])
+        Assert.Equal<string>("$\"\"\"zap\"\"\"", strings.[3])
 
     [<Fact>]
     let ``tokenizeWithSpans reports correct line and column`` () =

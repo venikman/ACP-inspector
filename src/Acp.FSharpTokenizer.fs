@@ -118,7 +118,6 @@ module FSharpTokenizer =
               ">>="
               "<<="
               "|>>"
-              "<||"
               "||"
               "<-"
               "->"
@@ -250,7 +249,14 @@ module FSharpTokenizer =
                 else
                     j <- j + 1
 
-            if closed then Some j else None
+            if closed then
+                let innerLen = j - start - 2
+
+                if innerLen = 1 then Some j
+                elif innerLen >= 2 && input.[start + 1] = '\\' then Some j
+                else None
+            else
+                None
 
         let parseNumber (start: int) =
             let isDecDigitOrUnderscore (c: char) = Char.IsDigit c || c = '_'

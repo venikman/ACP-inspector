@@ -102,3 +102,38 @@ module EvalTests =
 
         let findings = runPromptChecks defaultProfile msg
         Assert.Contains(findings, fun f -> f.code = "ACP.EVAL.FSHARP_MANY_UNKNOWN_TOKENS")
+
+    [<Fact>]
+    let ``fsharp lexing flags unclosed block comments`` () =
+        let code = "let x = (1 + 2)\n(* comment without closing"
+
+        let msg =
+            Message.FromClient(
+                ClientToAgentMessage.SessionPrompt
+                    { sessionId = sid
+                      content = [ ContentBlock.Text code ] }
+            )
+
+        let findings = runPromptChecks defaultProfile msg
+        Assert.Contains(findings, fun f -> f.code = "ACP.EVAL.FSHARP_UNCLOSED_BLOCK_COMMENT")
+
+    [<Fact>]
+    let ``fsharp lexing runs for request permission tool calls`` () =
+        let code = "let a = (1 + 2)\nlet b = \"hi"
+
+        let tc =
+            { toolCallId = "t-rp"
+              title = None
+              kind = None
+              status = ToolCallStatus.Requested
+              content = [ ContentBlock.Text code ] }
+
+        let rp =
+            { sessionId = sid
+              toolCall = tc
+              options = [] }
+
+        let msg = Message.FromAgent(AgentToClientMessage.RequestPermission rp)
+
+        let findings = runPromptChecks defaultProfile msg
+        Assert.Contains(findings, fun f -> f.code = "ACP.EVAL.FSHARP_UNCLOSED_STRING")
