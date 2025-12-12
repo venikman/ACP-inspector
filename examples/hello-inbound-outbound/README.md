@@ -4,11 +4,12 @@ Run the minimal validation flow used in the main README, but as a runnable FSI s
 
 Steps:
 
-1) Build the library (from repo root): `dotnet build src/ACP.fsproj`
-2) Execute the script from repo root (path matters for the `#I`): `dotnet fsi examples/hello-inbound-outbound/hello.fsx`
+1. Build the library (from repo root): `dotnet build src/ACP.fsproj`
+2. Execute the script from repo root (path matters for the `#I`): `dotnet fsi examples/hello-inbound-outbound/hello.fsx`
 
 What it does:
-- Loads the compiled `ACP.dll` from `src/bin/Debug/net10.0/`
+
+- Loads the compiled `ACP.dll` from `src/bin/Debug/net9.0/`
 - Constructs one inbound initialize and one outbound initialize-result message
 - Runs `validateInbound` and `validateOutbound`
 - Prints findings and final phases so you can sanity check wiring

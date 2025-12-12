@@ -5,6 +5,12 @@ __MACOSX/
 # build outputs
 bin/
 obj/
+TestResults/
 *.user
 *.suo
 *.cache
+
+.fake
+
+# PBT runner output (canonical evidence is tracked)
+core/evidence/pbt/*latest-failure.json
