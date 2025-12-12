@@ -8,9 +8,12 @@
     <Compile Include="Acp.Validation.Tests.fs" />
     <Compile Include="Acp.RuntimeAdapter.Tests.fs" />
     <Compile Include="Acp.Eval.Tests.fs" />
+    <Compile Include="Acp.Eval.Golden.Tests.fs" />
     <Compile Include="Acp.FSharpTokenizer.Tests.fs" />
+    <Compile Include="Acp.Security.Tests.fs" />
     <Compile Include="Pbt/EvidenceRunner.fs" />
     <Compile Include="Pbt/Generators.fs" />
+    <Compile Include="Pbt/TokenizerProperties.fs" />
     <Compile Include="Pbt/TraceReplay.fs" />
     <Compile Include="Pbt/ProtocolProperties.fs" />
     <Compile Include="Pbt/ProtocolStateMachine.fs" />

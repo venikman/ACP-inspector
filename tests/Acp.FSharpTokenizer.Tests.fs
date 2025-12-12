@@ -177,3 +177,40 @@ module FSharpTokenizerTests =
         let actual = tokenize input |> stripNoise
         Assert.Contains(Token.Directive "#r \"foo\"", actual)
         Assert.Contains(Token.Directive "#if DEBUG", actual)
+
+    [<Fact>]
+    let ``tokenizeWithSpans uses 0-based indices and end-exclusive lengths`` () =
+        let input = "let x"
+        let spanned = tokenizeWithSpans input
+
+        let slices =
+            spanned
+            |> List.map (fun st -> input.Substring(st.span.start.index, st.span.length))
+
+        Assert.Equal<string list>([ "let"; " "; "x" ], slices)
+
+        let first = spanned.Head
+        Assert.Equal(0, first.span.start.index)
+        Assert.Equal(3, first.span.length)
+
+    [<Fact>]
+    let ``tokenizeWithSpans treats CRLF as a single newline`` () =
+        let input = "let x = 1\r\nlet y = 2"
+
+        let lets =
+            tokenizeWithSpans input
+            |> List.filter (fun st -> st.token = Token.Keyword "let")
+
+        Assert.Equal(2, lets.Length)
+        let second = lets.[1]
+        Assert.Equal(2, second.span.start.line)
+        Assert.Equal(1, second.span.start.column)
+
+    [<Fact>]
+    let ``tokenizeWithSpans counts tabs as one column`` () =
+        let input = "\tlet x = 1"
+
+        let firstLet =
+            tokenizeWithSpans input |> List.find (fun st -> st.token = Token.Keyword "let")
+
+        Assert.Equal(2, firstLet.span.start.column)

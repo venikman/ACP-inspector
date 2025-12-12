@@ -21,11 +21,20 @@ module FSharpTokenizer =
         | Whitespace of string
         | Unknown of char
 
+    /// Absolute position in the original input.
+    /// - `index` is a 0-based character offset into the input string.
+    /// - `line` / `column` are 1-based.
+    /// - CRLF (`\r\n`) is treated as a single newline for line/column accounting.
+    /// - Tabs count as a single column step (no visual tab-width expansion).
     type Position =
         { index: int // 0-based absolute index
           line: int // 1-based line number
           column: int } // 1-based column number
 
+    /// Span of a token in the original input.
+    /// - End is exclusive at `start.index + length`.
+    /// - Spans from `tokenizeWithSpans` are ordered, non-overlapping,
+    ///   and cover the full input.
     type Span = { start: Position; length: int }
 
     type SpannedToken = { token: Token; span: Span }

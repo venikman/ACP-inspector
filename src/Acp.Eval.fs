@@ -58,8 +58,11 @@ module Eval =
         if not profile.enableFSharpLexing || String.IsNullOrWhiteSpace text then
             []
         else
+            let spanned = FSharpTokenizer.tokenizeWithSpans text
+
+            // Non-trivia tokens are used for code-signal counting and unknown-ratio checks.
             let tokens =
-                FSharpTokenizer.tokenizeWithSpans text
+                spanned
                 |> List.filter (fun st ->
                     match st.token with
                     | FSharpTokenizer.Token.Whitespace _
@@ -112,8 +115,9 @@ module Eval =
                 let isUnclosedBlockComment (c: string) =
                     c.StartsWith("(*") && not (c.EndsWith("*)"))
 
+                // Unclosed block comments must be detected over all tokens (including comments).
                 let unclosedComments =
-                    tokens
+                    spanned
                     |> List.choose (fun st ->
                         match st.token with
                         | FSharpTokenizer.Token.Comment c when isUnclosedBlockComment c -> Some st.span.start
