@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <LangVersion>preview</LangVersion>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
@@ -8,6 +8,7 @@
     <Compile Include="Acp.Validation.Tests.fs" />
     <Compile Include="Acp.RuntimeAdapter.Tests.fs" />
     <Compile Include="Acp.Eval.Tests.fs" />
+    <Compile Include="Acp.FSharpTokenizer.Tests.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../src/ACP.fsproj" />

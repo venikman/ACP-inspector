@@ -28,11 +28,11 @@ Normative behavior follows the published ACP spec and schema. This repo adds a F
 
 ## 60-second getting started
 
-1) Prereqs: .NET 10 SDK. From repo root: `dotnet build src/ACP.fsproj` (restores + builds).
-2) Quick probe via F# Interactive (from `src/` after build):
+1. Prereqs: .NET 9 SDK. From repo root: `dotnet build src/ACP.fsproj` (restores + builds).
+2. Quick probe via F# Interactive (from `src/` after build):
 
 ```fsharp
-#r "bin/Debug/net10.0/ACP.dll"
+#r "bin/Debug/net9.0/ACP.dll"
 open Acp
 open Acp.Domain
 open Acp.Domain.PrimitivesAndParties
@@ -73,7 +73,7 @@ printfn "Inbound findings: %A" inbound.findings
 printfn "Outbound findings: %A" outbound.findings
 ```
 
-3) Want to wire it into a runtime? See [`tooling/docs/runtime-integration.md`](tooling/docs/runtime-integration.md). Need an exec-friendly explainer for stakeholders? See [`pedagogy/ACP-Explained.md`](pedagogy/ACP-Explained.md).
+3. Want to wire it into a runtime? See [`tooling/docs/runtime-integration.md`](tooling/docs/runtime-integration.md). Need an exec-friendly explainer for stakeholders? See [`pedagogy/ACP-Explained.md`](pedagogy/ACP-Explained.md).
 
 ### Running tests with a TRX report
 
@@ -82,7 +82,8 @@ printfn "Outbound findings: %A" outbound.findings
 DOTNET_BIN=/usr/local/share/dotnet/dotnet tooling/scripts/run-tests.sh
 # writes tests/TestResults.trx and prints the console summary
 ```
-If `DOTNET_BIN` is unset, the script auto-chooses `/usr/local/share/dotnet/dotnet` when present; otherwise it falls back to `dotnet` on PATH (must be SDK 10 for net10.0).
+
+If `DOTNET_BIN` is unset, scripts use `dotnet` on PATH (must be SDK 9 for net9.0). Set `DOTNET_BIN` to override.
 
 ---
 
