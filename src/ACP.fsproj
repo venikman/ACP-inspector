@@ -6,10 +6,12 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Acp.Domain.fs" />
+    <Compile Include="Acp.FpfPins.fs" />
     <Compile Include="Acp.FSharpTokenizer.fs" />
     <Compile Include="Acp.Protocol.fs" />
     <Compile Include="Acp.Eval.fs" />
     <Compile Include="Acp.Validation.fs" />
+    <Compile Include="Acp.ValidationFindingPins.fs" />
     <Compile Include="Acp.RuntimeAdapter.fs" />
   </ItemGroup>
 </Project>
