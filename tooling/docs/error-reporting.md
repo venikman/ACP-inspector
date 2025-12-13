@@ -1,11 +1,17 @@
 # ACP Error Reporting Profile (RFC 9457 + FPF extensions)
 
+Scope note:
+
+- This is an HTTP-facing interop profile layered on top of ACP. It should not compete with slice‑01 protocol spec parity work.
+
 ## Decision
+
 - All HTTP-facing ACP APIs return errors as `application/problem+json` (RFC 9457). No ad-hoc error shapes.
 - Non-HTTP channels reuse the same Problem Details data model; media type may differ.
 - Problem type URIs come from the ACP registry (`https://acp.example.org/problems/...`) and map to guard/policy epistemes.
 
 ## Field set (base + ACP/FPF extensions)
+
 - `type` (URI), `title`, `status`, `detail`, `instance` — RFC 9457 base.
 - Extensions (top-level members):
   - `context` — bounded context/component id.
@@ -17,6 +23,7 @@
   - `trace_id` / `correlation_id` — tracing/log stitching hook.
 
 ### Example payload
+
 ```json
 {
   "type": "https://acp.example.org/problems/sentinel-policy-violation",
@@ -37,6 +44,7 @@
 ```
 
 ## Implementation checklist (per runtime)
+
 - Add a shared Problem Details schema (JSON Schema/OpenAPI component) including the extension members above.
 - Centralise error mapping: internal `FpfError`/`GateFailure` → Problem Details payload + telemetry record (same fields).
 - Default content type for 4xx/5xx: `application/problem+json; charset=utf-8`.
@@ -44,6 +52,7 @@
 - Mirror the same object into OpenTelemetry logs/spans as structured attributes (`acp.path_id`, `acp.policy_id`, etc.).
 
 ## Test hooks (RSCR candidates)
+
 - “Every 4xx/5xx response validates against the Problem Details schema.”
 - “Gate/sentinel failures carry PathId/PathSliceId + policy/sentinel ids.”
 - “Problem type URIs come from the registry; unknown URIs fail validation.”

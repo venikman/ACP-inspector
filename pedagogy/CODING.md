@@ -10,7 +10,9 @@ You are the project-specific coding assistant for the **ACP-sentinel** repositor
 ## 1. Project identity and scope
 
 - The project is an **F# implementation of an ACP validator/inspector**, plus **top‑level libraries** for building ACP **Clients**, **Agents**, and shared **Protocol** types.
-- ACP = **Agent Client Protocol** (https://agentclientprotocol.com) – a JSON‑RPC‑based protocol that standardizes communication between code editors/IDEs and AI coding agents.
+- ACP = **Agent Client Protocol** – a JSON‑RPC‑based protocol that standardizes communication between code editors/IDEs and AI coding agents.
+  - Spec source of truth (GitHub): https://github.com/agentclientprotocol/agent-client-protocol
+  - Overview/intro (website): https://agentclientprotocol.com/overview/introduction
 - ACP‑sentinel’s goals:
   1. Provide **idiomatic F# libraries** for implementing ACP **clients** and **agents**.
   2. Provide an **“inspector/sentinel” layer** that can:
@@ -26,7 +28,7 @@ When in doubt, you must treat the **published ACP schema and docs as normative**
 
 Think in terms of three main “holons” (distinct but composable subsystems):
 
-1. **Protocol holon**  
+1. **Protocol holon**
    - Strongly‑typed F# representation of ACP:
      - JSON‑RPC envelope types.
      - Agent and Client method sets (e.g. `authenticate`, `session/prompt`, `fs/read_text_file`, etc.).
@@ -36,7 +38,7 @@ Think in terms of three main “holons” (distinct but composable subsystems):
      - No logging.
      - Just types, decoders/encoders, and small validation helpers.
 
-2. **Runtime holon (Clients & Agents)**  
+2. **Runtime holon (Clients & Agents)**
    - Libraries for actually running:
      - ACP **agents** over stdio (subprocess of an editor).
      - ACP **clients** (e.g., editor or test harness).
@@ -48,7 +50,7 @@ Think in terms of three main “holons” (distinct but composable subsystems):
      - Transport plumbing.
      - Application‑specific behavior.
 
-3. **Sentinel / Inspector holon**  
+3. **Sentinel / Inspector holon**
    - Observes and validates:
      - Individual messages (schema‑level validation).
      - Conversations / sessions (state machine & behavior‑level validation).
@@ -111,10 +113,11 @@ Modeling guidelines:
        - Methods like `authenticate`, `new_session`, `session/prompt`, etc.
      - `AcpSentinel.Protocol.Client`:
        - Methods like `fs/read_text_file`, and any other client‑side services.
-  - Each method should have:
-    - A clear **request type**.
-    - A clear **response type** or event stream model.
-  - Do **not** invent new ACP methods or fields; if something is not in the spec, treat it as an **extension**, clearly marked as such.
+
+- Each method should have:
+  - A clear **request type**.
+  - A clear **response type** or event stream model.
+- Do **not** invent new ACP methods or fields; if something is not in the spec, treat it as an **extension**, clearly marked as such.
 
 3. **Session and state machines**
    - Represent sessions as explicit state machines:
@@ -142,7 +145,7 @@ Modeling guidelines:
 - **Spec pin:** Note the ACP spec version/date we target in code comments and docs; update when the upstream spec revs.
 - **Stdio framing defaults:** Assume UTF‑8, LF line endings, and bounded message size/timeouts; document deviations explicitly.
 - **Error codes:** Maintain a single ACP/JSON‑RPC error code map; emit `ValidationFinding` for unknown codes (until verified).
-- **_meta handling:** Preserve `_meta` passthrough; never let it affect validation unless a rule explicitly allows it.
+- **\_meta handling:** Preserve `_meta` passthrough; never let it affect validation unless a rule explicitly allows it.
 - **Profiles:** Add validation rules with a profile/flag (e.g., strict vs compat) instead of hard‑coding severity.
 - **Testing definition of done:** New protocol type → round‑trip test; new transition → valid + invalid path tests; new sentinel rule → example test that emits the expected findings.
 

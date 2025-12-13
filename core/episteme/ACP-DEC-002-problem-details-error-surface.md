@@ -6,6 +6,10 @@
 - AssuranceLevel: L1 (adopted, implementation pending)
 - LifecycleState: Shape → Implement
 
+Scope note:
+
+- This is an HTTP-facing error surface profile (RFC 9457) layered on top of ACP. It should not compete with slice‑01 protocol parity work.
+
 ## 1. Decision (normative for ACP HTTP-facing services)
 
 - All ACP-facing HTTP APIs **MUST** return errors as `application/problem+json` per RFC 9457 (type, title, status, detail, instance, extensions). Other channels (gRPC/MQ/CLI) **SHOULD** reuse the same data model even if the media type differs.

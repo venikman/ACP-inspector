@@ -6,6 +6,10 @@
 - AssuranceLevel: L0 (Analytic, unvalidated)
 - LifecycleState: Shape
 
+Scope note:
+
+- ConceptualCore work. It should not compete with slice‑01 (protocol spec parity) implementation priorities.
+
 ## Artifact Header
 
 - Parent Episteme: ACP-HYP-001 · Sentinel-Surface Inspectability
@@ -32,7 +36,7 @@ We normalize the hypothesis and minimal surrounding assumptions into explicit pr
 ### 2.1 Structural premises
 
 - **P1 (Sentinel totality on external actions).** For every external action a of the ACP implementation in a run ρ, there exists exactly one GateCrossing event g(a) in the sentinel/gate stack telemetry.
-- **P2 (PathSlice coverage).** For every time-ordered pair of GateCrossings g_i, g_{i+1} in a run ρ, there exists a unique PathSlice record ps_i covering the internal behavior between them, including ACP state transitions.
+- **P2 (PathSlice coverage).** For every time-ordered pair of GateCrossings g*i, g*{i+1} in a run ρ, there exists a unique PathSlice record ps_i covering the internal behavior between them, including ACP state transitions.
 - **P3 (FPF-compatible schema).** Every PathSlice and GateCrossing conforms to an FPF schema that includes at least ActorId, PathSliceId, RunId; GateId, GateDecision, ConstraintViolation; ACPStateBefore, ACPStateAfter; and DecisionLog/pins sufficient to embed in an E.TGA transduction graph.
 - **P4 (Deterministic reconstruction).** Given a complete, time-ordered set of PathSlices and GateCrossings for a run ρ, an ACP-inspector algorithm I deterministically constructs an E.TGA-compatible transduction graph T(ρ) or returns a localized reconstruction failure on a finite subset of events.
 
@@ -40,7 +44,7 @@ We normalize the hypothesis and minimal surrounding assumptions into explicit pr
 
 - **P5 (Protocol & state conformance encoding).** There exists a set of FPF/ACP conformance rules C such that violations of protocol constraints and ACP reasoning state machine transitions (Explore → Shape → Evidence → Operate, plus allowed sub-transitions) are decidable over T(ρ) and/or the underlying telemetry.
 - **P6 (Assurance functional).** There exists an assurance functional A such that, for any reconstructed run graph T(ρ), A(T(ρ)) yields a reliability score R(ρ), a conformance load CL(ρ), and a vector of assurance gauges G(ρ) (e.g., coverage of sentinels, constraint satisfaction).
-- **P7 (Monotonicity of gate-aligned assurance).** Holding models and prompts fixed, if a configuration κ₂ strengthens sentinel/gate policies relative to κ₁ such that all additional constraints are FPF-approved (i.e., they cannot increase the set of violations in C), then for any fixed workload W: R_{κ₂}(ρ) ≥ R_{κ₁}(ρ) and/or some components of G_{κ₂}(ρ) strictly improve, and CL_{κ₂}(ρ) ≤ CL_{κ₁}(ρ) for runs ρ induced by W under κ₁ and κ₂.
+- **P7 (Monotonicity of gate-aligned assurance).** Holding models and prompts fixed, if a configuration κ₂ strengthens sentinel/gate policies relative to κ₁ such that all additional constraints are FPF-approved (i.e., they cannot increase the set of violations in C), then for any fixed workload W: R*{κ₂}(ρ) ≥ R*{κ₁}(ρ) and/or some components of G*{κ₂}(ρ) strictly improve, and CL*{κ₂}(ρ) ≤ CL\_{κ₁}(ρ) for runs ρ induced by W under κ₁ and κ₂.
 
 Note: P7 is an explicit unpacking of “assurance computed over the sentinel surface using the FPF assurance calculus” into a monotonicity property that the Assurance-Delta prediction implicitly relies on.
 
@@ -123,16 +127,16 @@ When the ACP implementation is hardened (e.g., additional sentinel rules, strict
 
 For use by later Evidence/Induction artifacts, we summarize the derived predictions with their premise dependencies.
 
-| Id  | Family               | Informal description                                                             | Premises          |
-| --- | -------------------- | ------------------------------------------------------------------------------- | ----------------- |
-| TR-1 | Trace-Replay         | Inspector reconstructs a unique E.TGA graph or localized failure for any fully logged run. | P1–P4             |
-| TR-2 | Trace-Replay         | Trace-replay tests over logs suffice to evaluate reconstructability.           | P1–P4             |
-| CD-1 | Conformance-Detection | Violations of protocol/state rules in C are detected as violations over reconstructed runs. | P1–P5             |
-| CD-2 | Conformance-Detection | Sentinel/gate bypass produces either reconstruction failure or explicit violation of coverage rules. | P2–P5 (+¬P1)      |
-| CD-3 | Conformance-Detection | Fault-injection suites (within P1 and breaking P1) suffice to test conformance-detection claims. | P1–P5             |
-| AD-1 | Assurance-Delta      | Assurance metrics depend only on the reconstructed run surface, not internal agent logs. | P1–P3, P6         |
-| AD-2 | Assurance-Delta      | Hardened FPF-approved gates produce monotone non-negative assurance deltas for fixed workloads. | P1–P3, P6–P7      |
-| AD-3 | Assurance-Delta      | A/B tests over gate policies and fixed workloads are sufficient to measure assurance deltas. | P1–P3, P6–P7      |
+| Id   | Family                | Informal description                                                                                 | Premises     |
+| ---- | --------------------- | ---------------------------------------------------------------------------------------------------- | ------------ |
+| TR-1 | Trace-Replay          | Inspector reconstructs a unique E.TGA graph or localized failure for any fully logged run.           | P1–P4        |
+| TR-2 | Trace-Replay          | Trace-replay tests over logs suffice to evaluate reconstructability.                                 | P1–P4        |
+| CD-1 | Conformance-Detection | Violations of protocol/state rules in C are detected as violations over reconstructed runs.          | P1–P5        |
+| CD-2 | Conformance-Detection | Sentinel/gate bypass produces either reconstruction failure or explicit violation of coverage rules. | P2–P5 (+¬P1) |
+| CD-3 | Conformance-Detection | Fault-injection suites (within P1 and breaking P1) suffice to test conformance-detection claims.     | P1–P5        |
+| AD-1 | Assurance-Delta       | Assurance metrics depend only on the reconstructed run surface, not internal agent logs.             | P1–P3, P6    |
+| AD-2 | Assurance-Delta       | Hardened FPF-approved gates produce monotone non-negative assurance deltas for fixed workloads.      | P1–P3, P6–P7 |
+| AD-3 | Assurance-Delta       | A/B tests over gate policies and fixed workloads are sufficient to measure assurance deltas.         | P1–P3, P6–P7 |
 
 These entries are the “deductive hooks” that experiment and implementation artifacts should reference when designing tests.
 
@@ -161,4 +165,4 @@ Recommended file placement:
 - Pick: Explicit theoremization (TR, CD, AD families) to make test design and falsification straightforward.
 - Tests: Trace-replay suites, protocol/state fault-injection, sentinel-bypass scenarios, A/B gate-hardening experiments.
 - Risks: Hidden channels violating P1, mis-specified rule set C, assurance calculus that violates P7; these would break the deductions.
-- Next: Author Evidence/Experiment artifacts keyed to TR-, CD-, AD-* and implement telemetry & inspector features that make P1–P7 true (or explicitly relax them).
+- Next: Author Evidence/Experiment artifacts keyed to TR-, CD-, AD-\* and implement telemetry & inspector features that make P1–P7 true (or explicitly relax them).

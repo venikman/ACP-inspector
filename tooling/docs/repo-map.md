@@ -13,9 +13,9 @@ Touch when: updating ontology, adding rows to UTS, or recording hypotheses/decis
 ## Holon 2 — Tooling Reference
 
 - `src/` — executable F# code: domain, protocol state machine, validation, runtime adapter.
-- `tooling/docs/` — implementation-facing guidance (runtime integration, error surface, project rules, MVP notes, agent/sentinel playbook).
+- `tooling/docs/` — implementation-facing guidance (runtime integration, error surface, project rules, protocol notes, agent/sentinel playbook).
 - `tests/` — executable evidence: protocol/runtime/sentinel tests and `golden/` fixtures.
-- `core/roadmap/` (+ submodule `core/roadmap/sub-ACP`) — roadmap and slice planning; treated as implementation slices.
+- `core/roadmap/` (+ spec submodule `core/roadmap/sub-ACP` and `core/roadmap/ACP-spec-parity-matrix.md`) — roadmap and spec parity tracking; treated as implementation slices.
 
 Touch when: implementing protocol/runtime/validation changes, adjusting contributor rules, adding tests/goldens, or updating roadmap slices.
 

@@ -6,6 +6,10 @@
 - AssuranceLevel: L0 (Unsubstantiated)
 - LifecycleState: Explore
 
+Scope note:
+
+- ConceptualCore work. It should not compete with slice‑01 (protocol spec parity) implementation priorities.
+
 ## 0. Artifact Header
 
 - Parent Context: ACP‑Inspector / ACP governance stack
@@ -45,12 +49,12 @@ Normative link: This is a new U.Episteme artifact created by abduction and there
 
 Evaluation of ACP-HYP-001 against required plausibility filters. At least two filters are mandatory.
 
-| Filter | Assessment of ACP-HYP-001 | Notes |
-| --- | --- | --- |
-| Parsimony | Moderate / Acceptable. Hypothesis reuses existing FPF primitives (sentinel, PathSlice, E.TGA, DecisionLog, trust & assurance calculus) and adds only a telemetry schema + process for reconstruction. No new core theory is introduced; complexity is largely implementation detail. | Aligns with FPF guidance that abduction should introduce minimal new complexity consistent with solving the anomaly. |
-| Explanatory Power | High. If true, the hypothesis explains how to derive a defensible assurance story purely from ACP telemetry, resolve uncertainty about gate/sentinel enforcement, and check ACP state machine conformance. It directly addresses ACP‑ANOM‑001 instead of only local symptoms. | Supports FPF intent that the selected hypothesis should actually resolve the framed anomaly, not just alleviate symptoms. |
-| Consistency | High. Hypothesis is consistent with FPF’s Canonical Reasoning Cycle and Explore → Shape → Evidence → Operate state machine, which already assume artifacts progress through states driven by structured reasoning and assurance evidence. It locates assurance at the sentinel surface, which is already an FPF‑conformant control layer. |  |
-| Falsifiability | High. Hypothesis implies concrete, testable predictions about reconstructability of E.TGA runs, detectability of injected protocol violations, and impact of gate/sentinel hardening on computed R/CL. These predictions can be evaluated by simulation and real ACP deployments. | Satisfies FPF’s requirement that selected hypotheses generate clear, testable predictions. |
+| Filter            | Assessment of ACP-HYP-001                                                                                                                                                                                                                                                                                                                 | Notes                                                                                                                     |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Parsimony         | Moderate / Acceptable. Hypothesis reuses existing FPF primitives (sentinel, PathSlice, E.TGA, DecisionLog, trust & assurance calculus) and adds only a telemetry schema + process for reconstruction. No new core theory is introduced; complexity is largely implementation detail.                                                      | Aligns with FPF guidance that abduction should introduce minimal new complexity consistent with solving the anomaly.      |
+| Explanatory Power | High. If true, the hypothesis explains how to derive a defensible assurance story purely from ACP telemetry, resolve uncertainty about gate/sentinel enforcement, and check ACP state machine conformance. It directly addresses ACP‑ANOM‑001 instead of only local symptoms.                                                             | Supports FPF intent that the selected hypothesis should actually resolve the framed anomaly, not just alleviate symptoms. |
+| Consistency       | High. Hypothesis is consistent with FPF’s Canonical Reasoning Cycle and Explore → Shape → Evidence → Operate state machine, which already assume artifacts progress through states driven by structured reasoning and assurance evidence. It locates assurance at the sentinel surface, which is already an FPF‑conformant control layer. |                                                                                                                           |
+| Falsifiability    | High. Hypothesis implies concrete, testable predictions about reconstructability of E.TGA runs, detectability of injected protocol violations, and impact of gate/sentinel hardening on computed R/CL. These predictions can be evaluated by simulation and real ACP deployments.                                                         | Satisfies FPF’s requirement that selected hypotheses generate clear, testable predictions.                                |
 
 Plausibility conclusion: On current information, ACP-HYP-001 is retained as the prime hypothesis for addressing ACP-ANOM-001. It balances parsimony and explanatory power while remaining consistent with the FPF assurance stack.
 

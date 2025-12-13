@@ -1,4 +1,4 @@
 [submodule "core/roadmap/sub-ACP"]
 	path = core/roadmap/sub-ACP
-	url = https://github.com/venikman/sub-ACP
+	url = https://github.com/agentclientprotocol/agent-client-protocol
 	branch = main

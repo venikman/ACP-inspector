@@ -8,7 +8,13 @@ It aims to give you:
 - **Runtime holon**: transports, clients, and agents (IO, processes, stdio wiring).
 - **Sentinel holon**: stateful validation and assurance over ACP traffic.
 
-Normative behavior follows the published ACP spec and schema. This repo adds a First Principles Framework (FPF) view on assurance and observability.
+Normative behavior follows the published ACP spec and schema:
+
+- Spec source of truth (GitHub): https://github.com/agentclientprotocol/agent-client-protocol
+- Overview/intro (website): https://agentclientprotocol.com/overview/introduction
+- Local spec pin (submodule): `core/roadmap/sub-ACP` @ `v0.10.2` (`8e3919b7ab494cf2d19326e2e17c5e7aeb15e366`)
+
+This repo adds a First Principles Framework (FPF) view on assurance and observability.
 
 ## Who benefits (and how)
 
@@ -124,7 +130,7 @@ We align with the E.4 **Artefact Architecture**:
 - `src/Acp.Protocol.fs` — protocol state machine (initialize → sessions → prompt turns → updates → cancel).
 - `src/Acp.Validation.fs` — validation lanes/findings, protocol-error bridge, `runWithValidation` helper.
 - `src/Acp.RuntimeAdapter.fs` — runtime boundary: `validateInbound`/`validateOutbound` with profile-aware checks.
-- `tooling/docs/acp-fsharp-mvp.md` — MVP domain model and state machine narrative.
+- `tooling/docs/acp-fsharp-protocol.md` — protocol model and state machine narrative (spec parity).
 - `tooling/docs/runtime-integration.md` — adapter contract, lane semantics, JS/TS mirroring guidance.
 - `tooling/docs/error-reporting.md` — Problem Details (RFC 9457) surface with ACP/FPF extensions and telemetry hooks.
 - `tooling/docs/project-rules.md` — repo conventions: lanes/labels, branch naming, PR checklist, testing minima.
@@ -143,6 +149,8 @@ We align with the E.4 **Artefact Architecture**:
 
 - **Treat the ACP spec as normative.**  
   If this repo and the published spec disagree, the spec wins; open an issue and tag the discrepancy.
+  - Spec source of truth (GitHub): https://github.com/agentclientprotocol/agent-client-protocol
+  - Overview/intro (website): https://agentclientprotocol.com/overview/introduction
 
 - **Keep holons separate.**  
   Avoid mixing protocol types, runtime IO concerns, and sentinel rules in the same module.

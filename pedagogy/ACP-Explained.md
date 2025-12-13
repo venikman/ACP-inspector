@@ -5,6 +5,15 @@
 - Audience: Product / leadership / non-implementers
 - Status: Stable draft
 
+Spec sources:
+
+- GitHub (source of truth): https://github.com/agentclientprotocol/agent-client-protocol
+- Overview/intro: https://agentclientprotocol.com/overview/introduction
+
+Note for this repo:
+
+- ACP-sentinel’s near-term plan is **protocol-first** (spec parity). This explainer is context, not a roadmap driver. See `core/roadmap/ACP-slice-01.md`.
+
 ACP is a common “language” that lets code editors (like VS Code, JetBrains IDEs, etc.) talk to AI coding assistants in a consistent way. It’s an open standard created so any editor can plug into any compatible AI coding tool without custom one‑off integrations.
 
 ## Simple explanation
