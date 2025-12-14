@@ -1,0 +1,10 @@
+{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess-001","update":{"type":"agentMessage","message":{"type":"text","text":"Hello, this is a test message for codec benchmarking. It contains enough text to be realistic."}}},"id":null}
+{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess-001","update":{"type":"toolCallStart","toolCall":{"id":"tc-001","name":"read_file","status":"in_progress","approvalState":"approved"}}},"id":null}
+{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess-001","update":{"type":"toolCallComplete","toolCall":{"id":"tc-001","name":"read_file","status":"completed","approvalState":"approved"}}},"id":null}
+{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess-001","update":{"type":"currentMode","currentModeId":"default"}},"id":null}
+{"jsonrpc":"2.0","result":{"sessionId":"sess-002","modes":{"currentModeId":"default","availableModes":[{"id":"default","name":"Default","description":"Standard mode"}]}},"id":1}
+{"jsonrpc":"2.0","result":{"stopReason":"end_turn"},"id":2}
+{"jsonrpc":"2.0","error":{"code":-32600,"message":"Invalid Request","data":null},"id":3}
+{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":1,"clientCapabilities":{"fs":{"readTextFile":true,"writeTextFile":true},"terminal":true},"clientInfo":{"name":"test","version":"1.0"}},"id":4}
+{"jsonrpc":"2.0","method":"session/prompt","params":{"sessionId":"sess-001","prompt":[{"type":"text","text":"What is 2+2?"}]},"id":5}
+{"jsonrpc":"2.0","method":"fs/readTextFile","params":{"path":"/tmp/test.txt"},"id":6}
