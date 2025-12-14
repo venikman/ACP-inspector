@@ -14,6 +14,11 @@
     <Compile Include="Acp.RepoPolicy.Tests.fs" />
     <Compile Include="Acp.Codec.Tests.fs" />
     <Compile Include="Acp.TraceReplay.Tests.fs" />
+    <Compile Include="Acp.Transport.Tests.fs" />
+    <Compile Include="Acp.Connection.Tests.fs" />
+    <Compile Include="Acp.SessionState.Tests.fs" />
+    <Compile Include="Acp.ToolCalls.Tests.fs" />
+    <Compile Include="Acp.Permissions.Tests.fs" />
     <Compile Include="Pbt/EvidenceRunner.fs" />
     <Compile Include="Pbt/Generators.fs" />
     <Compile Include="Pbt/TokenizerProperties.fs" />

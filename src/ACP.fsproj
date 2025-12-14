@@ -14,5 +14,10 @@
     <Compile Include="Acp.Validation.fs" />
     <Compile Include="Acp.ValidationFindingPins.fs" />
     <Compile Include="Acp.RuntimeAdapter.fs" />
+    <Compile Include="Acp.Transport.fs" />
+    <Compile Include="Acp.Connection.fs" />
+    <Compile Include="Acp.Contrib.SessionState.fs" />
+    <Compile Include="Acp.Contrib.ToolCalls.fs" />
+    <Compile Include="Acp.Contrib.Permissions.fs" />
   </ItemGroup>
 </Project>
