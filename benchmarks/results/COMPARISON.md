@@ -2,16 +2,27 @@
 
 All measurements taken with hyperfine (20 runs, 5 warmup) on Apple Silicon.
 
-## ⚠️ Critical: These SDKs Do Different Things
+## ⚠️ Critical: Benchmark "SDKs" ≠ Real SDKs
 
-| SDK            | What "codec" measures    | Validation Level                     |
-| -------------- | ------------------------ | ------------------------------------ |
-| **Rust**       | `serde_json::from_str()` | JSON syntax only                     |
-| **TypeScript** | `JSON.parse()`           | JSON syntax only                     |
-| **Python**     | `json.loads()`           | JSON syntax only                     |
-| **F#**         | Full `Codec.decode`      | **Complete ACP protocol validation** |
+| Benchmark  | What it measures         | Real SDK validation             |
+| ---------- | ------------------------ | ------------------------------- |
+| **Rust**   | `serde_json::from_str()` | (no official ACP SDK exists)    |
+| **TS**     | `JSON.parse()`           | **Zod schemas** in official SDK |
+| **Python** | `json.loads()`           | (no official ACP SDK exists)    |
+| **F#**     | Full `Codec.decode`      | ✅ Same as measured             |
 
-**The F# SDK is the only one doing real protocol work:**
+### The Official TypeScript SDK Validates Too!
+
+The official `@agentclientprotocol/sdk` by Zed Industries uses **Zod schema validation**:
+
+```typescript
+// From official SDK - every request is validated
+const validatedParams = validate.zInitializeRequest.parse(params);
+```
+
+**Our benchmark TypeScript/Python/Rust are NOT real SDKs** - they're just `JSON.parse()` wrappers. A fair comparison would need to include Zod validation overhead.
+
+### What Both Real SDKs Validate
 
 - JSON-RPC 2.0 envelope validation
 - Request/response ID correlation and duplicate detection
