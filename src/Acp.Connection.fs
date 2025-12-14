@@ -251,19 +251,23 @@ module Connection =
 
         let extractRequestId (json: string) : RequestId option =
             try
-                let node = System.Text.Json.Nodes.JsonNode.Parse(json)
-
-                match box node with
+                match System.Text.Json.Nodes.JsonNode.Parse(json) with
                 | null -> None
-                | _ ->
-                    match node.AsObject().TryGetPropertyValue("id") with
-                    | true, idNode when not (isNull (box idNode)) ->
-                        match idNode.GetValueKind() with
-                        | System.Text.Json.JsonValueKind.Number -> Some(RequestId.Number(idNode.GetValue<int64>()))
-                        | System.Text.Json.JsonValueKind.String -> Some(RequestId.String(idNode.GetValue<string>()))
-                        | System.Text.Json.JsonValueKind.Null -> Some RequestId.Null
-                        | _ -> None
-                    | _ -> None
+                | node ->
+                    let jsonObj = node.AsObject()
+                    let mutable idNode: System.Text.Json.Nodes.JsonNode | null = null
+
+                    if jsonObj.TryGetPropertyValue("id", &idNode) then
+                        match Option.ofObj idNode with
+                        | None -> Some RequestId.Null
+                        | Some idNode ->
+                            match idNode.GetValueKind() with
+                            | System.Text.Json.JsonValueKind.Number -> Some(RequestId.Number(idNode.GetValue<int64>()))
+                            | System.Text.Json.JsonValueKind.String -> Some(RequestId.String(idNode.GetValue<string>()))
+                            | System.Text.Json.JsonValueKind.Null -> Some RequestId.Null
+                            | _ -> None
+                    else
+                        None
             with _ ->
                 None
 

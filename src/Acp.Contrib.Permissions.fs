@@ -71,9 +71,7 @@ module Permissions =
             response
 
         let tryAutoRespond requestId (request: RequestPermissionParams) : bool =
-            let matchingRule =
-                autoRules
-                |> List.tryFind (fun rule -> rule.predicate request)
+            let matchingRule = autoRules |> List.tryFind (fun rule -> rule.predicate request)
 
             match matchingRule with
             | Some rule ->
@@ -175,7 +173,8 @@ module Permissions =
             | None -> false
             | Some state ->
                 // Complete the task with Cancelled
-                state.completionSource.TrySetResult(RequestPermissionOutcome.Cancelled) |> ignore
+                state.completionSource.TrySetResult(RequestPermissionOutcome.Cancelled)
+                |> ignore
 
                 // Remove from pending
                 pending <- pending |> Map.remove requestId

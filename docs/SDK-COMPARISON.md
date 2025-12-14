@@ -6,7 +6,7 @@ This document compares the ACP-Inspector F# SDK with the official TypeScript and
 
 | Aspect               | F# SDK (ACP-Inspector) | Python SDK      | TypeScript SDK            |
 | -------------------- | ---------------------- | --------------- | ------------------------- |
-| **Language**         | F# (.NET 9)            | Python 3.10+    | TypeScript/Node.js        |
+| **Language**         | F# (.NET 10)           | Python 3.10+    | TypeScript/Node.js        |
 | **Protocol Version** | 0.10.x                 | 0.10.x          | 0.10.x                    |
 | **License**          | -                      | Apache 2.0      | Apache 2.0                |
 | **Package**          | NuGet (local)          | PyPI: `acp-sdk` | npm: `@anthropic/acp-sdk` |

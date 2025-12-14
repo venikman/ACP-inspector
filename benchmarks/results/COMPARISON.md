@@ -231,7 +231,7 @@ cd benchmarks/sdk-benchmarks/rust && cargo build --release && cd -
 # Run comparison
 hyperfine \
   './benchmarks/sdk-benchmarks/rust/target/release/acp-benchmark --mode codec --count 10000' \
-  'dotnet apps/ACP.Benchmark/bin/Release/net9.0/ACP.Benchmark.dll --mode codec --count 10000' \
+  'dotnet apps/ACP.Benchmark/bin/Release/net10.0/ACP.Benchmark.dll --mode codec --count 10000' \
   'node benchmarks/sdk-benchmarks/typescript/dist/benchmark.js --mode codec --count 10000' \
   'python3 benchmarks/sdk-benchmarks/python/benchmark.py --mode codec --count 10000'
 ```

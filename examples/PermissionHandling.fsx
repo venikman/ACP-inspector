@@ -4,7 +4,7 @@
 /// Demonstrates how to use PermissionBroker to manage permission
 /// requests with manual responses and auto-response rules.
 
-#r "../src/bin/Debug/net9.0/ACP.dll"
+#r "../src/bin/Debug/net10.0/ACP.dll"
 
 open System
 open System.Threading.Tasks

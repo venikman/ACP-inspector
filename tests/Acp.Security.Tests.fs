@@ -33,7 +33,12 @@ module SecurityTests =
         let repoRoot = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, ".."))
 
         let excludedParts =
-            [ "/bin/"; "/obj/"; "/.git/"; "/vendor/"; "/tests/TestResults/" ]
+            [ "/bin/"
+              "/obj/"
+              "/.git/"
+              "/vendor/"
+              "/node_modules/"
+              "/tests/TestResults/" ]
 
         let files =
             Directory.EnumerateFiles(repoRoot, "*.*", SearchOption.AllDirectories)

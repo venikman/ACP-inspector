@@ -41,7 +41,8 @@ module ToolCalls =
         let mutable toolCallOrder: string list = []
         let mutable toolCalls: Map<string, MutableToolCallState> = Map.empty
 
-        let mutable subscribers: (ToolCallView list -> SessionUpdateNotification -> unit) list = []
+        let mutable subscribers: (ToolCallView list -> SessionUpdateNotification -> unit) list =
+            []
 
         let toView (id: string) (state: MutableToolCallState) : ToolCallView =
             { toolCallId = id
@@ -55,11 +56,11 @@ module ToolCalls =
 
         let allViews () : ToolCallView list =
             toolCallOrder
-            |> List.choose (fun id ->
-                toolCalls |> Map.tryFind id |> Option.map (toView id))
+            |> List.choose (fun id -> toolCalls |> Map.tryFind id |> Option.map (toView id))
 
         let notifySubscribers (notification: SessionUpdateNotification) =
             let views = allViews ()
+
             for callback in subscribers do
                 callback views notification
 
@@ -159,7 +160,8 @@ module ToolCalls =
 
         /// Check if any tool calls are in progress.
         member _.HasInProgress() : bool =
-            toolCalls |> Map.exists (fun _ state -> state.status = ToolCallStatus.InProgress)
+            toolCalls
+            |> Map.exists (fun _ state -> state.status = ToolCallStatus.InProgress)
 
         /// Clear all tracked tool calls.
         member _.Reset() =

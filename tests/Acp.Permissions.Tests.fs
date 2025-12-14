@@ -24,10 +24,18 @@ let makePermissionRequest toolCallId title : RequestPermissionParams =
     { sessionId = sessionId
       toolCall = makeToolCallUpdate toolCallId title
       options =
-          [ { optionId = "allow-once"; name = "Allow Once"; kind = PermissionOptionKind.AllowOnce }
-            { optionId = "allow-always"; name = "Allow Always"; kind = PermissionOptionKind.AllowAlways }
-            { optionId = "reject-once"; name = "Reject Once"; kind = PermissionOptionKind.RejectOnce }
-            { optionId = "reject-always"; name = "Reject Always"; kind = PermissionOptionKind.RejectAlways } ] }
+        [ { optionId = "allow-once"
+            name = "Allow Once"
+            kind = PermissionOptionKind.AllowOnce }
+          { optionId = "allow-always"
+            name = "Allow Always"
+            kind = PermissionOptionKind.AllowAlways }
+          { optionId = "reject-once"
+            name = "Reject Once"
+            kind = PermissionOptionKind.RejectOnce }
+          { optionId = "reject-always"
+            name = "Reject Always"
+            kind = PermissionOptionKind.RejectAlways } ] }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Empty State
@@ -157,6 +165,7 @@ let ``WaitForResponse completes when Respond is called`` () =
         let! result = waitTask
 
         Assert.True(result.IsSome)
+
         match result.Value with
         | RequestPermissionOutcome.Selected optionId -> Assert.Equal("allow-once", optionId)
         | RequestPermissionOutcome.Cancelled -> Assert.Fail("Expected Selected, got Cancelled")
@@ -180,6 +189,7 @@ let ``WaitForResponse completes with Cancelled when Cancel is called`` () =
         let! result = waitTask
 
         Assert.True(result.IsSome)
+
         match result.Value with
         | RequestPermissionOutcome.Cancelled -> () // Expected
         | RequestPermissionOutcome.Selected _ -> Assert.Fail("Expected Cancelled, got Selected")
@@ -234,8 +244,8 @@ let ``AddAutoRule applies to matching requests`` () =
     let broker = PermissionBroker()
 
     // Add rule to auto-allow all Execute operations
-    broker.AddAutoRule(fun req ->
-        req.toolCall.kind = Some ToolKind.Execute, "allow-always")
+    broker.AddAutoRule(fun req -> req.toolCall.kind = Some ToolKind.Execute, "allow-always")
+    |> ignore
 
     let request = makePermissionRequest "tc1" "Execute bash"
     let requestId = broker.Enqueue(request)
@@ -253,7 +263,7 @@ let ``AddAutoRule does not apply when predicate returns false`` () =
     let broker = PermissionBroker()
 
     // Add rule that never matches
-    broker.AddAutoRule(fun _ -> false, "allow-always")
+    broker.AddAutoRule(fun _ -> false, "allow-always") |> ignore
 
     let request = makePermissionRequest "tc1" "Execute bash"
     let requestId = broker.Enqueue(request)
@@ -266,16 +276,18 @@ let ``Multiple auto rules checked in order`` () =
     let broker = PermissionBroker()
 
     // First rule rejects Read operations
-    broker.AddAutoRule(fun req ->
-        req.toolCall.kind = Some ToolKind.Read, "reject-once")
+    broker.AddAutoRule(fun req -> req.toolCall.kind = Some ToolKind.Read, "reject-once")
+    |> ignore
 
     // Second rule allows everything else
-    broker.AddAutoRule(fun _ -> true, "allow-once")
+    broker.AddAutoRule(fun _ -> true, "allow-once") |> ignore
 
     // Read request should be rejected
     let readRequest =
         { sessionId = sessionId
-          toolCall = { makeToolCallUpdate "tc1" "Read file" with kind = Some ToolKind.Read }
+          toolCall =
+            { makeToolCallUpdate "tc1" "Read file" with
+                kind = Some ToolKind.Read }
           options = (makePermissionRequest "x" "x").options }
 
     let _ = broker.Enqueue(readRequest)
@@ -341,7 +353,7 @@ let ``Subscribe receives new request events`` () =
     Assert.True(received.IsSome)
     Assert.Equal("tc1", received.Value.request.toolCall.toolCallId)
 
-    unsubscribe()
+    unsubscribe ()
 
 [<Fact>]
 let ``SubscribeToResponses receives response events`` () =
@@ -357,4 +369,4 @@ let ``SubscribeToResponses receives response events`` () =
     Assert.Equal(requestId, received.Value.requestId)
     Assert.Equal("allow-once", received.Value.selectedOptionId)
 
-    unsubscribe()
+    unsubscribe ()

@@ -61,7 +61,8 @@ module SessionState =
         let mutable agentMessages: ContentChunk list = []
         let mutable agentThoughts: ContentChunk list = []
 
-        let mutable subscribers: (SessionSnapshot -> SessionUpdateNotification -> unit) list = []
+        let mutable subscribers: (SessionSnapshot -> SessionUpdateNotification -> unit) list =
+            []
 
         let notifySubscribers (snapshot: SessionSnapshot) (notification: SessionUpdateNotification) =
             for callback in subscribers do
@@ -84,7 +85,10 @@ module SessionState =
                     sessionId <- Some notificationSessionId
                 else
                     raise (
-                        SessionNotificationMismatchError(SessionId.value currentId, SessionId.value notificationSessionId)
+                        SessionNotificationMismatchError(
+                            SessionId.value currentId,
+                            SessionId.value notificationSessionId
+                        )
                     )
 
         let applyToolCall (tc: ToolCall) =

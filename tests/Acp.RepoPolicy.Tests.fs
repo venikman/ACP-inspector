@@ -13,6 +13,7 @@ module RepoPolicyTests =
         [ "/bin/"
           "/obj/"
           "/.git/"
+          "/benchmarks/"
           "/tests/bin/"
           "/tests/obj/"
           "/tests/TestResults/" ]
