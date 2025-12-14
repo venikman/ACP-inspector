@@ -108,6 +108,11 @@ Common commands:
 - SSE tap (reads `data:` lines): `sse --url https://host/sse --record trace.jsonl`
 - Stdio proxy between two commands: `proxy-stdio --client-cmd "<cmd>" --agent-cmd "<cmd>" --record trace.jsonl`
 
+## Running tests
+
+- All tests: `dotnet test tests/ACP.Tests.fsproj -c Release`
+- Optional: only trace replay tests: `dotnet test tests/ACP.Tests.fsproj -c Release --filter FullyQualifiedName~TraceReplay`
+
 ---
 
 ## How to work in this repo
