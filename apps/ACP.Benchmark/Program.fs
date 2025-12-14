@@ -172,6 +172,52 @@ let runCodec (count: int) =
 
     0
 
+/// Raw JSON benchmark: pure System.Text.Json parsing (no ACP validation)
+/// This isolates .NET runtime overhead from codec logic
+let runRawJson (count: int) =
+    let messages =
+        [| initializeRequest
+           sessionNewRequest
+           sessionUpdateNotification
+           promptRequest |]
+
+    let sw = Stopwatch.StartNew()
+    let mutable ops = 0
+
+    for i in 0 .. (count - 1) do
+        let msg = messages[i % messages.Length]
+
+        // Raw JSON parse only (like TS/Python/Rust benchmarks do)
+        let doc = System.Text.Json.JsonDocument.Parse(msg)
+        doc.Dispose()
+        ops <- ops + 1
+
+        // Raw JSON serialize
+        let response =
+            System.Text.Json.JsonSerializer.Serialize(
+                {| jsonrpc = "2.0"
+                   result = {| sessionId = "sess-bench" |}
+                   id = i |}
+            )
+
+        ops <- ops + 1
+
+    sw.Stop()
+
+    let opsPerSec =
+        if sw.ElapsedMilliseconds > 0L then
+            float ops / (float sw.ElapsedMilliseconds / 1000.0)
+        else
+            float ops * 1000.0
+
+    printfn
+        """{"status":"ok","mode":"raw-json","ops":%d,"elapsed_ms":%d,"ops_per_sec":%.0f}"""
+        ops
+        sw.ElapsedMilliseconds
+        opsPerSec
+
+    0
+
 /// Token throughput benchmark: measure tokens/sec through SDK
 /// Simulates streaming LLM output with content chunks
 let runTokens (count: int) (tokensPerMessage: int) =
@@ -249,7 +295,11 @@ let main args =
     | "throughput" -> runThroughput count
     | "codec" -> runCodec count
     | "tokens" -> runTokens count tokensPerMsg
+    | "raw-json" -> runRawJson count
     | other ->
         eprintfn "Unknown mode: %s" other
-        eprintfn "Usage: ACP.Benchmark --mode <cold-start|roundtrip|throughput|codec|tokens> [--count N] [--tokens T]"
+
+        eprintfn
+            "Usage: ACP.Benchmark --mode <cold-start|roundtrip|throughput|codec|tokens|raw-json> [--count N] [--tokens T]"
+
         1
