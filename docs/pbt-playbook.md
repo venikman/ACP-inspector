@@ -43,8 +43,8 @@ FsCheck config is env‑driven in `tests/Pbt/Generators.fs`:
 
 Scripts:
 
-- `tooling/scripts/run-pbt.sh` runs only PBT tests.
-- `tooling/scripts/replay-pbt.sh <seed> <size> [filter]` reproduces failures.
+- `scripts/run-pbt.sh` runs only PBT tests.
+- `scripts/replay-pbt.sh <seed> <size> [filter]` reproduces failures.
 
 PR checklist: if a PBT fails, paste the seed, size, and shrunk trace into the PR.
 

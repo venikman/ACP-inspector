@@ -5,7 +5,7 @@ Run the minimal validation flow used in the main README, but as a runnable FSI s
 Steps:
 
 1. Build the library (from repo root): `dotnet build src/ACP.fsproj`
-2. Execute the script from repo root (path matters for the `#I`): `dotnet fsi tooling/examples/hello-inbound-outbound/hello.fsx`
+2. Execute the script from repo root (path matters for the `#I`): `dotnet fsi docs/examples/hello-inbound-outbound/hello.fsx`
 
 What it does:
 

@@ -68,7 +68,7 @@ else encodeAndSend res.message
 
 ## Error surface (HTTP runtimes)
 
-- HTTP runtimes MUST surface failures as RFC 9457 `application/problem+json` with the ACP extensions in `tooling/docs/error-reporting.md` (path_id, path_slice_id, assurance_lane, policy_id, sentinel_id, acp_state, etc.).
+- HTTP runtimes MUST surface failures as RFC 9457 `application/problem+json` with the ACP extensions in `docs/error-reporting.md` (path_id, path_slice_id, assurance_lane, policy_id, sentinel_id, acp_state, etc.).
 - The same Problem Details object should be mirrored into telemetry (logs/spans) so PathSlice‑keyed refresh (G.11) can act on gate failures.
 
 ## How to mirror in JS/TS runtime

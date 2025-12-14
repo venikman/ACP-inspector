@@ -3,10 +3,10 @@ set -euo pipefail
 
 # Replays a failing PBT run by fixing seed and size.
 # Usage:
-#   tooling/scripts/replay-pbt.sh <seed> <size> [filter]
+#   scripts/replay-pbt.sh <seed> <size> [filter]
 #
 # Example:
-#   tooling/scripts/replay-pbt.sh 12345 25 "TraceReplay"
+#   scripts/replay-pbt.sh 12345 25 "TraceReplay"
 
 if [[ $# -lt 2 ]]; then
   echo "usage: $0 <seed> <size> [filter]"
@@ -17,7 +17,7 @@ seed="$1"
 size="$2"
 filter="${3:-Acp.Tests.Pbt}"
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")"/../.. && pwd)"
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
 cd "$repo_root/tests"
 
 DOTNET_BIN="${DOTNET_BIN:-dotnet}"

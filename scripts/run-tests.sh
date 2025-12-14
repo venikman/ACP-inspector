@@ -6,7 +6,7 @@ set -euo pipefail
 # - Console summary (normal verbosity)
 # - tests/TestResults.trx (overwritten on each run)
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")"/../.. && pwd)"
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
 cd "$repo_root/tests"
 
 get_target_frameworks() {
@@ -121,7 +121,7 @@ if ! dotnet_has_required_runtimes "$DOTNET_BIN" "${required_netcoreapp_majors[@]
   else
     echo "ERROR: $DOTNET_BIN can't run target framework(s) '$tfms' (missing Microsoft.NETCore.App runtime(s): ${required_netcoreapp_majors[*]:-(unknown)})." >&2
     echo "       Try one of:" >&2
-    echo "       - Use dotnet 9 on PATH: tooling/scripts/run-tests.sh" >&2
+    echo "       - Use dotnet 9 on PATH: scripts/run-tests.sh" >&2
     echo "       - Install the missing runtime(s) for $tfms" >&2
     echo "       - Or set DOTNET_BIN to a dotnet that has them (e.g. DOTNET_BIN=\$(command -v dotnet))" >&2
     exit 1

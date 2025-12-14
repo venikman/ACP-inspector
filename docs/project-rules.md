@@ -28,9 +28,9 @@ This repository is the reference domain/protocol/validation layer. Keep it lean 
 
 ## Docs to update when behavior changes
 
-- `tooling/docs/runtime-integration.md`
+- `docs/runtime-integration.md`
 - `core/UTS.md` (lane/profile tables)
-- `tooling/docs/acp-fsharp-protocol.md` (spec narrative)
+- `docs/acp-fsharp-protocol.md` (spec narrative)
 
 ## Testing minima
 

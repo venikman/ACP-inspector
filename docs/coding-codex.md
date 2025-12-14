@@ -140,7 +140,7 @@ Modeling guidelines:
      - Non‑normative for validation, unless the project later defines explicit rules.
    - Avoid relying on `_meta` content for protocol correctness.
 
-## 6. Additional guardrails (keep in sync with tooling/docs/AGENT_ACP_SENTINEL.md)
+## 6. Additional guardrails (keep in sync with docs/AGENT_ACP_SENTINEL.md)
 
 - **Spec pin:** Note the ACP spec version/date we target in code comments and docs; update when the upstream spec revs.
 - **Stdio framing defaults:** Assume UTF‑8, LF line endings, and bounded message size/timeouts; document deviations explicitly.

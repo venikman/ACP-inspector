@@ -8,7 +8,7 @@ set -euo pipefail
 #   ACP_PBT_END_SIZE
 #   ACP_PBT_SEED
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")"/../.. && pwd)"
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
 cd "$repo_root/tests"
 
 DOTNET_BIN="${DOTNET_BIN:-dotnet}"

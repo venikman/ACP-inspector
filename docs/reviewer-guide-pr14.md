@@ -5,10 +5,12 @@ This PR adds a small F#‑subset tokenizer with spans and uses it in `Acp.Eval` 
 ## Intended scope / non‑goals
 
 **Intended use**
+
 - Provide “good‑enough” lexing for Eval heuristics on ACP prompt/toolcall text.
 - Surface coarse signals: unknown‑token ratio, unclosed strings, unclosed block comments.
 
 **Non‑goals**
+
 - Full compiler‑accurate F# lexing/parsing.
 - Perfect coverage of all F# syntax (active patterns, computation expressions, SRTP edge cases, etc.).
 - Emitting semantic findings (type errors, binding issues).
@@ -40,10 +42,10 @@ Tokenizer‑driven Eval checks are validated against a tiny golden corpus in `te
 
 Defaults live in `Acp.Eval.defaultProfile`:
 
-| Setting | Default | Rationale |
-|---|---:|---|
-| `fsharpUnknownTokenRatioThreshold` | 0.10 | tolerate minor unsupported syntax, but warn on non‑F# text |
-| `fsharpMinCodeTokenCount` | 5 | avoid firing on prose / short fragments |
+| Setting                            | Default | Rationale                                                  |
+| ---------------------------------- | ------: | ---------------------------------------------------------- |
+| `fsharpUnknownTokenRatioThreshold` |    0.10 | tolerate minor unsupported syntax, but warn on non‑F# text |
+| `fsharpMinCodeTokenCount`          |       5 | avoid firing on prose / short fragments                    |
 
 ## Known limitations / risks
 
@@ -54,7 +56,7 @@ Defaults live in `Acp.Eval.defaultProfile`:
 ## How to verify
 
 - Run unit + golden tests: `dotnet test tests/ACP.Tests.fsproj`.
-- Run tokenizer PBT only: `tooling/scripts/run-pbt.sh` (filter `TokenizerProperties` if needed).
+- Run tokenizer PBT only: `scripts/run-pbt.sh` (filter `TokenizerProperties` if needed).
 
 ## Three reviewer questions
 

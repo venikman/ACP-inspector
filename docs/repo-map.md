@@ -13,8 +13,9 @@ Touch when: updating ontology, adding rows to UTS, or recording hypotheses/decis
 ## Holon 2 — Tooling Reference
 
 - `src/` — executable F# code: domain, protocol state machine, validation, runtime adapter.
-- `tooling/docs/` — guidance and playbooks (runtime integration, error surface, project rules, protocol notes, agent/sentinel playbook, explainers, eval patterns).
-- `tooling/examples/` — runnable scripts for sanity checking the library from FSI.
+- `docs/` — guidance and playbooks (runtime integration, error surface, project rules, protocol notes, agent/sentinel playbook, explainers, eval patterns).
+- `docs/examples/` — runnable scripts for sanity checking the library from FSI.
+- `scripts/` — helper scripts for tests and PBT (TRX reports, replay).
 - `tests/` — executable evidence: protocol/runtime/sentinel tests and `golden/` fixtures.
 - `core/roadmap/` (+ spec submodule `core/roadmap/sub-ACP` and `core/roadmap/ACP-slice-01.md`) — roadmap and spec parity tracking; treated as implementation slices.
 
@@ -23,5 +24,5 @@ Touch when: implementing protocol/runtime/validation changes, adjusting contribu
 ## Quick rules of thumb
 
 - Keep holons separate: don’t mix runtime code with ontology files.
-- Add docs next to the holon they serve (implementation docs in `tooling/docs`, ontology/terms in `core/`).
+- Add docs next to the holon they serve (implementation docs in `docs`, ontology/terms in `core/`).
 - Roadmap stays in `core/roadmap` so planning is reviewable like code.
