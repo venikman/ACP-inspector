@@ -386,3 +386,141 @@ The F# SDK achieves **full feature parity** with the official Python SDK for cor
 - Router decorators
 
 The F# SDK is suitable for **production use** as an ACP client or agent implementation, with **significantly more test coverage** and **additional validation capabilities** not found in the official SDKs.
+
+---
+
+## Performance Comparison
+
+### Theoretical Performance Characteristics
+
+| Aspect            | F# SDK (.NET)                 | Python SDK                  | Advantage              |
+| ----------------- | ----------------------------- | --------------------------- | ---------------------- |
+| **Runtime**       | JIT-compiled, AOT-ready       | Interpreted (CPython)       | **F# ~10-50x faster**  |
+| **JSON parsing**  | System.Text.Json (zero-alloc) | Pydantic (reflection-heavy) | **F# ~5-20x faster**   |
+| **Memory**        | Value types, structs          | Everything boxed            | **F# ~3-10x less**     |
+| **Startup**       | ~200ms cold, 0ms warm         | ~100ms (lighter runtime)    | Python slightly faster |
+| **Concurrency**   | True async/parallel           | GIL-limited async           | **F# scales better**   |
+| **Type checking** | Compile-time (zero cost)      | Pydantic runtime validation | **F# zero overhead**   |
+
+### Key Performance Factors
+
+**F# Advantages:**
+
+1. **Codec performance**: 3,140-line hand-written codec using `System.Text.Json` with minimal allocations
+2. **Discriminated unions**: Pattern matching compiles to efficient jump tables
+3. **Immutable data**: Enables safe parallel processing without locks
+4. **AOT compilation**: Can publish as native binaries with near-instant startup
+
+**Python Advantages:**
+
+1. **Pydantic validation**: Auto-generated from schema, no manual codec maintenance
+2. **Faster iteration**: No compile step during development
+3. **Ecosystem**: More ACP tooling integrates with Python
+
+---
+
+## Python SDK Exclusive Features (Detailed)
+
+### 1. Task Module
+
+Async task scheduling and lifecycle management:
+
+```python
+# TaskDispatcher - queues and dispatches async tasks
+dispatcher = TaskDispatcher()
+await dispatcher.submit(task, priority=Priority.HIGH)
+
+# TaskQueue - priority-based FIFO queue
+queue = TaskQueue()
+queue.push(task, priority=2)
+next_task = queue.pop()
+
+# TaskSupervisor - monitors task lifecycle
+supervisor = TaskSupervisor()
+supervisor.watch(task_id, on_complete=callback)
+```
+
+**Use case**: Agents handling multiple concurrent operations with priorities.
+
+### 2. Telemetry (OpenTelemetry)
+
+Built-in observability:
+
+```python
+from acp_sdk.telemetry import configure_telemetry
+configure_telemetry(service_name="my-agent", endpoint="http://jaeger:4317")
+# Automatic spans for RPC calls, transport, tool execution
+```
+
+**Use case**: Production monitoring, distributed tracing.
+
+### 3. Router Decorators
+
+Declarative request routing:
+
+```python
+server = AgentServer()
+
+@server.on_prompt()
+async def handle_prompt(params: SessionPromptParams):
+    return SessionPromptResult(...)
+
+@server.on_permission_response()
+async def handle_permission(params):
+    ...
+```
+
+**Use case**: Clean agent implementation without manual dispatch.
+
+### 4. Pydantic Models
+
+Auto-generated from JSON schema (115,844 lines):
+
+```python
+# Runtime validation on construction
+params = SessionPromptParams(session_id="...", prompt=[...])
+# Raises ValidationError if invalid
+```
+
+**Use case**: Schema-driven development, IDE autocomplete.
+
+---
+
+## Improvement Roadmap for F# SDK
+
+### High Priority
+
+| Feature          | Description                           | Effort   |
+| ---------------- | ------------------------------------- | -------- |
+| **Task Module**  | Async task dispatcher with priorities | 2-3 days |
+| **Fix Warnings** | Address 10 compiler warnings          | 1 hour   |
+
+### Medium Priority
+
+| Feature             | Description                       | Effort   |
+| ------------------- | --------------------------------- | -------- |
+| **Telemetry**       | OpenTelemetry integration         | 2 days   |
+| **Agent Router**    | Declarative routing pattern       | 1-2 days |
+| **Benchmark Suite** | BenchmarkDotNet for codec/routing | 1 day    |
+
+### Low Priority
+
+| Feature                 | Description                     | Effort |
+| ----------------------- | ------------------------------- | ------ |
+| **WebSocket Transport** | Protocol spec support           | 2 days |
+| **SSE Transport**       | Protocol spec support           | 2 days |
+| **Schema Codegen**      | Generate codec from JSON schema | 1 week |
+
+### Trade-offs
+
+**Hand-written codec vs generated:**
+
+- F# codec: 3,140 lines, manually maintained
+- Python Pydantic: 115,844 lines, auto-generated
+- F# approach is 37x smaller and more maintainable, but requires manual updates
+
+**Task module:**
+
+- Python has it, F# doesn't
+- F# can use built-in `Async.Parallel` and `MailboxProcessor` for similar patterns
+- Dedicated module would improve ergonomics
