@@ -108,10 +108,147 @@ Common commands:
 - SSE tap (reads `data:` lines): `sse --url https://host/sse --record trace.jsonl`
 - Stdio proxy between two commands: `proxy-stdio --client-cmd "<cmd>" --agent-cmd "<cmd>" --record trace.jsonl`
 
+## SDK Modules
+
+The SDK provides runtime components for building ACP clients and agents, comparable to the official TypeScript and Python SDKs.
+
+### Transport Layer (`Acp.Transport`)
+
+Abstractions for bidirectional communication:
+
+```fsharp
+open Acp.Transport
+
+// In-memory transport for testing
+let transport = MemoryTransport()
+do! transport.SendAsync("message")
+let! msg = transport.ReceiveAsync()
+
+// Duplex pair for client-agent testing
+let clientTransport, agentTransport = DuplexTransport.CreatePair()
+
+// Stdio transport for process communication
+let stdioTransport = StdioTransport(stdin, stdout)
+```
+
+### Connection Layer (`Acp.Connection`)
+
+High-level client and agent connections with JSON-RPC correlation:
+
+```fsharp
+open Acp.Connection
+
+// Client side
+let client = ClientConnection(transport)
+let! initResult = client.InitializeAsync({ clientName = "MyClient"; clientVersion = "1.0" })
+let! sessionResult = client.NewSessionAsync({})
+let! promptResult = client.PromptAsync({ sessionId = sid; prompt = [...]; expectedTurnId = None })
+
+// Agent side
+let handlers = {
+    onInitialize = fun p -> task { return Ok { agentName = "MyAgent"; agentVersion = "1.0" } }
+    onNewSession = fun p -> task { return Ok { sessionId = ...; modes = [...]; currentModeId = ... } }
+    onPrompt = fun p -> task { return Ok { sessionId = p.sessionId; outputTurnId = ... } }
+    onCancel = fun p -> Task.FromResult()
+    onSetMode = fun p -> task { return Ok { currentModeId = p.modeId } }
+}
+let agent = AgentConnection(transport, handlers)
+let! _ = agent.StartListening()
+```
+
+### Session State (`Acp.Contrib.SessionState`)
+
+Accumulates streaming session notifications into coherent snapshots:
+
+```fsharp
+open Acp.Contrib.SessionState
+
+let accumulator = SessionAccumulator()
+
+// Subscribe to updates
+let unsubscribe = accumulator.Subscribe(fun snapshot notification ->
+    printfn "Tool calls: %d" snapshot.toolCalls.Count)
+
+// Apply notifications as they arrive
+let snapshot = accumulator.Apply(notification)
+
+// Access current state
+let toolCalls = snapshot.toolCalls
+let currentMode = snapshot.currentModeId
+let messages = snapshot.agentMessages
+```
+
+### Tool Call Tracking (`Acp.Contrib.ToolCalls`)
+
+Tracks tool call lifecycle with status filtering:
+
+```fsharp
+open Acp.Contrib.ToolCalls
+
+let tracker = ToolCallTracker()
+
+// Apply session updates
+tracker.Apply(notification)
+
+// Query by status
+let pending = tracker.Pending()
+let inProgress = tracker.InProgress()
+let completed = tracker.Completed()
+let failed = tracker.Failed()
+
+// Check if work is ongoing
+if tracker.HasInProgress() then ...
+
+// Get specific tool call
+match tracker.TryGet("tool-call-id") with
+| Some tc -> printfn "Status: %A" tc.status
+| None -> ()
+```
+
+### Permission Handling (`Acp.Contrib.Permissions`)
+
+Manages permission requests with auto-response rules:
+
+```fsharp
+open Acp.Contrib.Permissions
+
+let broker = PermissionBroker()
+
+// Add auto-response rules
+broker.AddAutoRule(fun req ->
+    req.toolCall.kind = Some ToolKind.Read, "allow-always") |> ignore
+
+// Enqueue permission request
+let requestId = broker.Enqueue(permissionRequest)
+
+// Respond manually
+match broker.Respond(requestId, "allow-once") with
+| Ok response -> printfn "Allowed"
+| Error e -> printfn "Error: %s" e
+
+// Or wait async
+let! outcome = broker.WaitForResponseAsync(requestId)
+
+// Check pending
+for pending in broker.PendingRequests() do
+    printfn "Pending: %s" pending.request.toolCall.title
+```
+
+### Examples
+
+See the `examples/` directory for complete integration demos:
+
+- `BasicClientAgent.fsx` - Client-agent communication
+- `SessionStateTracking.fsx` - Notification accumulation
+- `ToolCallTracking.fsx` - Tool call lifecycle
+- `PermissionHandling.fsx` - Permission request/response
+- `FullIntegration.fsx` - Complete SDK integration
+
 ## Running tests
 
 - All tests: `dotnet test tests/ACP.Tests.fsproj -c Release`
 - Optional: only trace replay tests: `dotnet test tests/ACP.Tests.fsproj -c Release --filter FullyQualifiedName~TraceReplay`
+- SDK tests: `dotnet test tests/ACP.Tests.fsproj --filter "FullyQualifiedName~Transport|FullyQualifiedName~Connection|FullyQualifiedName~SessionState|FullyQualifiedName~ToolCalls|FullyQualifiedName~Permissions"`
 
 ---
 
