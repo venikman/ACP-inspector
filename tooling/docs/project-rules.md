@@ -11,6 +11,7 @@ This repository is the reference domain/protocol/validation layer. Keep it lean 
 - **Branch naming:** `<initials>/<ticket-id>-<slug>` e.g. `sn/har-28-runtime-adapter`.
 - **PR checklist:**
   - Tests run: `dotnet test tests/ACP.Tests.fsproj`.
+  - Commit hygiene: one “slice step” (parity-matrix row / ACP-P work item) per commit; don’t mix unrelated fixes.
   - Add/adjust docs if behavior or APIs change.
   - Note lane impact in the PR description (Protocol/Session/Transport/ToolSurface/Implementation).
 
