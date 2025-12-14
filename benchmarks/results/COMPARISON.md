@@ -2,7 +2,25 @@
 
 All measurements taken with hyperfine (20 runs, 5 warmup) on Apple Silicon.
 
-## Summary Table
+## ⚠️ Critical: These SDKs Do Different Things
+
+| SDK            | What "codec" measures    | Validation Level                     |
+| -------------- | ------------------------ | ------------------------------------ |
+| **Rust**       | `serde_json::from_str()` | JSON syntax only                     |
+| **TypeScript** | `JSON.parse()`           | JSON syntax only                     |
+| **Python**     | `json.loads()`           | JSON syntax only                     |
+| **F#**         | Full `Codec.decode`      | **Complete ACP protocol validation** |
+
+**The F# SDK is the only one doing real protocol work:**
+
+- JSON-RPC 2.0 envelope validation
+- Request/response ID correlation and duplicate detection
+- ACP method routing (~40 methods)
+- Type-safe domain object construction (SessionId, ContentBlock, StopReason, etc.)
+- Capability validation (fs, terminal, mcp, prompt)
+- Session state tracking
+
+## Summary Table (Raw Numbers)
 
 | Metric                    | Rust      | TypeScript | Python | F#      |
 | ------------------------- | --------- | ---------- | ------ | ------- |
@@ -96,6 +114,33 @@ When we tested F# with raw JSON parsing only (`--mode raw-json`), the codec over
 
 - ~46ms for 20K codec ops = schema validation cost
 - This is the price of **type safety and protocol correctness**
+
+### What You Get for That Time
+
+The F# codec (1300+ lines) validates:
+
+| Validation                    | What it catches                                      |
+| ----------------------------- | ---------------------------------------------------- |
+| **JSON-RPC envelope**         | Missing `jsonrpc`, wrong version, malformed `id`     |
+| **Method routing**            | Unknown methods, wrong direction (client↔agent)      |
+| **Request/Response tracking** | Duplicate IDs, orphaned responses                    |
+| **Type safety**               | Wrong field types, missing required fields           |
+| **Domain objects**            | Invalid SessionId, StopReason, ContentBlock variants |
+| **Capabilities**              | Unsupported features, protocol mismatches            |
+
+**Without validation (Rust/TS/Python approach):**
+
+- Malformed messages silently pass through
+- Type errors discovered at runtime, deep in business logic
+- Protocol violations cause cryptic failures
+- No request/response correlation
+
+**With validation (F# approach):**
+
+- Errors caught at codec boundary with clear messages
+- Type-safe domain objects guaranteed
+- Protocol violations rejected immediately
+- Full audit trail of message flow
 
 ### Real-World Implications
 
