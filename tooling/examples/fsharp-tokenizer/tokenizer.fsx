@@ -1,4 +1,4 @@
-#I "../../src/bin/Debug/net9.0"
+#I "../../../src/bin/Debug/net9.0"
 #r "ACP.dll"
 
 open Acp.FSharpTokenizer

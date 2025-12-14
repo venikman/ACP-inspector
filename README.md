@@ -133,6 +133,7 @@ We align with the E.4 **Artefact Architecture**:
 - `tooling/docs/error-reporting.md` — Problem Details (RFC 9457) surface with ACP/FPF extensions and telemetry hooks.
 - `tooling/docs/project-rules.md` — repo conventions: lanes/labels, branch naming, PR checklist, testing minima.
 - `tooling/docs/AGENT_ACP_SENTINEL.md` — agent/sentinel playbook: holons, working style, validation rules.
+- `tooling/examples/` — small runnable scripts for sanity-checking the library from FSI.
 - `tooling/docs/acp-explained.md` — non-technical explanation of ACP with exec-ready summary.
 - `tooling/docs/evals/reusable-evaluation-patterns.md` — UTS-style evaluation patterns for AI coding agents.
 - `tooling/docs/coding-codex.md` — coding codex for assistants/contributors working in this repo.
