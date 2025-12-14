@@ -23,7 +23,7 @@ This repo adds a First Principles Framework (FPF) view on assurance and observab
 - **Risk, SRE, and governance** — validation lanes plus golden tests (`tests/`) give repeatable evidence for change control, regressions, and incident postmortems.
 - **Enterprise engineering & compliance** — typed protocol core + auditable validation findings reduce vendor risk, ease security reviews, and support regulated change windows.
 - **Applied AI researchers & prototypers** — a fully typed F# core and UTS let you explore ACP variants with safety rails and auditable deductions.
-- **Educators & onboarding leads** — the Pedagogical Companion (`pedagogy/`) distills ACP and sentinel rules into exec-friendly explainers and evaluation patterns.
+- **Educators & onboarding leads** — exec-friendly explainers and evaluation patterns live in `tooling/docs/` (see `tooling/docs/acp-explained.md` and `tooling/docs/evals/reusable-evaluation-patterns.md`).
 
 ### Typical scenarios
 
@@ -79,17 +79,17 @@ printfn "Inbound findings: %A" inbound.findings
 printfn "Outbound findings: %A" outbound.findings
 ```
 
-3. Want to wire it into a runtime? See [`tooling/docs/runtime-integration.md`](tooling/docs/runtime-integration.md). Need an exec-friendly explainer for stakeholders? See [`pedagogy/ACP-Explained.md`](pedagogy/ACP-Explained.md).
+3. Want to wire it into a runtime? See [`tooling/docs/runtime-integration.md`](tooling/docs/runtime-integration.md). Need an exec-friendly explainer for stakeholders? See [`tooling/docs/acp-explained.md`](tooling/docs/acp-explained.md).
 
 ### Running tests with a TRX report
 
 ```bash
 # from repo root
-DOTNET_BIN=/usr/local/share/dotnet/dotnet tooling/scripts/run-tests.sh
+tooling/scripts/run-tests.sh
 # writes tests/TestResults.trx and prints the console summary
 ```
 
-If `DOTNET_BIN` is unset, scripts use `dotnet` on PATH (must be SDK 9 for net9.0). Set `DOTNET_BIN` to override.
+If `DOTNET_BIN` is unset, scripts use `dotnet` on PATH. If `DOTNET_BIN` is set but can't run the target framework(s), the script falls back to `dotnet` on PATH and prints a warning.
 
 ---
 
@@ -104,8 +104,7 @@ The repo uses FPF concepts and artifacts:
 We align with the E.4 **Artefact Architecture**:
 
 - **Conceptual Core** - definitions, UTS, episteme/deduction.
-- **Tooling Reference** - F# domain model, protocol state machine, agent/sentinel playbook.
-- **Pedagogical Companion** - ACP explained, evaluation patterns, coding codex.
+- **Tooling Reference** - F# domain model, protocol state machine, agent/sentinel playbook, explainers and eval patterns.
 
 ---
 
@@ -115,7 +114,6 @@ We align with the E.4 **Artefact Architecture**:
 
 - Holon 1 · Conceptual Core → `vendor/` (FPF spec), `core/` (UTS, episteme).
 - Holon 2 · Tooling Reference → `src/` (domain/protocol/runtime/validation), `tooling/` (implementation-facing docs/playbooks), `tests/` (executable evidence and golden cases), `core/roadmap/` (+ submodule `core/roadmap/sub-ACP`) as implementation slices.
-- Holon 3 · Pedagogical Companion → `pedagogy/` (explainers, onboarding, eval patterns).
 
 **Conceptual Core (Holon 1)**
 
@@ -135,13 +133,10 @@ We align with the E.4 **Artefact Architecture**:
 - `tooling/docs/error-reporting.md` — Problem Details (RFC 9457) surface with ACP/FPF extensions and telemetry hooks.
 - `tooling/docs/project-rules.md` — repo conventions: lanes/labels, branch naming, PR checklist, testing minima.
 - `tooling/docs/AGENT_ACP_SENTINEL.md` — agent/sentinel playbook: holons, working style, validation rules.
+- `tooling/docs/acp-explained.md` — non-technical explanation of ACP with exec-ready summary.
+- `tooling/docs/evals/reusable-evaluation-patterns.md` — UTS-style evaluation patterns for AI coding agents.
+- `tooling/docs/coding-codex.md` — coding codex for assistants/contributors working in this repo.
 - `tests/` — protocol/runtime/sentinel tests and `golden/` fixtures.
-
-**Pedagogical Companion (Holon 3)**
-
-- `pedagogy/ACP-Explained.md` — non-technical explanation of ACP with exec-ready summary.
-- `pedagogy/docs/evals/Reusable Evaluation Patterns.md` — UTS-style evaluation patterns for AI coding agents.
-- `pedagogy/CODING.md` — coding codex for assistants/contributors working in this repo.
 
 ---
 
@@ -164,4 +159,4 @@ We align with the E.4 **Artefact Architecture**:
 For more detailed rules, see:
 
 - `tooling/docs/AGENT_ACP_SENTINEL.md` - architectural playbook.
-- `pedagogy/CODING.md` - assistant and contributor guardrails.
+- `tooling/docs/coding-codex.md` - assistant and contributor guardrails.
