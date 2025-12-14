@@ -172,10 +172,10 @@ module Generators =
             [ 2, genInitializeResult |> G.map AgentToClientMessage.InitializeResult
               2,
               genSessionId
-              |> G.map (fun sid -> AgentToClientMessage.SessionNewResult { sessionId = sid })
+              |> G.map (fun sid -> AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
               2,
               genSessionId
-              |> G.map (fun sid -> AgentToClientMessage.SessionLoadResult { sessionId = sid })
+              |> G.map (fun sid -> AgentToClientMessage.SessionLoadResult { sessionId = sid; modes = None })
               3,
               genSessionId
               |> G.bind genSessionPromptResult
@@ -235,7 +235,7 @@ module Generators =
                 genSessionId
                 |> G.where (fun sid -> not (sessions |> Map.containsKey sid))
                 |> G.map (fun sid ->
-                    Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid }),
+                    Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None }),
                     Ready(sessions |> Map.add sid false))
 
             let genSessionLoadReq =
@@ -252,7 +252,8 @@ module Generators =
                         else
                             sessions |> Map.add sid false
 
-                    Message.FromAgent(AgentToClientMessage.SessionLoadResult { sessionId = sid }), Ready sessions')
+                    Message.FromAgent(AgentToClientMessage.SessionLoadResult { sessionId = sid; modes = None }),
+                    Ready sessions')
 
             let genPromptReq =
                 G.elements idle

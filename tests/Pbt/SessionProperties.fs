@@ -80,7 +80,7 @@ module SessionProperties =
             P.forAll Generators.arbSessionId (fun sid ->
                 let msgs =
                     handshake
-                    @ [ Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid })
+                    @ [ Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
                         Message.FromClient(ClientToAgentMessage.SessionPrompt { sessionId = sid; content = [] })
                         Message.FromClient(ClientToAgentMessage.SessionPrompt { sessionId = sid; content = [] }) ]
 
@@ -101,7 +101,7 @@ module SessionProperties =
                 (fun (sid, sr) ->
                     let msgs =
                         handshake
-                        @ [ Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid })
+                        @ [ Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
                             Message.FromClient(ClientToAgentMessage.SessionPrompt { sessionId = sid; content = [] })
                             Message.FromClient(ClientToAgentMessage.SessionCancel { sessionId = sid })
                             Message.FromAgent(
