@@ -1,0 +1,14 @@
+{
+  "name": "acp-benchmark-typescript",
+  "version": "1.0.0",
+  "description": "TypeScript SDK benchmark for cross-language comparison",
+  "main": "benchmark.js",
+  "scripts": {
+    "build": "tsc",
+    "bench": "node benchmark.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  }
+}
