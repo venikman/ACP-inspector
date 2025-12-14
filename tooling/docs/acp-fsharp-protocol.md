@@ -9,14 +9,17 @@
 This document describes how the ACP-sentinel F# model maps to the **pinned ACP spec** and how to keep implementation, validation, and tests aligned.
 
 Spec sources (normative):
+
 - GitHub (source of truth): https://github.com/agentclientprotocol/agent-client-protocol
 - Overview/intro: https://agentclientprotocol.com/overview/introduction
 
 Local spec pin:
+
 - `core/roadmap/sub-ACP` (git submodule) @ `v0.10.2` (`8e3919b7ab494cf2d19326e2e17c5e7aeb15e366`)
 
 Completeness tracking:
-- `core/roadmap/ACP-spec-parity-matrix.md`
+
+- `core/roadmap/ACP-slice-01.md` (see “Spec parity matrix (slice‑01)”)
 
 ## Scope
 
