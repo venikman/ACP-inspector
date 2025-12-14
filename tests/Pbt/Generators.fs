@@ -38,8 +38,7 @@ module Generators =
               3, G.constant StopReason.Cancelled
               1, G.constant StopReason.MaxTokens
               1, G.constant StopReason.MaxTurnRequests
-              1, G.constant StopReason.Refusal
-              1, genSmallString |> G.map StopReason.Other ]
+              1, G.constant StopReason.Refusal ]
 
     let arbStopReason = A.fromGen genStopReason
 
@@ -50,14 +49,28 @@ module Generators =
     let private genResourceLink: Gen<ResourceLink> =
         genSmallString
         |> G.map (fun s ->
-            { uri = "file:///" + s
-              mimeType = None })
+            { name = s
+              uri = "file:///" + s
+              title = None
+              description = None
+              mimeType = None
+              size = None
+              annotations = None })
 
     let genContentBlock: Gen<ContentBlock> =
+        let genEmbedded =
+            genSmallString
+            |> G.map (fun s ->
+                ContentBlock.Resource
+                    { resource = EmbeddedResourceResource.Text("file:///" + s, s, None)
+                      annotations = None })
+
         G.frequency
-            [ 7, genSmallString |> G.map ContentBlock.Text
-              2, genResourceLink |> G.map ContentBlock.Resource
-              1, G.zip genSmallString (genSmallString |> G.map box) |> G.map ContentBlock.Other ]
+            [ 7,
+              genSmallString
+              |> G.map (fun s -> ContentBlock.Text { text = s; annotations = None })
+              2, genResourceLink |> G.map ContentBlock.ResourceLink
+              1, genEmbedded ]
 
     let arbContentBlock = A.fromGen genContentBlock
 
@@ -83,29 +96,31 @@ module Generators =
     let private agentCaps: AgentCapabilities =
         { loadSession = true
           mcpCapabilities = mcpCaps
-          promptCapabilities = promptCaps }
+          promptCapabilities = promptCaps
+          sessionCapabilities = SessionCapabilities.empty }
 
     let private clientInfo: ImplementationInfo =
         { name = "pbt-client"
           title = None
-          version = None }
+          version = "0.0.0-test" }
 
     let private agentInfo: ImplementationInfo =
         { name = "pbt-agent"
           title = None
-          version = None }
+          version = "0.0.0-test" }
 
     let genInitializeParams: Gen<InitializeParams> =
         G.constant
-            { protocolVersion = 1
+            { protocolVersion = ProtocolVersion.current
               clientCapabilities = clientCaps
               clientInfo = Some clientInfo }
 
     let genInitializeResult: Gen<InitializeResult> =
         G.constant
-            { negotiatedVersion = 1
+            { protocolVersion = ProtocolVersion.current
               agentCapabilities = agentCaps
-              agentInfo = Some agentInfo }
+              agentInfo = Some agentInfo
+              authMethods = [] }
 
     let private genNewSessionParams: Gen<NewSessionParams> =
         G.constant { cwd = "."; mcpServers = [] }
@@ -117,28 +132,33 @@ module Generators =
               mcpServers = [] }
 
     let private genSessionPromptParams (sid: SessionId) : Gen<SessionPromptParams> =
-        genContentBlocks |> G.map (fun blocks -> { sessionId = sid; content = blocks })
+        genContentBlocks |> G.map (fun blocks -> { sessionId = sid; prompt = blocks })
 
     let private genSessionPromptResult (sid: SessionId) : Gen<SessionPromptResult> =
         genStopReason |> G.map (fun sr -> { sessionId = sid; stopReason = sr })
 
     let private genSessionUpdate (sid: SessionId) : Gen<SessionUpdateNotification> =
+        let genChunk = genContentBlock |> G.map (fun cb -> ({ content = cb }: ContentChunk))
+
         let genUpdate =
             G.frequency
-                [ 5, genSmallString |> G.map SessionUpdate.StatusText
-                  3, genContentBlock |> G.map SessionUpdate.AgentMessageChunk
-                  1, G.constant (SessionUpdate.Other("pbt", box "")) ]
+                [ 3, genChunk |> G.map SessionUpdate.UserMessageChunk
+                  3, genChunk |> G.map SessionUpdate.AgentMessageChunk
+                  1, genChunk |> G.map SessionUpdate.AgentThoughtChunk ]
 
         genUpdate |> G.map (fun u -> { sessionId = sid; update = u })
 
     let private genToolCallUpdate: Gen<ToolCallUpdate> =
-        G.zip genSmallString genContentBlocks
-        |> G.map (fun (id, blocks) ->
+        G.zip genSmallString genContentBlock
+        |> G.map (fun (id, block) ->
             { toolCallId = id
               title = None
               kind = None
-              status = ToolCallStatus.Requested
-              content = blocks })
+              status = Some ToolCallStatus.Pending
+              content = Some [ ToolCallContent.Content({ content = block }: Content) ]
+              locations = Some []
+              rawInput = None
+              rawOutput = None })
 
     let private genRequestPermissionParams (sid: SessionId) : Gen<RequestPermissionParams> =
         genToolCallUpdate
@@ -187,7 +207,7 @@ module Generators =
               1,
               genSessionId
               |> G.bind genRequestPermissionParams
-              |> G.map AgentToClientMessage.RequestPermission ]
+              |> G.map AgentToClientMessage.SessionRequestPermissionRequest ]
 
     /// Unconstrained message generator (used for "invalid injection").
     let genMessageAny: Gen<Message> =
@@ -285,7 +305,8 @@ module Generators =
                 G.elements inflight
                 |> G.bind (fun sid ->
                     genRequestPermissionParams sid
-                    |> G.map (fun p -> Message.FromAgent(AgentToClientMessage.RequestPermission p), Ready sessions))
+                    |> G.map (fun p ->
+                        Message.FromAgent(AgentToClientMessage.SessionRequestPermissionRequest p), Ready sessions))
 
             let choices: (int * Gen<Message * SimplePhase>) list =
                 [ 3, genSessionNewReq

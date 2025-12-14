@@ -1,0 +1,28 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore tools
+        run: dotnet tool restore
+
+      - name: Fantomas (check)
+        run: dotnet fantomas src tests apps --check
+
+      - name: Tests
+        run: dotnet test tests/ACP.Tests.fsproj -c Release
+
+      - name: Build inspector
+        run: dotnet build apps/ACP.Inspector/ACP.Inspector.fsproj -c Release

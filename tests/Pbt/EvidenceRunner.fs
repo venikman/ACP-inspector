@@ -10,26 +10,27 @@ open FsCheck
 module EvidenceRunner =
 
     type private FailureRecord =
-        { propertyName  : string
-          timestampUtc  : string
-          seed          : string
-          shrinks       : int
-          args          : string list
-          shrunkArgs    : string list
-          outcome       : string }
+        { propertyName: string
+          timestampUtc: string
+          seed: string
+          shrinks: int
+          args: string list
+          shrunkArgs: string list
+          outcome: string }
 
     type PbtEvidenceRunner() =
         interface IRunner with
             member _.OnStartFixture _ = ()
             member _.OnArguments(_, _, _) = ()
             member _.OnShrink(_, _) = ()
+
             member _.OnFinished(name, result) =
                 match result with
-                | TestResult.Failed (data, args, shrunkArgs, outcome, seed0, _seed1, shrinkCount) ->
+                | TestResult.Failed(data, args, shrunkArgs, outcome, seed0, _seed1, shrinkCount) ->
                     let argsStr = args |> List.map (fun o -> sprintf "%A" o)
                     let shrunkStr = shrunkArgs |> List.map (fun o -> sprintf "%A" o)
 
-                    let record : FailureRecord =
+                    let record: FailureRecord =
                         { propertyName = name
                           timestampUtc = DateTime.UtcNow.ToString("O")
                           seed = sprintf "%A" seed0

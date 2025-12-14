@@ -133,7 +133,7 @@ module ProtocolStateMachine =
             | m -> m)
             (fun (actual, model) ->
                 let msg =
-                    Message.FromClient(ClientToAgentMessage.SessionPrompt { sessionId = sid; content = [] })
+                    Message.FromClient(ClientToAgentMessage.SessionPrompt { sessionId = sid; prompt = [] })
 
                 let ok = apply actual msg
 
@@ -170,7 +170,10 @@ module ProtocolStateMachine =
                 Message.FromAgent(
                     AgentToClientMessage.SessionUpdate
                         { sessionId = sid
-                          update = SessionUpdate.StatusText "ok" }
+                          update =
+                            SessionUpdate.AgentMessageChunk(
+                                ({ content = ContentBlock.Text { text = "ok"; annotations = None } }: ContentChunk)
+                            ) }
                 )
 
             apply actual msg && (projectPhase actual.Value = model))
@@ -180,13 +183,16 @@ module ProtocolStateMachine =
             { toolCallId = "tc-1"
               title = None
               kind = None
-              status = ToolCallStatus.Requested
-              content = [] }
+              status = Some ToolCallStatus.Pending
+              content = Some []
+              locations = Some []
+              rawInput = None
+              rawOutput = None }
 
         StateMachine.operation "RequestPermission" (fun m -> m) (fun (actual, model) ->
             let msg =
                 Message.FromAgent(
-                    AgentToClientMessage.RequestPermission
+                    AgentToClientMessage.SessionRequestPermissionRequest
                         { sessionId = sid
                           toolCall = tc
                           options = [] }

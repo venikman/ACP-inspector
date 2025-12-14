@@ -35,27 +35,32 @@ module ValidationTests =
     let private agentCaps: AgentCapabilities =
         { loadSession = true
           mcpCapabilities = mcpCaps
-          promptCapabilities = promptCaps }
+          promptCapabilities = promptCaps
+          sessionCapabilities = SessionCapabilities.empty }
 
     let private clientInfo: ImplementationInfo =
         { name = "test-client"
           title = None
-          version = None }
+          version = "0.0.0-test" }
 
     let private agentInfo: ImplementationInfo =
         { name = "test-agent"
           title = None
-          version = None }
+          version = "0.0.0-test" }
 
     let private initParams: InitializeParams =
-        { protocolVersion = 1
+        { protocolVersion = ProtocolVersion.current
           clientCapabilities = clientCaps
           clientInfo = Some clientInfo }
 
     let private initResult: InitializeResult =
-        { negotiatedVersion = 1
+        { protocolVersion = ProtocolVersion.current
           agentCapabilities = agentCaps
-          agentInfo = Some agentInfo }
+          agentInfo = Some agentInfo
+          authMethods = [] }
+
+    let private textBlock (text: string) : ContentBlock =
+        ContentBlock.Text { text = text; annotations = None }
 
     let private mkModeState () : SessionModeState =
         let ask: SessionMode =
@@ -79,7 +84,7 @@ module ValidationTests =
           Message.FromClient(
               ClientToAgentMessage.SessionPrompt
                   { sessionId = sid
-                    content = [ ContentBlock.Text "hi" ] }
+                    prompt = [ textBlock "hi" ] }
           )
           Message.FromAgent(
               AgentToClientMessage.SessionPromptResult
@@ -95,7 +100,7 @@ module ValidationTests =
           Message.FromClient(
               ClientToAgentMessage.SessionPrompt
                   { sessionId = sid
-                    content = [ ContentBlock.Text "hi" ] }
+                    prompt = [ textBlock "hi" ] }
           )
           Message.FromClient(ClientToAgentMessage.SessionCancel { sessionId = sid })
           Message.FromAgent(
@@ -112,7 +117,7 @@ module ValidationTests =
           Message.FromClient(
               ClientToAgentMessage.SessionPrompt
                   { sessionId = sid
-                    content = [ ContentBlock.Text "hi" ] }
+                    prompt = [ textBlock "hi" ] }
           )
           Message.FromClient(ClientToAgentMessage.SessionCancel { sessionId = sid })
           Message.FromAgent(
@@ -129,7 +134,7 @@ module ValidationTests =
           Message.FromClient(
               ClientToAgentMessage.SessionPrompt
                   { sessionId = sid
-                    content = [ ContentBlock.Text "p1" ] }
+                    prompt = [ textBlock "p1" ] }
           )
           Message.FromAgent(
               AgentToClientMessage.SessionPromptResult
@@ -139,7 +144,7 @@ module ValidationTests =
           Message.FromClient(
               ClientToAgentMessage.SessionPrompt
                   { sessionId = sid
-                    content = [ ContentBlock.Text "p2" ] }
+                    prompt = [ textBlock "p2" ] }
           )
           Message.FromAgent(
               AgentToClientMessage.SessionPromptResult
@@ -155,12 +160,12 @@ module ValidationTests =
           Message.FromClient(
               ClientToAgentMessage.SessionPrompt
                   { sessionId = sid
-                    content = [ ContentBlock.Text "p1" ] }
+                    prompt = [ textBlock "p1" ] }
           )
           Message.FromClient(
               ClientToAgentMessage.SessionPrompt
                   { sessionId = sid
-                    content = [ ContentBlock.Text "p2" ] }
+                    prompt = [ textBlock "p2" ] }
           )
           Message.FromAgent(
               AgentToClientMessage.SessionPromptResult
@@ -199,7 +204,7 @@ module ValidationTests =
             [ Message.FromClient(
                   ClientToAgentMessage.SessionPrompt
                       { sessionId = sid
-                        content = [ ContentBlock.Text "oops" ] }
+                        prompt = [ textBlock "oops" ] }
               )
               Message.FromClient(ClientToAgentMessage.Initialize initParams) ]
 
@@ -223,7 +228,7 @@ module ValidationTests =
               Message.FromClient(
                   ClientToAgentMessage.SessionPrompt
                       { sessionId = sid
-                        content = [ ContentBlock.Text "hi" ] }
+                        prompt = [ textBlock "hi" ] }
               )
               Message.FromClient(ClientToAgentMessage.SessionCancel { sessionId = sid })
               Message.FromAgent(
@@ -340,7 +345,7 @@ module ValidationTests =
             [ Message.FromClient(
                   ClientToAgentMessage.SessionPrompt
                       { sessionId = sid
-                        content = [ ContentBlock.Text "hi before init" ] }
+                        prompt = [ textBlock "hi before init" ] }
               ) ]
 
         let result = runWithValidation sid spec badMessages true None None
@@ -416,7 +421,7 @@ module ValidationTests =
               Message.FromAgent(
                   AgentToClientMessage.SessionUpdate
                       { sessionId = sid
-                        update = SessionUpdate.CurrentModeUpdate next }
+                        update = SessionUpdate.CurrentModeUpdate { currentModeId = next } }
               ) ]
 
         let result = runWithValidation sid spec trace true None None

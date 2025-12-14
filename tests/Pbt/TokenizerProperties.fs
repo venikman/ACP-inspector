@@ -17,7 +17,7 @@ module TokenizerProperties =
     let private config = Generators.PbtConfig.config
 
     /// Small, mixed-character input generator biased toward useful ACP/F# text.
-    let private genInput : Gen<string> =
+    let private genInput: Gen<string> =
         let ascii =
             [ 'a' .. 'z' ]
             @ [ 'A' .. 'Z' ]
@@ -31,6 +31,7 @@ module TokenizerProperties =
 
         G.sized (fun s ->
             let len = max 0 (min 200 (s * 2))
+
             G.listOfLength len (G.frequency [ 9, G.elements ascii; 1, G.elements weird ])
             |> G.map (fun cs -> String(cs |> List.toArray)))
 
@@ -46,8 +47,7 @@ module TokenizerProperties =
         tokenizeWithSpans input
         |> List.map (fun st ->
             match st.token with
-            | Token.Whitespace ws ->
-                if ws.Contains("\n") || ws.Contains("\r") then "\n" else " "
+            | Token.Whitespace ws -> if ws.Contains("\n") || ws.Contains("\r") then "\n" else " "
             | Token.Comment _ -> "(*c*)"
             | _ -> input.Substring(st.span.start.index, st.span.length))
         |> String.concat ""
@@ -59,6 +59,7 @@ module TokenizerProperties =
                 let ts = tokenizeWithSpans input
 
                 let okLengths = ts |> List.forall (fun st -> st.span.length > 0)
+
                 let okBounds =
                     ts
                     |> List.forall (fun st ->

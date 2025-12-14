@@ -1,21 +1,43 @@
 namespace Acp
 
 open System
+open System.Text.Json.Nodes
 
-/// Domain model for a core slice of the Agent Client Protocol (ACP).
-/// JSON-RPC 2.0 framing and raw JSON live elsewhere; this is "what ACP means".
+/// Domain model for ACP v0.10.x (schema.json).
+/// This is the typed, transport-agnostic meaning of ACP after JSON-RPC framing is decoded.
 module Domain =
 
+    /// Spec/version metadata for this implementation.
+    [<RequireQualifiedAccess>]
+    module Spec =
+        /// ACP schema version this repo targets (spec line: schema.json).
+        [<Literal>]
+        let Schema = "0.10.x"
+
+        /// JSON-RPC framing version used by the codec.
+        [<Literal>]
+        let JsonRpc = "2.0"
+
     // -------------
-    // Primitives & Parties (R1-R4)
+    // Primitives (schema)
     // -------------
 
     module PrimitivesAndParties =
 
-        /// MAJOR protocol version negotiated during initialization.
+        /// MAJOR protocol version negotiated during initialization (uint16 in schema).
         type ProtocolVersion = int
 
-        /// Opaque server-chosen session identifier.
+        [<RequireQualifiedAccess>]
+        module ProtocolVersion =
+            /// Current protocol major version implemented by this repo.
+            let current: ProtocolVersion = 1
+
+            /// Supported protocol major versions (currently only `current`).
+            let supported: ProtocolVersion list = [ current ]
+
+            let isSupported (v: ProtocolVersion) = supported |> List.contains v
+
+        /// Opaque session identifier.
         [<Struct>]
         type SessionId = SessionId of string
 
@@ -27,19 +49,9 @@ module Domain =
         type ImplementationInfo =
             { name: string
               title: string option
-              version: string option }
+              version: string }
 
-        /// R1/R2 - parties (agent/client). Thin wrappers over ImplementationInfo today.
-        [<RequireQualifiedAccess>]
-        type PartyRole =
-            | Agent
-            | Client
-
-        type Party =
-            { role: PartyRole
-              implementation: ImplementationInfo }
-
-        /// R4 - reasons why a prompt turn stopped.
+        /// Reasons why a prompt turn stopped (StopReason).
         [<RequireQualifiedAccess>]
         type StopReason =
             | EndTurn
@@ -47,10 +59,9 @@ module Domain =
             | MaxTurnRequests
             | Refusal
             | Cancelled
-            | Other of string
 
     // -------------
-    // Capabilities (R7, R13-R15)
+    // Capabilities (schema)
     // -------------
 
     module Capabilities =
@@ -68,26 +79,57 @@ module Domain =
         /// MCP transport capabilities supported by the agent.
         type McpCapabilities = { http: bool; sse: bool }
 
-        /// Non-baseline prompt content types the agent can process.
+        /// Prompt content types the agent can process in `session/prompt`.
         type PromptCapabilities =
             { audio: bool
               image: bool
               embeddedContext: bool }
 
+        /// Session capabilities supported by the agent. Currently an empty object in schema.
+        [<Struct>]
+        type SessionCapabilities = SessionCapabilities
+
+        [<RequireQualifiedAccess>]
+        module SessionCapabilities =
+            let empty = SessionCapabilities
+
         /// Capabilities advertised by the agent during initialize.
         type AgentCapabilities =
             { loadSession: bool
               mcpCapabilities: McpCapabilities
-              promptCapabilities: PromptCapabilities }
+              promptCapabilities: PromptCapabilities
+              sessionCapabilities: SessionCapabilities }
 
     // -------------
-    // Initialization (R1-R3, R19)
+    // Authentication (schema)
+    // -------------
+
+    module Authentication =
+
+        type AuthMethod =
+            { id: string
+              name: string
+              description: string option }
+
+        type AuthenticateParams = { methodId: string }
+
+        /// Empty result object in schema.
+        [<Struct>]
+        type AuthenticateResult = AuthenticateResult
+
+        [<RequireQualifiedAccess>]
+        module AuthenticateResult =
+            let empty = AuthenticateResult
+
+    // -------------
+    // Initialization (schema)
     // -------------
 
     module Initialization =
 
         open PrimitivesAndParties
         open Capabilities
+        open Authentication
 
         /// Params for initialize (client -> agent).
         type InitializeParams =
@@ -97,12 +139,13 @@ module Domain =
 
         /// Result for initialize (agent -> client).
         type InitializeResult =
-            { negotiatedVersion: ProtocolVersion
+            { protocolVersion: ProtocolVersion
               agentCapabilities: AgentCapabilities
-              agentInfo: ImplementationInfo option }
+              agentInfo: ImplementationInfo option
+              authMethods: AuthMethod list }
 
     // -------------
-    // Session modes (session-modes)
+    // Session modes (schema)
     // -------------
 
     module SessionModes =
@@ -117,7 +160,6 @@ module Domain =
         module SessionModeId =
             let value (SessionModeId s) = s
 
-        /// A mode the agent can operate in.
         type SessionMode =
             { id: SessionModeId
               name: string
@@ -134,13 +176,15 @@ module Domain =
               modeId: SessionModeId }
 
         /// Domain-level result for session/set_mode (agent -> client).
-        /// JSON-RPC result is structurally empty; we reattach sessionId + modeId from the request.
+        /// Wire result is structurally empty; we reattach sessionId + modeId from the request.
         type SetSessionModeResult =
             { sessionId: SessionId
               modeId: SessionModeId }
 
+        type CurrentModeUpdate = { currentModeId: SessionModeId }
+
     // -------------
-    // Session setup (R3, R4, R16)
+    // Session setup (schema)
     // -------------
 
     module SessionSetup =
@@ -148,15 +192,31 @@ module Domain =
         open PrimitivesAndParties
         open SessionModes
 
-        /// Environment variable passed to an MCP server.
-        type McpServerEnvVar = { name: string; value: string }
+        type EnvVariable = { name: string; value: string }
 
-        /// Minimal MCP server configuration used in session/new & session/load.
-        type McpServer =
+        type HttpHeader = { name: string; value: string }
+
+        type McpServerHttp =
+            { name: string
+              url: string
+              headers: HttpHeader list }
+
+        type McpServerSse =
+            { name: string
+              url: string
+              headers: HttpHeader list }
+
+        type McpServerStdio =
             { name: string
               command: string
               args: string list
-              env: McpServerEnvVar list }
+              env: EnvVariable list }
+
+        [<RequireQualifiedAccess>]
+        type McpServer =
+            | Http of McpServerHttp
+            | Sse of McpServerSse
+            | Stdio of McpServerStdio
 
         /// Params for session/new (client -> agent).
         type NewSessionParams =
@@ -175,13 +235,13 @@ module Domain =
               modes: SessionModeState option }
 
         /// Domain-level result for session/load (agent -> client).
-        /// JSON-RPC result does not include a session id; we reattach it from the request.
+        /// Wire result does not include a session id; we reattach it from the request.
         type LoadSessionResult =
             { sessionId: SessionId
               modes: SessionModeState option }
 
     // -------------
-    // Session context (R3, R16)
+    // Session context (runtime helper)
     // -------------
 
     module SessionContext =
@@ -203,27 +263,27 @@ module Domain =
               sessions: Map<SessionId, SessionState<'turnState>> }
 
     // -------------
-    // Metadata (R17)
+    // Metadata (sentinel/runtime policy, not wire _meta)
     // -------------
 
     module Metadata =
 
-        /// R17 - opaque metadata carrier preserved by the runtime.
+        /// Opaque metadata carrier preserved by the runtime.
         [<Struct>]
-        type MetaEnvelope = MetaEnvelope of obj // Runtime-specific; sentinel must not rely on shape unless profile enables it.
+        type MetaEnvelope = MetaEnvelope of obj // Runtime-specific.
 
-        /// R17/R19 - metadata and transport policy knobs. Keep opaque to the protocol core.
+        /// Metadata and transport policy knobs.
         [<RequireQualifiedAccess>]
         type MetadataPolicy =
-            | Disallow // Strip metadata entirely.
-            | AllowOpaque // Preserve but treat as opaque.
-            | AllowKinds of string list // Allowlisted kinds (profile-owned schema).
+            | Disallow
+            | AllowOpaque
+            | AllowKinds of string list
 
-        /// R19 - transport defaults surfaced to validation.
+        /// Transport defaults surfaced to validation.
         type TransportDefaults =
-            { lineSeparator: string option // e.g., "\n" vs "\r\n"
-              maxFrameBytes: int option // framing chunk limit
-              maxMessageBytes: int option // logical JSON-RPC message budget
+            { lineSeparator: string option
+              maxFrameBytes: int option
+              maxMessageBytes: int option
               metaEnvelope: MetaEnvelope option }
 
         /// Runtime profile for metadata/transport handling.
@@ -232,175 +292,401 @@ module Domain =
               transport: TransportDefaults option }
 
     // -------------
-    // Prompt turns & updates (R4, R5, R6, R10, R15)
+    // JSON-RPC (wire errors + ids)
+    // -------------
+
+    module JsonRpc =
+
+        [<RequireQualifiedAccess>]
+        type RequestId =
+            | Null
+            | Number of int64
+            | String of string
+
+        type Error =
+            { code: int
+              message: string
+              data: JsonNode option }
+
+    // -------------
+    // Tooling + content (schema)
     // -------------
 
     module Prompting =
 
         open PrimitivesAndParties
         open SessionModes
+        open SessionSetup
 
-        /// A resource that the client can read (usually a file URI).
+        // ---- Content blocks ----
+
+        type Annotations =
+            { audience: string list option
+              priority: float option
+              lastModified: string option }
+
+        type TextContent =
+            { text: string
+              annotations: Annotations option }
+
+        type ImageContent =
+            { data: string
+              mimeType: string
+              uri: string option
+              annotations: Annotations option }
+
+        type AudioContent =
+            { data: string
+              mimeType: string
+              annotations: Annotations option }
+
         type ResourceLink =
-            { uri: string; mimeType: string option }
+            { name: string
+              uri: string
+              title: string option
+              description: string option
+              mimeType: string option
+              size: int64 option
+              annotations: Annotations option }
 
-        /// Content blocks used in prompts and session updates (subset of ACP ContentBlock).
+        [<RequireQualifiedAccess>]
+        type EmbeddedResourceResource =
+            | Text of uri: string * text: string * mimeType: string option
+            | Blob of uri: string * blob: string * mimeType: string option
+
+        type EmbeddedResource =
+            { resource: EmbeddedResourceResource
+              annotations: Annotations option }
+
         [<RequireQualifiedAccess>]
         type ContentBlock =
-            | Text of string
-            | Resource of ResourceLink
-            /// Escape hatch for content kinds not modeled yet (images, audio, embedded contexts, ...).
-            | Other of kind: string * raw: obj
-        // TODO: connect ContentBlock.Other + Metadata.MetaEnvelope into a profile system so that
-        // validation rules remain agnostic to raw metadata unless explicitly enabled.
+            | Text of TextContent
+            | Image of ImageContent
+            | Audio of AudioContent
+            | ResourceLink of ResourceLink
+            | Resource of EmbeddedResource
 
-        /// Params for session/prompt (client -> agent).
+        type ContentChunk = { content: ContentBlock }
+
+        // ---- Prompt request/response ----
+
         type SessionPromptParams =
             { sessionId: SessionId
-              content: ContentBlock list }
+              prompt: ContentBlock list }
 
-        /// Result for session/prompt (agent -> client). This mirrors the ACP wire type.
+        /// Domain-level result for session/prompt (agent -> client).
+        /// Wire result does not include a session id; we reattach it from the request.
         type SessionPromptResult =
             { sessionId: SessionId
               stopReason: StopReason }
 
-        /// R11 - domain-level error outcome (non-wire, for sentinel and UTS).
+        /// Domain-level error outcome (non-wire, for sentinel and higher-level tooling).
         [<RequireQualifiedAccess>]
         type DomainErrorOutcome =
-            | ProtocolViolation of ProtocolErrorCode: string * details: string
+            | ProtocolViolation of code: string * details: string
             | AgentInternalFailure of details: string
             | ClientInternalFailure of details: string
             | ToolingFailure of toolName: string * details: string
 
-        /// R10/R11 - canonical prompt turn outcome classification.
+        /// Canonical prompt turn outcome classification (non-wire).
         [<RequireQualifiedAccess>]
         type PromptTurnOutcome =
             | Completed of stopReason: StopReason
             | CancelledByUser
             | DomainError of DomainErrorOutcome
 
-        /// Plan entry priority in session/update (low/medium/high).
+        // ---- Plan ----
+
         [<RequireQualifiedAccess>]
         type PlanEntryPriority =
-            | Low
-            | Medium
             | High
-            | Other of string
+            | Medium
+            | Low
 
-        /// Plan entry status in session/update.
         [<RequireQualifiedAccess>]
         type PlanEntryStatus =
             | Pending
             | InProgress
             | Completed
-            | Cancelled
-            | Failed
-            | Other of string
 
         type PlanEntry =
             { content: string
               priority: PlanEntryPriority
               status: PlanEntryStatus }
 
-        /// Execution status of a tool call reported via session/update.
-        [<RequireQualifiedAccess>]
-        type ToolCallStatus =
-            | Requested
-            | InProgress
-            | Completed
-            | Cancelled
-            | Failed
-            | Other of string
+        type Plan = { entries: PlanEntry list }
 
-        /// Coarse tool kinds; keep open for extension.
+        // ---- Commands ----
+
+        type UnstructuredCommandInput = { hint: string }
+
+        [<RequireQualifiedAccess>]
+        type AvailableCommandInput = Unstructured of UnstructuredCommandInput
+
+        type AvailableCommand =
+            { name: string
+              description: string
+              input: AvailableCommandInput option }
+
+        type AvailableCommandsUpdate =
+            { availableCommands: AvailableCommand list }
+
+        // ---- Tool calls ----
+
+        type Diff =
+            { path: string
+              oldText: string option
+              newText: string }
+
+        type Terminal = { terminalId: string }
+
+        type Content = { content: ContentBlock }
+
+        [<RequireQualifiedAccess>]
+        type ToolCallContent =
+            | Content of Content
+            | Diff of Diff
+            | Terminal of Terminal
+
         [<RequireQualifiedAccess>]
         type ToolKind =
-            | FileSystem
-            | Terminal
-            | Mcp
-            | Custom of string
+            | Read
+            | Edit
+            | Delete
+            | Move
+            | Search
+            | Execute
+            | Think
+            | Fetch
+            | SwitchMode
+            | Other
 
-        /// Tool call update embedded in session/update and request_permission.
+        [<RequireQualifiedAccess>]
+        type ToolCallStatus =
+            | Pending
+            | InProgress
+            | Completed
+            | Failed
+
+        type ToolCallLocation = { path: string; line: int option }
+
+        type ToolCall =
+            { toolCallId: string
+              title: string
+              kind: ToolKind
+              status: ToolCallStatus
+              content: ToolCallContent list
+              locations: ToolCallLocation list
+              rawInput: JsonNode option
+              rawOutput: JsonNode option }
+
         type ToolCallUpdate =
             { toolCallId: string
               title: string option
               kind: ToolKind option
-              status: ToolCallStatus
-              content: ContentBlock list }
+              status: ToolCallStatus option
+              content: ToolCallContent list option
+              locations: ToolCallLocation list option
+              rawInput: JsonNode option
+              rawOutput: JsonNode option }
 
-        /// Different types of updates sent during session processing.
-        [<RequireQualifiedAccess>]
-        type SessionUpdate =
-            | Plan of PlanEntry list
-            | UserMessageChunk of ContentBlock
-            | AgentMessageChunk of ContentBlock
-            | ToolCall of ToolCallUpdate
-            | CurrentModeUpdate of currentModeId: SessionModeId
-            | StatusText of string
-            | Other of kind: string * raw: obj
+        // ---- Permission requests ----
 
-        type SessionUpdateNotification =
-            { sessionId: SessionId
-              update: SessionUpdate }
-
-        /// Params for session/cancel (client -> agent).
-        type SessionCancelParams = { sessionId: SessionId }
-
-        /// Kind of permission option presented to the user.
         [<RequireQualifiedAccess>]
         type PermissionOptionKind =
             | AllowOnce
             | AllowAlways
             | RejectOnce
             | RejectAlways
-            | Other of string
 
-        type PermissionOptionId = string
-
-        /// Option presented to the user when requesting permission.
         type PermissionOption =
-            { optionId: PermissionOptionId
+            { optionId: string
               name: string
               kind: PermissionOptionKind }
 
-        /// Params for session/request_permission (agent -> client).
         type RequestPermissionParams =
             { sessionId: SessionId
               toolCall: ToolCallUpdate
               options: PermissionOption list }
 
+        [<RequireQualifiedAccess>]
+        type RequestPermissionOutcome =
+            | Cancelled
+            | Selected of optionId: string
+
+        type RequestPermissionResult = { outcome: RequestPermissionOutcome }
+
+        // ---- Session updates ----
+
+        [<RequireQualifiedAccess>]
+        type SessionUpdate =
+            | UserMessageChunk of ContentChunk
+            | AgentMessageChunk of ContentChunk
+            | AgentThoughtChunk of ContentChunk
+            | ToolCall of ToolCall
+            | ToolCallUpdate of ToolCallUpdate
+            | Plan of Plan
+            | AvailableCommandsUpdate of AvailableCommandsUpdate
+            | CurrentModeUpdate of CurrentModeUpdate
+
+        type SessionUpdateNotification =
+            { sessionId: SessionId
+              update: SessionUpdate }
+
+        /// Params for session/cancel (client -> agent). Notification.
+        type SessionCancelParams = { sessionId: SessionId }
+
+        // ---- File system + terminal tool surface (agent -> client requests) ----
+
+        type ReadTextFileParams =
+            { sessionId: SessionId
+              path: string
+              line: int option
+              limit: int option }
+
+        type ReadTextFileResult = { content: string }
+
+        type WriteTextFileParams =
+            { sessionId: SessionId
+              path: string
+              content: string }
+
+        [<Struct>]
+        type WriteTextFileResult = WriteTextFileResult
+
+        [<RequireQualifiedAccess>]
+        module WriteTextFileResult =
+            let empty = WriteTextFileResult
+
+        type CreateTerminalParams =
+            { sessionId: SessionId
+              command: string
+              args: string list
+              cwd: string option
+              env: EnvVariable list
+              outputByteLimit: uint64 option }
+
+        type CreateTerminalResult = { terminalId: string }
+
+        type TerminalExitStatus =
+            { exitCode: int option
+              signal: string option }
+
+        type TerminalOutputParams =
+            { sessionId: SessionId
+              terminalId: string }
+
+        type TerminalOutputResult =
+            { output: string
+              truncated: bool
+              exitStatus: TerminalExitStatus option }
+
+        type WaitForTerminalExitParams =
+            { sessionId: SessionId
+              terminalId: string }
+
+        type WaitForTerminalExitResult = TerminalExitStatus
+
+        type KillTerminalCommandParams =
+            { sessionId: SessionId
+              terminalId: string }
+
+        [<Struct>]
+        type KillTerminalCommandResult = KillTerminalCommandResult
+
+        [<RequireQualifiedAccess>]
+        module KillTerminalCommandResult =
+            let empty = KillTerminalCommandResult
+
+        type ReleaseTerminalParams =
+            { sessionId: SessionId
+              terminalId: string }
+
+        [<Struct>]
+        type ReleaseTerminalResult = ReleaseTerminalResult
+
+        [<RequireQualifiedAccess>]
+        module ReleaseTerminalResult =
+            let empty = ReleaseTerminalResult
+
     // -------------
-    // Message envelopes (decoded JSON-RPC)
+    // Message envelopes (decoded JSON-RPC + correlated responses)
     // -------------
 
     module Messaging =
 
         open Initialization
-        open SessionModes
+        open Authentication
+        open JsonRpc
         open SessionSetup
+        open SessionModes
         open Prompting
 
-        /// Methods and notifications originating at the client.
+        /// Methods/notifications/responses originating at the client.
         [<RequireQualifiedAccess>]
         type ClientToAgentMessage =
+            // Requests (client -> agent)
             | Initialize of InitializeParams
+            | Authenticate of AuthenticateParams
             | SessionNew of NewSessionParams
             | SessionLoad of LoadSessionParams
             | SessionPrompt of SessionPromptParams
             | SessionSetMode of SetSessionModeParams
+            | ExtRequest of methodName: string * parameters: JsonNode option
+            // Notifications (client -> agent)
             | SessionCancel of SessionCancelParams
-        // Future: authenticate, request_permission outcome/result, fs/*, terminal/*, ...
+            | ExtNotification of methodName: string * parameters: JsonNode option
+            // Responses (client -> agent) to agent->client requests
+            | FsReadTextFileResult of ReadTextFileResult
+            | FsWriteTextFileResult of WriteTextFileResult
+            | SessionRequestPermissionResult of RequestPermissionResult
+            | TerminalCreateResult of CreateTerminalResult
+            | TerminalOutputResult of TerminalOutputResult
+            | TerminalWaitForExitResult of WaitForTerminalExitResult
+            | TerminalKillResult of KillTerminalCommandResult
+            | TerminalReleaseResult of ReleaseTerminalResult
+            | FsReadTextFileError of request: ReadTextFileParams * error: Error
+            | FsWriteTextFileError of request: WriteTextFileParams * error: Error
+            | SessionRequestPermissionError of request: RequestPermissionParams * error: Error
+            | TerminalCreateError of request: CreateTerminalParams * error: Error
+            | TerminalOutputError of request: TerminalOutputParams * error: Error
+            | TerminalWaitForExitError of request: WaitForTerminalExitParams * error: Error
+            | TerminalKillError of request: KillTerminalCommandParams * error: Error
+            | TerminalReleaseError of request: ReleaseTerminalParams * error: Error
+            | ExtError of methodName: string * error: Error
+            | ExtResponse of methodName: string * result: JsonNode option
 
-        /// Methods and notifications originating at the agent.
+        /// Methods/notifications/requests originating at the agent.
         [<RequireQualifiedAccess>]
         type AgentToClientMessage =
+            // Responses (agent -> client) to client->agent requests
             | InitializeResult of InitializeResult
+            | AuthenticateResult of AuthenticateResult
             | SessionNewResult of NewSessionResult
             | SessionLoadResult of LoadSessionResult
             | SessionPromptResult of SessionPromptResult
             | SessionSetModeResult of SetSessionModeResult
+            | ExtResponse of methodName: string * result: JsonNode option
+            | InitializeError of error: Error
+            | AuthenticateError of error: Error
+            | SessionNewError of error: Error
+            | SessionLoadError of request: LoadSessionParams * error: Error
+            | SessionPromptError of request: SessionPromptParams * error: Error
+            | SessionSetModeError of request: SetSessionModeParams * error: Error
+            | ExtError of methodName: string * error: Error
+            // Notifications (agent -> client)
             | SessionUpdate of SessionUpdateNotification
-            | RequestPermission of RequestPermissionParams
+            | ExtNotification of methodName: string * parameters: JsonNode option
+            // Requests (agent -> client)
+            | FsReadTextFileRequest of ReadTextFileParams
+            | FsWriteTextFileRequest of WriteTextFileParams
+            | SessionRequestPermissionRequest of RequestPermissionParams
+            | TerminalCreateRequest of CreateTerminalParams
+            | TerminalOutputRequest of TerminalOutputParams
+            | TerminalWaitForExitRequest of WaitForTerminalExitParams
+            | TerminalKillRequest of KillTerminalCommandParams
+            | TerminalReleaseRequest of ReleaseTerminalParams
+            | ExtRequest of methodName: string * parameters: JsonNode option
 
         /// Direction-tagged domain message stream for a single connection.
         [<RequireQualifiedAccess>]
@@ -409,7 +695,7 @@ module Domain =
             | FromAgent of AgentToClientMessage
 
     // -------------
-    // Tracing (R16)
+    // Tracing
     // -------------
 
     module Tracing =
@@ -417,8 +703,7 @@ module Domain =
         open PrimitivesAndParties
         open Messaging
 
-        /// R16 - full session trace, the event history for invariants. Message list is ordered as observed on the connection.
-        /// Derived turn views can be layered on top (from Messaging.Message) without changing wire types.
+        /// Full session trace: message list is ordered as observed on the connection.
         type SessionTrace =
             { sessionId: SessionId
               messages: Message list }

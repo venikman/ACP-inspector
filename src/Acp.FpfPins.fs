@@ -14,9 +14,8 @@ module FpfPins =
 
     /// Minimal pin bundle aligned to FPF lane separation.
     type FpfPins =
-        { pathId      : PathId
-          pathSliceId : PathSliceId
-          policyId    : string option
-          sentinelId  : string option
-          lane        : string option }
-
+        { pathId: PathId
+          pathSliceId: PathSliceId
+          policyId: string option
+          sentinelId: string option
+          lane: string option }

@@ -98,7 +98,7 @@ module Protocol =
             let sessions' = ctx.sessions |> Map.add sid s'
             Ok { ctx with sessions = sessions' }
 
-    /// MVP Spec<Phase,Message> for ACP v0.9.x "core slice".
+    /// MVP Spec<Phase,Message> for ACP v0.10.x "core slice".
     /// Rules encoded:
     ///   - initialize must be first
     ///   - exactly one initialize result
@@ -129,11 +129,11 @@ module Protocol =
 
                 Ok(Phase.Ready ctx)
 
-            | Phase.WaitingForInitializeResult _, Message.FromAgent(AgentToClientMessage.SessionNewResult _)
-            | Phase.WaitingForInitializeResult _, Message.FromAgent(AgentToClientMessage.SessionLoadResult _)
-            | Phase.WaitingForInitializeResult _, Message.FromAgent(AgentToClientMessage.SessionPromptResult _)
-            | Phase.WaitingForInitializeResult _, Message.FromAgent(AgentToClientMessage.SessionUpdate _)
-            | Phase.WaitingForInitializeResult _, Message.FromAgent(AgentToClientMessage.RequestPermission _) ->
+            // If initialize fails, the connection is not ready; allow the client to retry.
+            | Phase.WaitingForInitializeResult _, Message.FromAgent(AgentToClientMessage.InitializeError _) ->
+                Ok Phase.AwaitingInitialize
+
+            | Phase.WaitingForInitializeResult _, Message.FromAgent _ ->
                 Error ProtocolError.InitializeResultWithoutRequest
 
             | Phase.WaitingForInitializeResult _, Message.FromClient _
@@ -238,6 +238,21 @@ module Protocol =
                         Ok(Phase.Ready { ctx with sessions = sessions' })
                     | TurnState.Idle _ -> Error(ProtocolError.NoPromptInFlight s.sessionId)
 
+            // session/prompt error: close the turn (no StopReason available).
+            | Phase.Ready ctx, Message.FromAgent(AgentToClientMessage.SessionPromptError(req, _)) ->
+                match ctx.sessions |> Map.tryFind req.sessionId with
+                | None -> Error(ProtocolError.UnknownSession req.sessionId)
+                | Some s ->
+                    match s.turnState with
+                    | TurnState.PromptInFlight _ ->
+                        let s' =
+                            { s with
+                                turnState = TurnState.Idle None }
+
+                        let sessions' = ctx.sessions |> Map.add s.sessionId s'
+                        Ok(Phase.Ready { ctx with sessions = sessions' })
+                    | TurnState.Idle _ -> Error(ProtocolError.NoPromptInFlight s.sessionId)
+
             // session/cancel: only valid while a prompt is in flight.
             | Phase.Ready ctx, Message.FromClient(ClientToAgentMessage.SessionCancel c) ->
                 match ctx.sessions |> Map.tryFind c.sessionId with
@@ -260,7 +275,7 @@ module Protocol =
                 | None -> Error(ProtocolError.UnknownSession u.sessionId)
                 | Some s ->
                     match u.update with
-                    | SessionUpdate.CurrentModeUpdate currentModeId ->
+                    | SessionUpdate.CurrentModeUpdate { currentModeId = currentModeId } ->
                         let s' =
                             match s.modeState with
                             | None -> s
@@ -276,13 +291,16 @@ module Protocol =
                     | _ -> Ok(Phase.Ready ctx)
 
             // session/request_permission: must be inside a prompt turn.
-            | Phase.Ready ctx, Message.FromAgent(AgentToClientMessage.RequestPermission p) ->
+            | Phase.Ready ctx, Message.FromAgent(AgentToClientMessage.SessionRequestPermissionRequest p) ->
                 match ctx.sessions |> Map.tryFind p.sessionId with
                 | None -> Error(ProtocolError.UnknownSession p.sessionId)
                 | Some s ->
                     match s.turnState with
                     | TurnState.PromptInFlight _ -> Ok(Phase.Ready ctx)
                     | TurnState.Idle _ -> Error(ProtocolError.NoPromptInFlight s.sessionId)
+
+            // Everything else: currently state-neutral (full JSON-RPC correlation is added in the codec layer).
+            | Phase.Ready ctx, _ -> Ok(Phase.Ready ctx)
 
         { initial = Phase.AwaitingInitialize
           step = step }

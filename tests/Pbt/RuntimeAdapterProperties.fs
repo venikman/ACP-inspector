@@ -24,29 +24,33 @@ module RuntimeAdapterProperties =
     let private mkProfileWithLimit limit : RuntimeProfile =
         { metadata = MetadataPolicy.AllowOpaque
           transport =
-            Some { lineSeparator = None
-                   maxFrameBytes = None
-                   maxMessageBytes = Some limit
-                   metaEnvelope = None } }
+            Some
+                { lineSeparator = None
+                  maxFrameBytes = None
+                  maxMessageBytes = Some limit
+                  metaEnvelope = None } }
 
     let private hasSizeFinding findings =
         findings
         |> List.exists (fun f ->
-            f.lane = Lane.Transport &&
-            match f.failure with
-            | Some failure -> failure.code = "ACP.TRANSPORT.MAX_MESSAGE_BYTES_EXCEEDED"
-            | None -> false)
+            f.lane = Lane.Transport
+            && match f.failure with
+               | Some failure -> failure.code = "ACP.TRANSPORT.MAX_MESSAGE_BYTES_EXCEEDED"
+               | None -> false)
 
     [<Fact>]
     let ``validateInbound size checks match maxMessageBytes`` () =
         let limit = 10
-        let profile = Some (mkProfileWithLimit limit)
+        let profile = Some(mkProfileWithLimit limit)
 
         let gen = G.zip Generators.genMessageAny (G.choose (0, limit * 3))
 
         let prop =
-            P.forAll (A.fromGen gen) (fun (msg : Message, n : int) ->
-                let frame : InboundFrame = { rawByteLength = Some n; message = msg }
+            P.forAll (A.fromGen gen) (fun (msg: Message, n: int) ->
+                let frame: InboundFrame =
+                    { rawByteLength = Some n
+                      message = msg }
+
                 let r = validateInbound sid profile frame false
                 hasSizeFinding r.findings = (n > limit))
 
@@ -55,13 +59,16 @@ module RuntimeAdapterProperties =
     [<Fact>]
     let ``validateOutbound size checks match maxMessageBytes`` () =
         let limit = 10
-        let profile = Some (mkProfileWithLimit limit)
+        let profile = Some(mkProfileWithLimit limit)
 
         let gen = G.zip Generators.genMessageAny (G.choose (0, limit * 3))
 
         let prop =
-            P.forAll (A.fromGen gen) (fun (msg : Message, n : int) ->
-                let frame : OutboundFrame = { rawByteLength = Some n; message = msg }
+            P.forAll (A.fromGen gen) (fun (msg: Message, n: int) ->
+                let frame: OutboundFrame =
+                    { rawByteLength = Some n
+                      message = msg }
+
                 let r = validateOutbound sid profile frame false
                 hasSizeFinding r.findings = (n > limit))
 

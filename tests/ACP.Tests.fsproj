@@ -11,6 +11,9 @@
     <Compile Include="Acp.Eval.Golden.Tests.fs" />
     <Compile Include="Acp.FSharpTokenizer.Tests.fs" />
     <Compile Include="Acp.Security.Tests.fs" />
+    <Compile Include="Acp.RepoPolicy.Tests.fs" />
+    <Compile Include="Acp.Codec.Tests.fs" />
+    <Compile Include="Acp.TraceReplay.Tests.fs" />
     <Compile Include="Pbt/EvidenceRunner.fs" />
     <Compile Include="Pbt/Generators.fs" />
     <Compile Include="Pbt/TokenizerProperties.fs" />

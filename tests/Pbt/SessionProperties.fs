@@ -33,17 +33,19 @@ module SessionProperties =
           promptCapabilities =
             { audio = false
               image = false
-              embeddedContext = false } }
+              embeddedContext = false }
+          sessionCapabilities = SessionCapabilities.empty }
 
     let private initParams: InitializeParams =
-        { protocolVersion = 1
+        { protocolVersion = ProtocolVersion.current
           clientCapabilities = clientCaps
           clientInfo = None }
 
     let private initResult: InitializeResult =
-        { negotiatedVersion = 1
+        { protocolVersion = ProtocolVersion.current
           agentCapabilities = agentCaps
-          agentInfo = None }
+          agentInfo = None
+          authMethods = [] }
 
     let private handshake: Message list =
         [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
@@ -81,8 +83,8 @@ module SessionProperties =
                 let msgs =
                     handshake
                     @ [ Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
-                        Message.FromClient(ClientToAgentMessage.SessionPrompt { sessionId = sid; content = [] })
-                        Message.FromClient(ClientToAgentMessage.SessionPrompt { sessionId = sid; content = [] }) ]
+                        Message.FromClient(ClientToAgentMessage.SessionPrompt { sessionId = sid; prompt = [] })
+                        Message.FromClient(ClientToAgentMessage.SessionPrompt { sessionId = sid; prompt = [] }) ]
 
                 let r = runWithValidation sid spec msgs false None None
                 hasSessionFailure "ACP.SESSION.MULTIPLE_PROMPTS_IN_FLIGHT" r.findings)
@@ -102,7 +104,7 @@ module SessionProperties =
                     let msgs =
                         handshake
                         @ [ Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
-                            Message.FromClient(ClientToAgentMessage.SessionPrompt { sessionId = sid; content = [] })
+                            Message.FromClient(ClientToAgentMessage.SessionPrompt { sessionId = sid; prompt = [] })
                             Message.FromClient(ClientToAgentMessage.SessionCancel { sessionId = sid })
                             Message.FromAgent(
                                 AgentToClientMessage.SessionPromptResult { sessionId = sid; stopReason = sr }

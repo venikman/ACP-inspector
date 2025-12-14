@@ -77,12 +77,23 @@ module Validation =
             | Message.FromClient(ClientToAgentMessage.SessionCancel p) -> Some p.sessionId
             | Message.FromClient(ClientToAgentMessage.SessionLoad p) -> Some p.sessionId
             | Message.FromClient(ClientToAgentMessage.SessionSetMode p) -> Some p.sessionId
+            | Message.FromClient(ClientToAgentMessage.FsReadTextFileError(req, _)) -> Some req.sessionId
+            | Message.FromClient(ClientToAgentMessage.FsWriteTextFileError(req, _)) -> Some req.sessionId
+            | Message.FromClient(ClientToAgentMessage.SessionRequestPermissionError(req, _)) -> Some req.sessionId
+            | Message.FromClient(ClientToAgentMessage.TerminalCreateError(req, _)) -> Some req.sessionId
+            | Message.FromClient(ClientToAgentMessage.TerminalOutputError(req, _)) -> Some req.sessionId
+            | Message.FromClient(ClientToAgentMessage.TerminalWaitForExitError(req, _)) -> Some req.sessionId
+            | Message.FromClient(ClientToAgentMessage.TerminalKillError(req, _)) -> Some req.sessionId
+            | Message.FromClient(ClientToAgentMessage.TerminalReleaseError(req, _)) -> Some req.sessionId
             | Message.FromAgent(AgentToClientMessage.SessionNewResult r) -> Some r.sessionId
             | Message.FromAgent(AgentToClientMessage.SessionPromptResult r) -> Some r.sessionId
+            | Message.FromAgent(AgentToClientMessage.SessionPromptError(req, _)) -> Some req.sessionId
             | Message.FromAgent(AgentToClientMessage.SessionLoadResult r) -> Some r.sessionId
+            | Message.FromAgent(AgentToClientMessage.SessionLoadError(req, _)) -> Some req.sessionId
             | Message.FromAgent(AgentToClientMessage.SessionSetModeResult r) -> Some r.sessionId
+            | Message.FromAgent(AgentToClientMessage.SessionSetModeError(req, _)) -> Some req.sessionId
             | Message.FromAgent(AgentToClientMessage.SessionUpdate u) -> Some u.sessionId
-            | Message.FromAgent(AgentToClientMessage.RequestPermission r) -> Some r.sessionId
+            | Message.FromAgent(AgentToClientMessage.SessionRequestPermissionRequest r) -> Some r.sessionId
             | _ -> None
 
         let private subjectOfError
@@ -173,11 +184,12 @@ module Validation =
                 |> List.tryFind (fun (_, msg) ->
                     match msg with
                     | Message.FromAgent(AgentToClientMessage.SessionPromptResult r) -> r.sessionId = sid
+                    | Message.FromAgent(AgentToClientMessage.SessionPromptError(req, _)) -> req.sessionId = sid
                     | _ -> false)
 
             match resultOpt with
             | None -> None
-            | Some(resultIdx, resultMsg) ->
+            | Some(resultIdx, Message.FromAgent(AgentToClientMessage.SessionPromptResult r)) ->
                 let between = indexed |> List.filter (fun (i, _) -> i > promptIdx && i < resultIdx)
 
                 let cancelOpt =
@@ -187,10 +199,7 @@ module Validation =
                         | Message.FromClient(ClientToAgentMessage.SessionCancel c) -> c.sessionId = sid
                         | _ -> false)
 
-                let stopReason =
-                    match resultMsg with
-                    | Message.FromAgent(AgentToClientMessage.SessionPromptResult r) -> r.stopReason
-                    | _ -> StopReason.Other "invalid-result-shape"
+                let stopReason = Some r.stopReason
 
                 let promptOrdinal =
                     indexed
@@ -203,14 +212,40 @@ module Validation =
 
                 Some(promptIdx, cancelOpt |> Option.map fst, resultIdx, stopReason, promptOrdinal)
 
+            | Some(resultIdx, Message.FromAgent(AgentToClientMessage.SessionPromptError _)) ->
+                let between = indexed |> List.filter (fun (i, _) -> i > promptIdx && i < resultIdx)
+
+                let cancelOpt =
+                    between
+                    |> List.tryFind (fun (_, msg) ->
+                        match msg with
+                        | Message.FromClient(ClientToAgentMessage.SessionCancel c) -> c.sessionId = sid
+                        | _ -> false)
+
+                let stopReason = None
+
+                let promptOrdinal =
+                    indexed
+                    |> List.take promptIdx
+                    |> List.filter (fun (_, msg) ->
+                        match msg with
+                        | Message.FromClient(ClientToAgentMessage.SessionPrompt p) when p.sessionId = sid -> true
+                        | _ -> false)
+                    |> List.length
+
+                Some(promptIdx, cancelOpt |> Option.map fst, resultIdx, stopReason, promptOrdinal)
+
+            | Some _ -> None
+
     /// Session-lane invariant: if a cancel occurs between prompt and result, stopReason must be Cancelled.
     let private checkSessionCancelInvariant (trace: SessionTrace) : ValidationFinding list =
         match tryFindPromptWindow trace.sessionId trace with
         | None -> []
-        | Some(promptIdx, cancelIdxOpt, resultIdx, stopReason, promptOrdinal) ->
-            match cancelIdxOpt with
-            | None -> []
-            | Some cancelIdx ->
+        | Some(promptIdx, cancelIdxOpt, resultIdx, stopReasonOpt, promptOrdinal) ->
+            match cancelIdxOpt, stopReasonOpt with
+            | None, _ -> []
+            | Some _, None -> []
+            | Some cancelIdx, Some stopReason ->
                 match stopReason with
                 | StopReason.Cancelled -> []
                 | _ ->
@@ -271,6 +306,27 @@ module Validation =
                     let failure =
                         { code = "ACP.SESSION.RESULT_WITHOUT_PROMPT"
                           message = "SessionPromptResult was sent without a prior in-flight SessionPrompt."
+                          subject = subject }
+
+                    findings <-
+                        findings
+                        @ [ { lane = Lane.Session
+                              severity = Severity.Error
+                              subject = subject
+                              failure = Some failure
+                              sessionId = Some trace.sessionId
+                              traceIndex = Some idx
+                              note = Some(sprintf "index=%d; openPrompts=%d" idx openPrompts) } ]
+                else
+                    openPrompts <- max 0 (openPrompts - 1)
+
+            | Message.FromAgent(AgentToClientMessage.SessionPromptError(req, _)) when req.sessionId = trace.sessionId ->
+                if openPrompts = 0 then
+                    let subject = Subject.PromptTurn(trace.sessionId, 0)
+
+                    let failure =
+                        { code = "ACP.SESSION.ERROR_WITHOUT_PROMPT"
+                          message = "SessionPrompt error response was sent without a prior in-flight SessionPrompt."
                           subject = subject }
 
                     findings <-
@@ -357,7 +413,7 @@ module Validation =
 
             | Message.FromAgent(AgentToClientMessage.SessionUpdate u) when u.sessionId = sid ->
                 match u.update with
-                | Prompting.SessionUpdate.CurrentModeUpdate currentModeId ->
+                | Prompting.SessionUpdate.CurrentModeUpdate { currentModeId = currentModeId } ->
                     match modeStateOpt with
                     | None -> ()
                     | Some ms ->
@@ -480,37 +536,29 @@ module Validation =
 
         let evalProfile = defaultArg evalProfile Eval.defaultProfile
 
-        let validateContentBlocks traceIndex (msg: Message) (blocks: Prompting.ContentBlock list) =
+        let validateMessageExtensibility traceIndex (msg: Message) =
             match profile with
             | None -> ()
             | Some rp ->
                 let policy = rp.metadata
 
-                blocks
-                |> List.iter (function
-                    | Prompting.ContentBlock.Other(kind, _) ->
-                        match
-                            MetadataProfile.validate policy kind (Subject.MessageAt(traceIndex, msg)) (Some traceIndex)
-                        with
-                        | Some f -> findings <- findings @ [ f ]
-                        | None -> ()
-                    | _ -> ())
+                let validate kind =
+                    match
+                        MetadataProfile.validate policy kind (Subject.MessageAt(traceIndex, msg)) (Some traceIndex)
+                    with
+                    | Some f -> findings <- findings @ [ f ]
+                    | None -> ()
 
-        let validateMessageContent traceIndex (msg: Message) =
-            match msg with
-            | Message.FromClient(ClientToAgentMessage.SessionPrompt p) -> validateContentBlocks traceIndex msg p.content
-            | Message.FromAgent(AgentToClientMessage.SessionUpdate u) ->
-                let blocks =
-                    match u.update with
-                    | Prompting.SessionUpdate.UserMessageChunk cb -> [ cb ]
-                    | Prompting.SessionUpdate.AgentMessageChunk cb -> [ cb ]
-                    | Prompting.SessionUpdate.ToolCall tc -> tc.content
-                    | _ -> []
-
-                validateContentBlocks traceIndex msg blocks
-            | Message.FromAgent(AgentToClientMessage.RequestPermission rp) ->
-                validateContentBlocks traceIndex msg rp.toolCall.content
-            | _ -> ()
+                match msg with
+                | Message.FromClient(ClientToAgentMessage.ExtNotification(methodName, _)) -> validate methodName
+                | Message.FromClient(ClientToAgentMessage.ExtRequest(methodName, _)) -> validate methodName
+                | Message.FromClient(ClientToAgentMessage.ExtResponse(methodName, _)) -> validate methodName
+                | Message.FromClient(ClientToAgentMessage.ExtError(methodName, _)) -> validate methodName
+                | Message.FromAgent(AgentToClientMessage.ExtNotification(methodName, _)) -> validate methodName
+                | Message.FromAgent(AgentToClientMessage.ExtRequest(methodName, _)) -> validate methodName
+                | Message.FromAgent(AgentToClientMessage.ExtResponse(methodName, _)) -> validate methodName
+                | Message.FromAgent(AgentToClientMessage.ExtError(methodName, _)) -> validate methodName
+                | _ -> ()
 
         let addEvalFindings (msg: Message) =
             // Eval findings are advisory; map to Eval lane.
@@ -539,7 +587,7 @@ module Validation =
 
         for (idx, msg) in messages |> List.indexed do
             trace <- SessionTrace.append msg trace
-            validateMessageContent idx msg
+            validateMessageExtensibility idx msg
             addEvalFindings msg
 
             if continueProcessing then

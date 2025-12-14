@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Acp.Domain.fs" />
+    <Compile Include="Acp.Codec.fs" />
     <Compile Include="Acp.FpfPins.fs" />
     <Compile Include="Acp.FSharpTokenizer.fs" />
     <Compile Include="Acp.Protocol.fs" />

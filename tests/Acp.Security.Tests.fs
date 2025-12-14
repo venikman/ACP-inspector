@@ -33,11 +33,7 @@ module SecurityTests =
         let repoRoot = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, ".."))
 
         let excludedParts =
-            [ "/bin/"
-              "/obj/"
-              "/.git/"
-              "/vendor/"
-              "/tests/TestResults/" ]
+            [ "/bin/"; "/obj/"; "/.git/"; "/vendor/"; "/tests/TestResults/" ]
 
         let files =
             Directory.EnumerateFiles(repoRoot, "*.*", SearchOption.AllDirectories)
@@ -52,11 +48,12 @@ module SecurityTests =
             |> List.choose (fun path ->
                 try
                     let text = File.ReadAllText path
-                    if text |> Seq.exists isSuspectBidiOrZeroWidth then Some path else None
+
+                    if text |> Seq.exists isSuspectBidiOrZeroWidth then
+                        Some path
+                    else
+                        None
                 with _ ->
                     None)
 
-        Assert.True(
-            offenders.IsEmpty,
-            "Found bidi / zero-width controls in:\n" + String.Join("\n", offenders)
-        )
+        Assert.True(offenders.IsEmpty, "Found bidi / zero-width controls in:\n" + String.Join("\n", offenders))

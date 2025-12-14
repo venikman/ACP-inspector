@@ -13,6 +13,11 @@ Normative behavior follows the published ACP spec and schema:
 - Spec source of truth (GitHub): https://github.com/agentclientprotocol/agent-client-protocol
 - Overview/intro (website): https://agentclientprotocol.com/overview/introduction
 
+Implementation targets:
+
+- ACP schema: `Acp.Domain.Spec.Schema` (currently `0.10.x`)
+- Negotiated major `protocolVersion`: `Acp.Domain.PrimitivesAndParties.ProtocolVersion.current` (currently `1`)
+
 This repo adds a First Principles Framework (FPF) view on assurance and observability.
 
 ## Who benefits (and how)
@@ -52,7 +57,7 @@ let inbound =
           message =
             Message.FromClient(
                 ClientToAgentMessage.Initialize
-                    { protocolVersion = 1
+                    { protocolVersion = ProtocolVersion.current
                       clientCapabilities =
                         { fs = { readTextFile = true; writeTextFile = false }
                           terminal = false }
@@ -65,12 +70,13 @@ let outbound =
           message =
             Message.FromAgent(
                 AgentToClientMessage.InitializeResult
-                    { negotiatedVersion = 1
+                    { protocolVersion = ProtocolVersion.current
                       agentCapabilities =
                         { loadSession = true
                           mcpCapabilities = { http = false; sse = false }
                           promptCapabilities = { audio = false; image = false; embeddedContext = false } }
-                      agentInfo = None }) }
+                      agentInfo = None
+                      authMethods = [] }) }
         false
 
 printfn "Inbound findings: %A" inbound.findings
@@ -79,38 +85,59 @@ printfn "Outbound findings: %A" outbound.findings
 
 3. Want to wire it into a runtime?
 
-### Running tests with a TRX report
-
-```bash
-# from repo root
-scripts/run-tests.sh
-# writes tests/TestResults.trx and prints the console summary
-```
-
-If `DOTNET_BIN` is unset, scripts use `dotnet` on PATH. If `DOTNET_BIN` is set but can't run the target framework(s), the script falls back to `dotnet` on PATH and prints a warning.
-
 **Tooling Reference (Holon 2)**
 
 - `src/Acp.Domain.fs` — F# domain model: protocol versions, sessions, capabilities, messages, tool calls, etc.
 - `src/Acp.Protocol.fs` — protocol state machine (initialize → sessions → prompt turns → updates → cancel).
 - `src/Acp.Validation.fs` — validation lanes/findings, protocol-error bridge, `runWithValidation` helper.
 - `src/Acp.RuntimeAdapter.fs` — runtime boundary: `validateInbound`/`validateOutbound` with profile-aware checks.
-- `tests/` — protocol/runtime/sentinel tests and `golden/` fixtures.
+- `tests/` — protocol/runtime/sentinel tests
+
+## Inspector CLI (apps/ACP.Inspector)
+
+This repo includes a small CLI to decode JSON-RPC ACP traffic, correlate responses, and run the sentinel validation over the full trace.
+
+- Build: `dotnet build apps/ACP.Inspector/ACP.Inspector.fsproj -c Release`
+- Run: `dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -- <command> [options]`
+
+Common commands:
+
+- Replay a recorded trace: `replay --trace trace.jsonl`
+- Inspect newline-delimited JSON-RPC from stdin: `tap-stdin --direction fromClient --record trace.jsonl`
+- WebSocket tap (optional stdin send): `ws --url ws://host/path --stdin-send --record trace.jsonl`
+- SSE tap (reads `data:` lines): `sse --url https://host/sse --record trace.jsonl`
+- Stdio proxy between two commands: `proxy-stdio --client-cmd "<cmd>" --agent-cmd "<cmd>" --record trace.jsonl`
 
 ---
 
 ## How to work in this repo
 
-- **Treat the ACP spec as normative.**  
+- **Treat the ACP spec as normative.**
   If this repo and the published spec disagree, the spec wins; open an issue and tag the discrepancy.
   - Spec source of truth (GitHub): https://github.com/agentclientprotocol/agent-client-protocol
   - Overview/intro (website): https://agentclientprotocol.com/overview/introduction
 
-- **Keep holons separate.**  
+- **Keep holons separate.**
   Avoid mixing protocol types, runtime IO concerns, and sentinel rules in the same module.
 
-- **Prefer idiomatic F#.**  
+- **Prefer idiomatic F#.**
   Use discriminated unions and records, composition over inheritance, and Result-based error handling.
 
-- **Document spec grey areas.**  
+- **Follow the F# style guide.**
+  See `STYLEGUIDE.md` for the canonical conventions used in this repo.
+
+- **Format with Fantomas.**
+  This repo uses Fantomas as the formatter (and as a formatting “linter” in `--check` mode):
+  - Format: `dotnet tool restore && dotnet fantomas src tests apps`
+  - Check only: `dotnet tool restore && dotnet fantomas src tests apps --check`
+  - Note: `tests/golden/` is ignored via `.fantomasignore` (it contains intentionally-invalid F# samples).
+
+- **Optional: enable pre-commit auto-formatting.**
+  This repo includes a `pre-commit` hook that auto-runs Fantomas and re-stages changes:
+  - One-time setup: `git config core.hooksPath .githooks`
+
+- **No Python in this repo.**
+  Do not add Python source/config/scripts; this project is .NET-only. (Enforced by tests.)
+
+- **Document spec grey areas.**
   When the ACP spec is ambiguous, document assumptions in comments and mark them for later verification.

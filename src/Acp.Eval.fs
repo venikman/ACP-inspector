@@ -44,15 +44,18 @@ module Eval =
     let private hasNonEmptyText (blocks: ContentBlock list) =
         blocks
         |> List.exists (function
-            | ContentBlock.Text t when not (String.IsNullOrWhiteSpace t) -> true
+            | ContentBlock.Text t when not (String.IsNullOrWhiteSpace t.text) -> true
             | _ -> false)
 
-    let private hasUsefulContent (blocks: ContentBlock list) =
+    let private hasUsefulPromptContent (blocks: ContentBlock list) =
         blocks
         |> List.exists (function
-            | ContentBlock.Text t when not (String.IsNullOrWhiteSpace t) -> true
-            | ContentBlock.Resource _ -> true
-            | _ -> false)
+            | ContentBlock.Text t when not (String.IsNullOrWhiteSpace t.text) -> true
+            | ContentBlock.Text _ -> false
+            | ContentBlock.Image _
+            | ContentBlock.Audio _
+            | ContentBlock.ResourceLink _
+            | ContentBlock.Resource _ -> true)
 
     let private fsharpLexFindings (profile: EvalProfile) (text: string) : EvalFinding list =
         if not profile.enableFSharpLexing || String.IsNullOrWhiteSpace text then
@@ -168,7 +171,24 @@ module Eval =
     let private collectFSharpFindingsFromContent (profile: EvalProfile) (blocks: ContentBlock list) =
         blocks
         |> List.choose (function
-            | ContentBlock.Text t -> Some t
+            | ContentBlock.Text t -> Some t.text
+            | _ -> None)
+        |> List.collect (fsharpLexFindings profile)
+
+    let private toolCallContentHasUsefulContent (items: ToolCallContent list) =
+        items
+        |> List.exists (function
+            | ToolCallContent.Content _ -> true
+            | ToolCallContent.Diff _ -> true
+            | ToolCallContent.Terminal _ -> true)
+
+    let private collectFSharpFindingsFromToolCallContent (profile: EvalProfile) (items: ToolCallContent list) =
+        items
+        |> List.choose (function
+            | ToolCallContent.Content c ->
+                match c.content with
+                | ContentBlock.Text t -> Some t.text
+                | _ -> None
             | _ -> None)
         |> List.collect (fsharpLexFindings profile)
 
@@ -180,7 +200,7 @@ module Eval =
             match msg with
             | Message.FromClient(ClientToAgentMessage.SessionPrompt p) ->
                 let baseFindings =
-                    if profile.requireNonEmptyInstruction && not (hasNonEmptyText p.content) then
+                    if profile.requireNonEmptyInstruction && not (hasNonEmptyText p.prompt) then
                         [ { code = "ACP.EVAL.EMPTY_INSTRUCTION"
                             message = "Prompt content must include at least one non-empty text block."
                             severity = EvalSeverity.Error
@@ -188,14 +208,14 @@ module Eval =
                     else
                         []
 
-                let fsharpFindings = collectFSharpFindingsFromContent profile p.content
+                let fsharpFindings = collectFSharpFindingsFromContent profile p.prompt
 
                 baseFindings @ fsharpFindings
             | Message.FromAgent(AgentToClientMessage.SessionUpdate u) ->
                 match u.update with
                 | SessionUpdate.ToolCall tc ->
                     let baseFindings =
-                        if tc.content.IsEmpty || not (hasUsefulContent tc.content) then
+                        if tc.content.IsEmpty || not (toolCallContentHasUsefulContent tc.content) then
                             [ { code = "ACP.EVAL.EMPTY_TOOL_CALL_CONTENT"
                                 message = "Tool call content must include text or resource content."
                                 severity = EvalSeverity.Error
@@ -203,13 +223,15 @@ module Eval =
                         else
                             []
 
-                    let fsharpFindings = collectFSharpFindingsFromContent profile tc.content
+                    let fsharpFindings = collectFSharpFindingsFromToolCallContent profile tc.content
 
                     baseFindings @ fsharpFindings
                 | _ -> []
-            | Message.FromAgent(AgentToClientMessage.RequestPermission rp) ->
+            | Message.FromAgent(AgentToClientMessage.SessionRequestPermissionRequest rp) ->
+                let toolItems = rp.toolCall.content |> Option.defaultValue []
+
                 let baseFindings =
-                    if rp.toolCall.content.IsEmpty || not (hasUsefulContent rp.toolCall.content) then
+                    if toolItems.IsEmpty || not (toolCallContentHasUsefulContent toolItems) then
                         [ { code = "ACP.EVAL.EMPTY_TOOL_CALL_CONTENT"
                             message = "Tool call content must include text or resource content."
                             severity = EvalSeverity.Error
@@ -217,7 +239,7 @@ module Eval =
                     else
                         []
 
-                let fsharpFindings = collectFSharpFindingsFromContent profile rp.toolCall.content
+                let fsharpFindings = collectFSharpFindingsFromToolCallContent profile toolItems
 
                 baseFindings @ fsharpFindings
             | _ -> []

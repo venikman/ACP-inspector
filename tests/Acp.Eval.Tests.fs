@@ -12,13 +12,19 @@ module EvalTests =
 
     let sid = SessionId "s-eval"
 
+    let private textBlock (text: string) : ContentBlock =
+        ContentBlock.Text { text = text; annotations = None }
+
+    let private toolText (text: string) : ToolCallContent =
+        ToolCallContent.Content { content = textBlock text }
+
     [<Fact>]
     let ``non-empty text passes code judge`` () =
         let msg =
             Message.FromClient(
                 ClientToAgentMessage.SessionPrompt
                     { sessionId = sid
-                      content = [ ContentBlock.Text "hi" ] }
+                      prompt = [ textBlock "hi" ] }
             )
 
         let findings = runPromptChecks defaultProfile msg
@@ -27,7 +33,7 @@ module EvalTests =
     [<Fact>]
     let ``empty prompt fails code judge`` () =
         let msg =
-            Message.FromClient(ClientToAgentMessage.SessionPrompt { sessionId = sid; content = [] })
+            Message.FromClient(ClientToAgentMessage.SessionPrompt { sessionId = sid; prompt = [] })
 
         let findings = runPromptChecks defaultProfile msg
         Assert.Equal(1, findings.Length)
@@ -38,12 +44,15 @@ module EvalTests =
 
     [<Fact>]
     let ``tool call with text passes`` () =
-        let tc =
+        let tc: ToolCall =
             { toolCallId = "t1"
-              title = None
-              kind = None
-              status = ToolCallStatus.Requested
-              content = [ ContentBlock.Text "do thing" ] }
+              title = "t1"
+              kind = ToolKind.Read
+              status = ToolCallStatus.Pending
+              content = [ toolText "do thing" ]
+              locations = []
+              rawInput = None
+              rawOutput = None }
 
         let msg =
             Message.FromAgent(
@@ -57,12 +66,15 @@ module EvalTests =
 
     [<Fact>]
     let ``tool call empty content fails`` () =
-        let tc =
+        let tc: ToolCall =
             { toolCallId = "t-empty"
-              title = None
-              kind = None
-              status = ToolCallStatus.Requested
-              content = [] }
+              title = "t-empty"
+              kind = ToolKind.Read
+              status = ToolCallStatus.Pending
+              content = []
+              locations = []
+              rawInput = None
+              rawOutput = None }
 
         let msg =
             Message.FromAgent(
@@ -83,7 +95,7 @@ module EvalTests =
             Message.FromClient(
                 ClientToAgentMessage.SessionPrompt
                     { sessionId = sid
-                      content = [ ContentBlock.Text code ] }
+                      prompt = [ textBlock code ] }
             )
 
         let findings = runPromptChecks defaultProfile msg
@@ -97,7 +109,7 @@ module EvalTests =
             Message.FromClient(
                 ClientToAgentMessage.SessionPrompt
                     { sessionId = sid
-                      content = [ ContentBlock.Text code ] }
+                      prompt = [ textBlock code ] }
             )
 
         let findings = runPromptChecks defaultProfile msg
@@ -111,7 +123,7 @@ module EvalTests =
             Message.FromClient(
                 ClientToAgentMessage.SessionPrompt
                     { sessionId = sid
-                      content = [ ContentBlock.Text code ] }
+                      prompt = [ textBlock code ] }
             )
 
         let findings = runPromptChecks defaultProfile msg
@@ -125,15 +137,18 @@ module EvalTests =
             { toolCallId = "t-rp"
               title = None
               kind = None
-              status = ToolCallStatus.Requested
-              content = [ ContentBlock.Text code ] }
+              status = None
+              content = Some [ toolText code ]
+              locations = None
+              rawInput = None
+              rawOutput = None }
 
         let rp =
             { sessionId = sid
               toolCall = tc
               options = [] }
 
-        let msg = Message.FromAgent(AgentToClientMessage.RequestPermission rp)
+        let msg = Message.FromAgent(AgentToClientMessage.SessionRequestPermissionRequest rp)
 
         let findings = runPromptChecks defaultProfile msg
         Assert.Contains(findings, fun f -> f.code = "ACP.EVAL.FSHARP_UNCLOSED_STRING")
