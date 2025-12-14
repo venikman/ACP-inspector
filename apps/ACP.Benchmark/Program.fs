@@ -20,6 +20,20 @@ let sessionUpdateNotification =
 let promptRequest =
     """{"jsonrpc":"2.0","method":"session/prompt","params":{"sessionId":"sess-001","prompt":[{"type":"text","text":"What is 2+2?"}]},"id":2}"""
 
+// Simulated streaming token content (realistic LLM output)
+let makeTokenUpdate (tokenCount: int) =
+    // ~5 chars per token average (realistic for LLMs)
+    let text = String.replicate tokenCount "word "
+    // Use proper ACP schema: sessionUpdate field with agent_message_chunk type
+    sprintf
+        """{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess-001","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"%s"}}}}"""
+        text
+
+// Pre-generate token messages of various sizes
+let tokenUpdate10 = makeTokenUpdate 10 // ~50 chars
+let tokenUpdate100 = makeTokenUpdate 100 // ~500 chars
+let tokenUpdate1000 = makeTokenUpdate 1000 // ~5000 chars
+
 /// Cold start benchmark: measure time to decode first message
 let runColdStart () =
     let sw = Stopwatch.StartNew()
@@ -158,10 +172,55 @@ let runCodec (count: int) =
 
     0
 
+/// Token throughput benchmark: measure tokens/sec through SDK
+/// Simulates streaming LLM output with content chunks
+let runTokens (count: int) (tokensPerMessage: int) =
+    // Pre-generate the message for this token size
+    let message = makeTokenUpdate tokensPerMessage
+
+    let sw = Stopwatch.StartNew()
+    let mutable decoded = 0
+    let mutable totalTokens = 0L
+
+    for _ in 1..count do
+        match Codec.decode Direction.FromAgent CodecState.empty message with
+        | Ok _ ->
+            decoded <- decoded + 1
+            totalTokens <- totalTokens + int64 tokensPerMessage
+        | Error _ -> ()
+
+    sw.Stop()
+
+    let elapsedSec = float sw.ElapsedMilliseconds / 1000.0
+
+    let tokensPerSec =
+        if elapsedSec > 0.0 then
+            float totalTokens / elapsedSec
+        else
+            float totalTokens * 1000.0
+
+    let msgsPerSec =
+        if elapsedSec > 0.0 then
+            float decoded / elapsedSec
+        else
+            float decoded * 1000.0
+
+    printfn
+        """{"status":"ok","mode":"tokens","messages":%d,"tokens_per_msg":%d,"total_tokens":%d,"elapsed_ms":%d,"tokens_per_sec":%.0f,"msgs_per_sec":%.0f}"""
+        decoded
+        tokensPerMessage
+        totalTokens
+        sw.ElapsedMilliseconds
+        tokensPerSec
+        msgsPerSec
+
+    0
+
 /// Parse command line arguments
 let parseArgs (args: string[]) =
     let mutable mode = "roundtrip"
     let mutable count = 100
+    let mutable tokensPerMsg = 100
 
     let rec parse =
         function
@@ -171,22 +230,26 @@ let parseArgs (args: string[]) =
         | "--count" :: c :: rest ->
             count <- Int32.Parse(c)
             parse rest
+        | "--tokens" :: t :: rest ->
+            tokensPerMsg <- Int32.Parse(t)
+            parse rest
         | _ :: rest -> parse rest
         | [] -> ()
 
     parse (Array.toList args)
-    (mode, count)
+    (mode, count, tokensPerMsg)
 
 [<EntryPoint>]
 let main args =
-    let (mode, count) = parseArgs args
+    let (mode, count, tokensPerMsg) = parseArgs args
 
     match mode with
     | "cold-start" -> runColdStart ()
     | "roundtrip" -> runRoundtrip ()
     | "throughput" -> runThroughput count
     | "codec" -> runCodec count
+    | "tokens" -> runTokens count tokensPerMsg
     | other ->
         eprintfn "Unknown mode: %s" other
-        eprintfn "Usage: ACP.Benchmark --mode <cold-start|roundtrip|throughput|codec> [--count N]"
+        eprintfn "Usage: ACP.Benchmark --mode <cold-start|roundtrip|throughput|codec|tokens> [--count N] [--tokens T]"
         1
