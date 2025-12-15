@@ -261,9 +261,18 @@ module TransportTests =
 
             do! (chaosClient :> Transport.ITransport).SendAsync("""{"test":"dropped"}""")
 
-            // Message should not arrive
-            let! received = agentSide.ReceiveAsync()
-            Assert.True(received.IsNone)
+            // Message should not arrive (timeout-based assertion)
+            let receiveTask = agentSide.ReceiveAsync()
+
+            let! completed = Task.WhenAny(receiveTask :> Task, Task.Delay(200))
+
+            if obj.ReferenceEquals(completed, (receiveTask :> Task)) then
+                let! received = receiveTask
+                Assert.True(received.IsNone)
+            else
+                () // Timed out waiting for a message: expected
+
+            do! agentSide.CloseAsync()
         }
 
     [<Fact>]

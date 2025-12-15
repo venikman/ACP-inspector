@@ -54,22 +54,24 @@ module Transport =
 
             member _.ReceiveAsync() =
                 task {
-                    if closed then
-                        return None
-                    else
-                        // Try immediate dequeue first
-                        match inbound.TryDequeue() with
-                        | true, msg -> return Some msg
-                        | false, _ ->
-                            // Wait for signal with timeout
-                            let! acquired = receiveSignal.WaitAsync(100)
+                    let mutable done' = false
+                    let mutable result' = None
 
-                            if acquired && not closed then
-                                match inbound.TryDequeue() with
-                                | true, msg -> return Some msg
-                                | false, _ -> return None
-                            else
-                                return None
+                    while not done' do
+                        if closed then
+                            done' <- true
+                            result' <- None
+                        else
+                            // Try immediate dequeue first
+                            match inbound.TryDequeue() with
+                            | true, msg ->
+                                done' <- true
+                                result' <- Some msg
+                            | false, _ ->
+                                // Block until signaled (message enqueued or transport closed).
+                                do! receiveSignal.WaitAsync()
+
+                    return result'
                 }
 
             member _.CloseAsync() =
@@ -159,20 +161,23 @@ module Transport =
 
             member _.ReceiveAsync() =
                 task {
-                    if closeFlag.Value then
-                        return None
-                    else
-                        match receiveQueue.TryDequeue() with
-                        | true, msg -> return Some msg
-                        | false, _ ->
-                            let! acquired = receiveSignal.WaitAsync(100)
+                    let mutable done' = false
+                    let mutable result' = None
 
-                            if acquired && not closeFlag.Value then
-                                match receiveQueue.TryDequeue() with
-                                | true, msg -> return Some msg
-                                | false, _ -> return None
-                            else
-                                return None
+                    while not done' do
+                        if closeFlag.Value then
+                            done' <- true
+                            result' <- None
+                        else
+                            match receiveQueue.TryDequeue() with
+                            | true, msg ->
+                                done' <- true
+                                result' <- Some msg
+                            | false, _ ->
+                                // Block until signaled (message enqueued or transport closed).
+                                do! receiveSignal.WaitAsync()
+
+                    return result'
                 }
 
             member _.CloseAsync() =

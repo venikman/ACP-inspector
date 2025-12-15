@@ -32,6 +32,7 @@ jobs:
           if ! dotnet tool list -g | grep -q dotnet-reportgenerator-globaltool; then
             dotnet tool install -g dotnet-reportgenerator-globaltool
           fi
+          export PATH="$PATH:$HOME/.dotnet/tools"
           reportgenerator \
             -reports:./coverage/**/coverage.cobertura.xml \
             -targetdir:./coverage/report \
