@@ -529,16 +529,109 @@ module Connection =
 
                 let requestSw = Stopwatch.StartNew()
 
-                let encodeResult = Codec.encode (Some reqId) (Message.FromAgent msg)
+                try
+                    let encodeResult = Codec.encode (Some reqId) (Message.FromAgent msg)
 
-                match encodeResult with
-                | Error e ->
-                    Observability.recordCodecEncodeError
-                        (Some transportName)
-                        (Some "fromAgent")
-                        (Some methodName)
-                        (Some reqIdText)
+                    match encodeResult with
+                    | Error e ->
+                        Observability.recordCodecEncodeError
+                            (Some transportName)
+                            (Some "fromAgent")
+                            (Some methodName)
+                            (Some reqIdText)
 
+                        return Error(ConnectionError.EncodeFailed(sprintf "%A" e))
+                    | Ok json ->
+                        use activity =
+                            Observability.startActivity
+                                "acp.agent.request"
+                                ActivityKind.Client
+                                [ Observability.TransportTag, transportName
+                                  Observability.MethodTag, methodName
+                                  Observability.JsonRpcIdTag, reqIdText
+                                  Observability.DirectionTag, "fromAgent" ]
+
+                        try
+                            let tcs = TaskCompletionSource<Message>()
+                            pendingRequests.[reqId] <- tcs
+
+                            try
+                                let sendBytes = int64 (Encoding.UTF8.GetByteCount(json))
+                                let sendSw = Stopwatch.StartNew()
+
+                                try
+                                    do! transport.SendAsync(json)
+                                with ex ->
+                                    sendSw.Stop()
+
+                                    Observability.recordTransportSendDuration
+                                        transportName
+                                        "fromAgent"
+                                        (Some methodName)
+                                        (Some reqIdText)
+                                        sendSw.Elapsed.TotalMilliseconds
+
+                                    raise ex
+
+                                sendSw.Stop()
+
+                                Observability.recordTransportSend
+                                    transportName
+                                    "fromAgent"
+                                    (Some methodName)
+                                    (Some reqIdText)
+                                    sendBytes
+                                    sendSw.Elapsed.TotalMilliseconds
+
+                                // Wait for response
+                                let receiveSw = Stopwatch.StartNew()
+                                let! received = transport.ReceiveAsync()
+                                receiveSw.Stop()
+
+                                match received with
+                                | None ->
+                                    Observability.recordTransportReceive
+                                        transportName
+                                        "fromClient"
+                                        (Some methodName)
+                                        (Some reqIdText)
+                                        None
+                                        receiveSw.Elapsed.TotalMilliseconds
+
+                                    return Error ConnectionError.TransportClosed
+                                | Some responseJson ->
+                                    let recvBytes = int64 (Encoding.UTF8.GetByteCount(responseJson))
+
+                                    Observability.recordTransportReceive
+                                        transportName
+                                        "fromClient"
+                                        (Some methodName)
+                                        (Some reqIdText)
+                                        (Some recvBytes)
+                                        receiveSw.Elapsed.TotalMilliseconds
+
+                                    let decodeResult =
+                                        lock codecLock (fun () ->
+                                            match Codec.decode Codec.Direction.FromClient codecState responseJson with
+                                            | Ok(newState, msg) ->
+                                                codecState <- newState
+                                                Ok msg
+                                            | Error e ->
+                                                Observability.recordCodecDecodeError
+                                                    (Some transportName)
+                                                    (Some "fromClient")
+                                                    (Some methodName)
+                                                    (Some reqIdText)
+
+                                                Error(ConnectionError.DecodeFailed e))
+
+                                    return decodeResult
+                            finally
+                                pendingRequests.TryRemove(reqId) |> ignore
+                        with ex ->
+                            Observability.recordException activity ex
+                            return raise ex
+                finally
                     requestSw.Stop()
 
                     Observability.recordConnectionRequestDuration
@@ -547,122 +640,6 @@ module Connection =
                         (Some methodName)
                         (Some reqIdText)
                         requestSw.Elapsed.TotalMilliseconds
-
-                    return Error(ConnectionError.EncodeFailed(sprintf "%A" e))
-                | Ok json ->
-                    use activity =
-                        Observability.startActivity
-                            "acp.agent.request"
-                            ActivityKind.Client
-                            [ Observability.TransportTag, transportName
-                              Observability.MethodTag, methodName
-                              Observability.JsonRpcIdTag, reqIdText
-                              Observability.DirectionTag, "fromAgent" ]
-
-                    let tcs = TaskCompletionSource<Message>()
-                    pendingRequests.[reqId] <- tcs
-
-                    try
-                        let sendBytes = int64 (Encoding.UTF8.GetByteCount(json))
-                        let sendSw = Stopwatch.StartNew()
-
-                        try
-                            do! transport.SendAsync(json)
-                        with ex ->
-                            sendSw.Stop()
-                            Observability.recordException activity ex
-
-                            Observability.recordTransportSendDuration
-                                transportName
-                                "fromAgent"
-                                (Some methodName)
-                                (Some reqIdText)
-                                sendSw.Elapsed.TotalMilliseconds
-
-                            requestSw.Stop()
-
-                            Observability.recordConnectionRequestDuration
-                                transportName
-                                "fromAgent"
-                                (Some methodName)
-                                (Some reqIdText)
-                                requestSw.Elapsed.TotalMilliseconds
-
-                            raise ex
-
-                        sendSw.Stop()
-
-                        Observability.recordTransportSend
-                            transportName
-                            "fromAgent"
-                            (Some methodName)
-                            (Some reqIdText)
-                            sendBytes
-                            sendSw.Elapsed.TotalMilliseconds
-
-                        // Wait for response
-                        let receiveSw = Stopwatch.StartNew()
-                        let! received = transport.ReceiveAsync()
-                        receiveSw.Stop()
-
-                        match received with
-                        | None ->
-                            Observability.recordTransportReceive
-                                transportName
-                                "fromClient"
-                                (Some methodName)
-                                (Some reqIdText)
-                                None
-                                receiveSw.Elapsed.TotalMilliseconds
-
-                            requestSw.Stop()
-
-                            Observability.recordConnectionRequestDuration
-                                transportName
-                                "fromAgent"
-                                (Some methodName)
-                                (Some reqIdText)
-                                requestSw.Elapsed.TotalMilliseconds
-
-                            return Error ConnectionError.TransportClosed
-                        | Some responseJson ->
-                            let recvBytes = int64 (Encoding.UTF8.GetByteCount(responseJson))
-
-                            Observability.recordTransportReceive
-                                transportName
-                                "fromClient"
-                                (Some methodName)
-                                (Some reqIdText)
-                                (Some recvBytes)
-                                receiveSw.Elapsed.TotalMilliseconds
-
-                            let decodeResult =
-                                lock codecLock (fun () ->
-                                    match Codec.decode Codec.Direction.FromClient codecState responseJson with
-                                    | Ok(newState, msg) ->
-                                        codecState <- newState
-                                        Ok msg
-                                    | Error e ->
-                                        Observability.recordCodecDecodeError
-                                            (Some transportName)
-                                            (Some "fromClient")
-                                            (Some methodName)
-                                            (Some reqIdText)
-
-                                        Error(ConnectionError.DecodeFailed e))
-
-                            requestSw.Stop()
-
-                            Observability.recordConnectionRequestDuration
-                                transportName
-                                "fromAgent"
-                                (Some methodName)
-                                (Some reqIdText)
-                                requestSw.Elapsed.TotalMilliseconds
-
-                            return decodeResult
-                    finally
-                        pendingRequests.TryRemove(reqId) |> ignore
             }
 
         let extractRequestId (json: string) : RequestId option =

@@ -350,16 +350,25 @@ Common options:
         let consoleExporter = hasFlag "--otel" args || hasFlag "--otel-console" args
 
         let otlpEndpoint = tryGetArg "--otlp-endpoint" args
+        let otlpEndpointUri = otlpEndpoint |> Option.map Uri
 
         let serviceName =
             tryGetArg "--service-name" args
             |> Option.filter (fun v -> not (String.IsNullOrWhiteSpace v))
             |> Option.defaultValue "acp-inspector"
 
-        if (not consoleExporter) && otlpEndpoint.IsNone then
+        if (not consoleExporter) && otlpEndpointUri.IsNone then
             noopDisposable
         else
             let resource = ResourceBuilder.CreateDefault().AddService(serviceName)
+
+            let configureExporters addOtlp addConsole builder =
+                let builder =
+                    match otlpEndpointUri with
+                    | None -> builder
+                    | Some endpoint -> addOtlp endpoint builder
+
+                if consoleExporter then addConsole builder else builder
 
             let tracerBuilder =
                 Sdk
@@ -368,15 +377,10 @@ Common options:
                     .AddSource(Observability.ActivitySourceName)
 
             let tracerBuilder =
-                match otlpEndpoint with
-                | None -> tracerBuilder
-                | Some endpoint -> tracerBuilder.AddOtlpExporter(fun o -> o.Endpoint <- Uri(endpoint))
-
-            let tracerBuilder =
-                if consoleExporter then
-                    tracerBuilder.AddConsoleExporter()
-                else
-                    tracerBuilder
+                tracerBuilder
+                |> configureExporters
+                    (fun endpoint builder -> builder.AddOtlpExporter(fun o -> o.Endpoint <- endpoint))
+                    (fun builder -> builder.AddConsoleExporter())
 
             let tracerProvider = tracerBuilder.Build()
 
@@ -384,15 +388,10 @@ Common options:
                 Sdk.CreateMeterProviderBuilder().SetResourceBuilder(resource).AddMeter(Observability.MeterName)
 
             let meterBuilder =
-                match otlpEndpoint with
-                | None -> meterBuilder
-                | Some endpoint -> meterBuilder.AddOtlpExporter(fun o -> o.Endpoint <- Uri(endpoint))
-
-            let meterBuilder =
-                if consoleExporter then
-                    meterBuilder.AddConsoleExporter()
-                else
-                    meterBuilder
+                meterBuilder
+                |> configureExporters
+                    (fun endpoint builder -> builder.AddOtlpExporter(fun o -> o.Endpoint <- endpoint))
+                    (fun builder -> builder.AddConsoleExporter())
 
             let meterProvider = meterBuilder.Build()
 
