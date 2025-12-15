@@ -11,6 +11,8 @@ TestResults/
 *.cache
 nupkg/
 coverage/
+docs/_site/
+.fsdocs/
 
 .fake
 
