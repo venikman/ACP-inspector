@@ -177,34 +177,71 @@ module TransportTests =
     // Chaos/Fault Injection Transport Tests
     // ============================================================
 
-    /// Wrapper transport that can inject faults for testing.
-    /// Optionally accepts a Random instance for deterministic testing.
-    /// Note: Uses Random.Shared by default for thread-safety in concurrent scenarios.
-    type ChaosTransport(inner: Transport.ITransport, ?random: Random) =
-        let mutable delayMs = 0
-        let mutable dropRate = 0.0
-        let mutable corruptRate = 0.0
-        let mutable failOnSend = false
-        let mutable failOnReceive = false
-        let random = defaultArg random Random.Shared
+    /// Configuration for chaos transport behavior.
+    type ChaosConfig =
+        {
+            DelayMs: int
+            DropRate: float
+            CorruptRate: float
+            FailOnSend: bool
+            FailOnReceive: bool
+            /// Optional seed for deterministic random behavior in tests
+            RandomSeed: int option
+        }
 
-        member _.SetDelay(ms: int) = delayMs <- ms
-        member _.SetDropRate(rate: float) = dropRate <- rate
-        member _.SetCorruptRate(rate: float) = corruptRate <- rate
-        member _.SetFailOnSend(fail: bool) = failOnSend <- fail
-        member _.SetFailOnReceive(fail: bool) = failOnReceive <- fail
+        static member Default =
+            { DelayMs = 0
+              DropRate = 0.0
+              CorruptRate = 0.0
+              FailOnSend = false
+              FailOnReceive = false
+              RandomSeed = None }
+
+    /// Wrapper transport for chaos/fault injection testing.
+    /// Supports deterministic testing via RandomSeed configuration.
+    /// Thread-safe when using Random.Shared (default).
+    type ChaosTransport(inner: Transport.ITransport, config: ChaosConfig) =
+        let random =
+            match config.RandomSeed with
+            | Some seed -> Random(seed)
+            | None -> Random.Shared
+
+        let mutable currentConfig = config
+
+        new(inner: Transport.ITransport) = ChaosTransport(inner, ChaosConfig.Default)
+
+        member _.SetDelay(ms: int) =
+            currentConfig <- { currentConfig with DelayMs = ms }
+
+        member _.SetDropRate(rate: float) =
+            currentConfig <- { currentConfig with DropRate = rate }
+
+        member _.SetCorruptRate(rate: float) =
+            currentConfig <-
+                { currentConfig with
+                    CorruptRate = rate }
+
+        member _.SetFailOnSend(fail: bool) =
+            currentConfig <- { currentConfig with FailOnSend = fail }
+
+        member _.SetFailOnReceive(fail: bool) =
+            currentConfig <-
+                { currentConfig with
+                    FailOnReceive = fail }
 
         interface Transport.ITransport with
             member _.SendAsync(message: string) =
                 task {
-                    if failOnSend then
+                    // Fault injection
+                    if currentConfig.FailOnSend then
                         raise (IOException("Simulated send failure"))
 
-                    if delayMs > 0 then
-                        do! Task.Delay(delayMs)
+                    // Latency injection
+                    if currentConfig.DelayMs > 0 then
+                        do! Task.Delay(currentConfig.DelayMs)
 
-                    if random.NextDouble() < dropRate then
-                        // Drop the message silently
+                    // Drop injection (message silently dropped)
+                    if random.NextDouble() < currentConfig.DropRate then
                         ()
                     else
                         do! inner.SendAsync(message)
@@ -212,19 +249,21 @@ module TransportTests =
 
             member _.ReceiveAsync() =
                 task {
-                    if failOnReceive then
+                    // Fault injection
+                    if currentConfig.FailOnReceive then
                         raise (IOException("Simulated receive failure"))
 
-                    if delayMs > 0 then
-                        do! Task.Delay(delayMs)
+                    // Latency injection
+                    if currentConfig.DelayMs > 0 then
+                        do! Task.Delay(currentConfig.DelayMs)
 
                     let! result = inner.ReceiveAsync()
 
                     match result with
                     | None -> return None
                     | Some msg ->
-                        if random.NextDouble() < corruptRate then
-                            // Corrupt the message by truncating
+                        // Corruption injection
+                        if random.NextDouble() < currentConfig.CorruptRate then
                             let corrupted =
                                 if msg.Length > 10 then
                                     msg.Substring(0, msg.Length / 2)
