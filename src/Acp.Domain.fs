@@ -338,7 +338,7 @@ module Domain =
             let isStandard code = code <= -32600 && code >= -32700
 
             /// Check if a code is in the ACP reserved range.
-            let isAcpReserved code = code <= -32000 && code >= -32099
+            let isAcpReserved code = code >= -32099 && code <= -32000
 
             /// Check if a code is a known ACP error code.
             let isKnownAcp code =
