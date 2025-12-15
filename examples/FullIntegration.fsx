@@ -7,7 +7,7 @@
 /// - Tool call tracking
 /// - Permission handling
 
-#r "../src/bin/Debug/net10.0/ACP.dll"
+#r "../src/bin/Debug/net9.0/ACP.dll"
 
 open System
 open System.Threading.Tasks
@@ -46,7 +46,11 @@ type SmartClient(transport: ITransport) =
 
     member _.InitializeAsync() =
         task {
-            let! result = connection.InitializeAsync({ clientName = "SmartClient"; clientVersion = "1.0.0" })
+            let! result =
+                connection.InitializeAsync(
+                    { clientName = "SmartClient"
+                      clientVersion = "1.0.0" }
+                )
 
             match result with
             | Ok init -> printfn $"[SmartClient] Connected to {init.agentName}"
@@ -57,7 +61,7 @@ type SmartClient(transport: ITransport) =
 
     member _.StartSessionAsync() =
         task {
-            let! result = connection.NewSessionAsync({})
+            let! result = connection.NewSessionAsync({ })
 
             match result with
             | Ok session ->
@@ -74,10 +78,14 @@ type SmartClient(transport: ITransport) =
             | None -> return Error(ConnectionError.ProtocolError "No session")
             | Some sid ->
                 let prompt =
-                    [ PromptItem.UserMessage
-                          { content = [ ContentBlock.Text { text = text; annotations = None } ] } ]
+                    [ PromptItem.UserMessage { content = [ ContentBlock.Text { text = text; annotations = None } ] } ]
 
-                return! connection.PromptAsync({ sessionId = sid; prompt = prompt; expectedTurnId = None })
+                return!
+                    connection.PromptAsync(
+                        { sessionId = sid
+                          prompt = prompt
+                          expectedTurnId = None }
+                    )
         }
 
     /// Process a session update notification
@@ -132,8 +140,8 @@ type SmartClient(transport: ITransport) =
         try
             let snapshot = sessionState.Snapshot()
             printfn $"Messages - User: {snapshot.userMessages.Length}, Agent: {snapshot.agentMessages.Length}"
-        with
-        | :? SessionSnapshotUnavailableError -> printfn "Messages - (no session data)"
+        with :? SessionSnapshotUnavailableError ->
+            printfn "Messages - (no session data)"
 
     member _.CloseAsync() =
         task {
@@ -149,7 +157,14 @@ let createAgent (transport: ITransport) =
     let mutable sessionCounter = 0
 
     let handlers =
-        { onInitialize = fun _ -> task { return Ok { agentName = "DemoAgent"; agentVersion = "1.0.0" } }
+        { onInitialize =
+            fun _ ->
+                task {
+                    return
+                        Ok
+                            { agentName = "DemoAgent"
+                              agentVersion = "1.0.0" }
+                }
 
           onNewSession =
             fun _ ->
@@ -159,7 +174,9 @@ let createAgent (transport: ITransport) =
                     return
                         Ok
                             { sessionId = SessionId $"demo-{sessionCounter}"
-                              modes = [ { modeId = SessionModeId "default"; name = "Default" } ]
+                              modes =
+                                [ { modeId = SessionModeId "default"
+                                    name = "Default" } ]
                               currentModeId = SessionModeId "default" }
                 }
 
@@ -167,7 +184,11 @@ let createAgent (transport: ITransport) =
             fun p ->
                 task {
                     printfn $"[Agent] Processing prompt..."
-                    return Ok { sessionId = p.sessionId; outputTurnId = TurnId "turn-1" }
+
+                    return
+                        Ok
+                            { sessionId = p.sessionId
+                              outputTurnId = TurnId "turn-1" }
                 }
 
           onCancel = fun _ -> Task.FromResult()
@@ -241,10 +262,16 @@ let runExample () =
                     rawOutput = None }
 
               SessionUpdate.AgentMessageChunk
-                  { content = ContentBlock.Text { text = "Running tests..."; annotations = None } } ]
+                  { content =
+                      ContentBlock.Text
+                          { text = "Running tests..."
+                            annotations = None } } ]
 
         for update in updates do
-            let notification = { sessionId = sessionId; update = update }
+            let notification =
+                { sessionId = sessionId
+                  update = update }
+
             client.ProcessUpdate(notification) |> ignore
 
         printfn ""
@@ -264,8 +291,12 @@ let runExample () =
                   rawInput = None
                   rawOutput = None }
               options =
-                [ { optionId = "allow-once"; name = "Allow Once"; kind = PermissionOptionKind.AllowOnce }
-                  { optionId = "reject"; name = "Reject"; kind = PermissionOptionKind.RejectOnce } ] }
+                [ { optionId = "allow-once"
+                    name = "Allow Once"
+                    kind = PermissionOptionKind.AllowOnce }
+                  { optionId = "reject"
+                    name = "Reject"
+                    kind = PermissionOptionKind.RejectOnce } ] }
 
         let outcome = client.HandlePermissionRequest(permRequest)
         printfn $"  Outcome: {outcome}"

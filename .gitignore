@@ -9,6 +9,10 @@ TestResults/
 *.user
 *.suo
 *.cache
+nupkg/
+coverage/
+docs/_site/
+.fsdocs/
 
 .fake
 

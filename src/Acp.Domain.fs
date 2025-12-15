@@ -308,6 +308,54 @@ module Domain =
               message: string
               data: JsonNode option }
 
+        /// Standard JSON-RPC 2.0 error codes.
+        [<RequireQualifiedAccess>]
+        module ErrorCode =
+            // Standard JSON-RPC 2.0 error codes
+            [<Literal>]
+            let ParseError = -32700
+
+            [<Literal>]
+            let InvalidRequest = -32600
+
+            [<Literal>]
+            let MethodNotFound = -32601
+
+            [<Literal>]
+            let InvalidParams = -32602
+
+            [<Literal>]
+            let InternalError = -32603
+
+            // ACP-specific error codes (reserved range -32000 to -32099)
+            [<Literal>]
+            let AuthenticationRequired = -32000
+
+            [<Literal>]
+            let ResourceNotFound = -32002
+
+            /// Check if a code is a standard JSON-RPC error code.
+            let isStandard code = code <= -32600 && code >= -32700
+
+            /// Check if a code is in the ACP reserved range.
+            let isAcpReserved code = code <= -32000 && code >= -32099
+
+            /// Check if a code is a known ACP error code.
+            let isKnownAcp code =
+                code = AuthenticationRequired || code = ResourceNotFound
+
+            /// Describe a known error code.
+            let describe =
+                function
+                | c when c = ParseError -> Some "Parse error"
+                | c when c = InvalidRequest -> Some "Invalid request"
+                | c when c = MethodNotFound -> Some "Method not found"
+                | c when c = InvalidParams -> Some "Invalid params"
+                | c when c = InternalError -> Some "Internal error"
+                | c when c = AuthenticationRequired -> Some "Authentication required"
+                | c when c = ResourceNotFound -> Some "Resource not found"
+                | _ -> None
+
     // -------------
     // Tooling + content (schema)
     // -------------

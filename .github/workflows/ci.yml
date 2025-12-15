@@ -13,7 +13,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 9.0.x
 
       - name: Restore tools
         run: dotnet tool restore
@@ -21,8 +21,34 @@ jobs:
       - name: Fantomas (check)
         run: dotnet fantomas src tests apps --check
 
-      - name: Tests
-        run: dotnet test tests/ACP.Tests.fsproj -c Release
+      - name: Tests with coverage
+        run: |
+          dotnet test tests/ACP.Tests.fsproj -c Release \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./coverage
+
+      - name: Generate coverage report
+        run: |
+          if ! dotnet tool list -g | grep -q dotnet-reportgenerator-globaltool; then
+            dotnet tool install -g dotnet-reportgenerator-globaltool
+          fi
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          reportgenerator \
+            -reports:./coverage/**/coverage.cobertura.xml \
+            -targetdir:./coverage/report \
+            -reporttypes:MarkdownSummaryGithub
+
+      - name: Output coverage summary
+        run: |
+          if [ -f ./coverage/report/SummaryGithub.md ]; then
+            cat ./coverage/report/SummaryGithub.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: ./coverage/report
 
       - name: Build inspector
         run: dotnet build apps/ACP.Inspector/ACP.Inspector.fsproj -c Release

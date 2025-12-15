@@ -4,7 +4,7 @@
 /// Demonstrates how to use SessionAccumulator to merge streaming
 /// session notifications into coherent snapshots.
 
-#r "../src/bin/Debug/net10.0/ACP.dll"
+#r "../src/bin/Debug/net9.0/ACP.dll"
 
 open System
 open Acp.Domain

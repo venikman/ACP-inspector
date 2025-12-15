@@ -4,7 +4,7 @@
 /// Demonstrates how to use PermissionBroker to manage permission
 /// requests with manual responses and auto-response rules.
 
-#r "../src/bin/Debug/net10.0/ACP.dll"
+#r "../src/bin/Debug/net9.0/ACP.dll"
 
 open System
 open System.Threading.Tasks
@@ -31,10 +31,18 @@ let makePermissionRequest toolCallId title kind : RequestPermissionParams =
           rawInput = None
           rawOutput = None }
       options =
-        [ { optionId = "allow-once"; name = "Allow Once"; kind = PermissionOptionKind.AllowOnce }
-          { optionId = "allow-always"; name = "Allow Always"; kind = PermissionOptionKind.AllowAlways }
-          { optionId = "reject-once"; name = "Reject Once"; kind = PermissionOptionKind.RejectOnce }
-          { optionId = "reject-always"; name = "Reject Always"; kind = PermissionOptionKind.RejectAlways } ] }
+        [ { optionId = "allow-once"
+            name = "Allow Once"
+            kind = PermissionOptionKind.AllowOnce }
+          { optionId = "allow-always"
+            name = "Allow Always"
+            kind = PermissionOptionKind.AllowAlways }
+          { optionId = "reject-once"
+            name = "Reject Once"
+            kind = PermissionOptionKind.RejectOnce }
+          { optionId = "reject-always"
+            name = "Reject Always"
+            kind = PermissionOptionKind.RejectAlways } ] }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Part 1: Manual Permission Handling
@@ -49,24 +57,31 @@ let broker = PermissionBroker()
 
 // Subscribe to events
 let unsubRequests =
-    broker.SubscribeToRequests(fun req ->
-        printfn $"  [Event] New request: {req.request.toolCall.title}")
+    broker.SubscribeToRequests(fun req -> printfn $"  [Event] New request: {req.request.toolCall.title}")
 
 let unsubResponses =
     broker.SubscribeToResponses(fun resp ->
         let outcome =
-            if resp.wasCancelled then "CANCELLED"
-            elif resp.wasAutoResponded then $"AUTO: {resp.selectedOptionId}"
-            else resp.selectedOptionId
+            if resp.wasCancelled then
+                "CANCELLED"
+            elif resp.wasAutoResponded then
+                $"AUTO: {resp.selectedOptionId}"
+            else
+                resp.selectedOptionId
 
         printfn $"  [Event] Response: {outcome}")
 
 // Enqueue some requests
 printfn "Enqueueing permission requests..."
 
-let req1 = broker.Enqueue(makePermissionRequest "tc1" "Execute: rm -rf /tmp/cache" ToolKind.Execute)
-let req2 = broker.Enqueue(makePermissionRequest "tc2" "Read: ~/.ssh/id_rsa" ToolKind.Read)
-let req3 = broker.Enqueue(makePermissionRequest "tc3" "Edit: config.json" ToolKind.Edit)
+let req1 =
+    broker.Enqueue(makePermissionRequest "tc1" "Execute: rm -rf /tmp/cache" ToolKind.Execute)
+
+let req2 =
+    broker.Enqueue(makePermissionRequest "tc2" "Read: ~/.ssh/id_rsa" ToolKind.Read)
+
+let req3 =
+    broker.Enqueue(makePermissionRequest "tc3" "Edit: config.json" ToolKind.Edit)
 
 printfn ""
 printfn $"Pending requests: {broker.PendingRequests().Length}"
@@ -104,8 +119,10 @@ printfn "Response history:"
 
 for resp in broker.ResponseHistory() do
     let status =
-        if resp.wasCancelled then "Cancelled"
-        else $"Selected: {resp.selectedOptionId}"
+        if resp.wasCancelled then
+            "Cancelled"
+        else
+            $"Selected: {resp.selectedOptionId}"
 
     printfn $"  [{resp.requestId}] {status}"
 
@@ -141,13 +158,19 @@ printfn ""
 printfn "Testing auto-response rules..."
 printfn ""
 
-let testReq1 = broker.Enqueue(makePermissionRequest "tc4" "Read: package.json" ToolKind.Read)
+let testReq1 =
+    broker.Enqueue(makePermissionRequest "tc4" "Read: package.json" ToolKind.Read)
+
 printfn $"  Read request → Pending: {broker.HasPending()}"
 
-let testReq2 = broker.Enqueue(makePermissionRequest "tc5" "Execute: npm install" ToolKind.Execute)
+let testReq2 =
+    broker.Enqueue(makePermissionRequest "tc5" "Execute: npm install" ToolKind.Execute)
+
 printfn $"  Execute request → Pending: {broker.HasPending()}"
 
-let testReq3 = broker.Enqueue(makePermissionRequest "tc6" "Edit: README.md" ToolKind.Edit)
+let testReq3 =
+    broker.Enqueue(makePermissionRequest "tc6" "Edit: README.md" ToolKind.Edit)
+
 printfn $"  Edit request → Pending: {broker.HasPending()}"
 
 printfn ""
@@ -173,7 +196,9 @@ printfn ""
 printfn "Removing Execute reject rule..."
 broker.RemoveAutoRule(rule2)
 
-let testReq4 = broker.Enqueue(makePermissionRequest "tc7" "Execute: dotnet build" ToolKind.Execute)
+let testReq4 =
+    broker.Enqueue(makePermissionRequest "tc7" "Execute: dotnet build" ToolKind.Execute)
+
 printfn $"  Execute request now → Pending: {broker.HasPending()}"
 printfn $"  Pending count: {broker.PendingRequests().Length}"
 
