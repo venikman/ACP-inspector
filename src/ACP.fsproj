@@ -11,8 +11,8 @@
     <Description>F# implementation of the Agent Client Protocol (ACP) with validation and sentinel layer. Provides protocol types, codec, transport abstractions, and runtime validation.</Description>
     <PackageTags>acp;agent-client-protocol;json-rpc;llm;ai;validation;fsharp</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/your-org/ACP-inspector</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/your-org/ACP-inspector</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/venikman/ACP-inspector</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/venikman/ACP-inspector</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
 

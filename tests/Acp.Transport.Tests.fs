@@ -178,13 +178,14 @@ module TransportTests =
     // ============================================================
 
     /// Wrapper transport that can inject faults for testing.
-    type ChaosTransport(inner: Transport.ITransport) =
+    /// Optionally accepts a Random instance for deterministic testing.
+    type ChaosTransport(inner: Transport.ITransport, ?random: Random) =
         let mutable delayMs = 0
         let mutable dropRate = 0.0
         let mutable corruptRate = 0.0
         let mutable failOnSend = false
         let mutable failOnReceive = false
-        let random = Random()
+        let random = defaultArg random (Random())
 
         member _.SetDelay(ms: int) = delayMs <- ms
         member _.SetDropRate(rate: float) = dropRate <- rate
@@ -224,8 +225,10 @@ module TransportTests =
                         if random.NextDouble() < corruptRate then
                             // Corrupt the message by truncating
                             let corrupted =
-                                if msg.Length > 10 then msg.Substring(0, msg.Length / 2)
-                                else "{"
+                                if msg.Length > 10 then
+                                    msg.Substring(0, msg.Length / 2)
+                                else
+                                    "{"
 
                             return Some corrupted
                         else
@@ -293,8 +296,7 @@ module TransportTests =
             chaos.SetFailOnSend(true)
 
             let! ex =
-                Assert.ThrowsAsync<IOException>(fun () ->
-                    (chaos :> Transport.ITransport).SendAsync("test") :> Task)
+                Assert.ThrowsAsync<IOException>(fun () -> (chaos :> Transport.ITransport).SendAsync("test") :> Task)
 
             Assert.Contains("Simulated send failure", ex.Message)
         }
@@ -306,9 +308,7 @@ module TransportTests =
             let chaos = ChaosTransport(transport)
             chaos.SetFailOnReceive(true)
 
-            let! ex =
-                Assert.ThrowsAsync<IOException>(fun () ->
-                    (chaos :> Transport.ITransport).ReceiveAsync() :> Task)
+            let! ex = Assert.ThrowsAsync<IOException>(fun () -> (chaos :> Transport.ITransport).ReceiveAsync() :> Task)
 
             Assert.Contains("Simulated receive failure", ex.Message)
         }
