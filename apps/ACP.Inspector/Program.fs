@@ -11,6 +11,11 @@ open System.Text.Json
 open System.Threading
 open System.Threading.Tasks
 
+open OpenTelemetry
+open OpenTelemetry.Metrics
+open OpenTelemetry.Resources
+open OpenTelemetry.Trace
+
 open Acp
 open Acp.Domain
 open Acp.Domain.JsonRpc
@@ -53,6 +58,7 @@ module private Cli =
             | Direction.FromClient -> "C→A"
             | Direction.FromAgent -> "A→C"
 
+    [<CLIMutable>]
     type TraceFrame =
         { ts: DateTimeOffset
           direction: string
@@ -60,19 +66,57 @@ module private Cli =
 
     module TraceFrame =
         let private jsonOptions =
-            JsonSerializerOptions(PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = false)
+            JsonSerializerOptions(
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                PropertyNameCaseInsensitive = true,
+                WriteIndented = false
+            )
 
         let encode (frame: TraceFrame) =
             JsonSerializer.Serialize(frame, jsonOptions)
 
         let tryDecode (line: string) =
             try
-                let frame: TraceFrame | null =
-                    JsonSerializer.Deserialize<TraceFrame>(line, jsonOptions)
+                use doc = JsonDocument.Parse(line)
+                let root = doc.RootElement
 
-                match frame with
-                | null -> None
-                | frame -> Some frame
+                if root.ValueKind <> JsonValueKind.Object then
+                    None
+                else
+                    let mutable tsEl = Unchecked.defaultof<JsonElement>
+                    let mutable directionEl = Unchecked.defaultof<JsonElement>
+                    let mutable jsonEl = Unchecked.defaultof<JsonElement>
+
+                    if
+                        root.TryGetProperty("ts", &tsEl)
+                        && root.TryGetProperty("direction", &directionEl)
+                        && root.TryGetProperty("json", &jsonEl)
+                    then
+                        let ts =
+                            match tsEl.ValueKind with
+                            | JsonValueKind.String -> tsEl.GetDateTimeOffset()
+                            | JsonValueKind.Number -> DateTimeOffset.FromUnixTimeMilliseconds(tsEl.GetInt64())
+                            | _ -> DateTimeOffset.MinValue
+
+                        let direction =
+                            match directionEl.ValueKind with
+                            | JsonValueKind.String -> directionEl.GetString() |> Option.ofObj
+                            | _ -> None
+
+                        let json =
+                            match jsonEl.ValueKind with
+                            | JsonValueKind.String -> jsonEl.GetString() |> Option.ofObj
+                            | _ -> None
+
+                        match direction, json with
+                        | Some direction, Some json ->
+                            Some
+                                { ts = ts
+                                  direction = direction
+                                  json = json }
+                        | _ -> None
+                    else
+                        None
             with _ ->
                 None
 
@@ -260,6 +304,7 @@ Usage:
   dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -- <command> [options]
 
 Commands:
+  report --trace <path>
   replay --trace <path> [--connection-id <id>]
   record --out <path> --direction <fromClient|fromAgent>
   tap-stdin --direction <fromClient|fromAgent> [--record <path>] [--connection-id <id>]
@@ -270,6 +315,9 @@ Commands:
 Common options:
   --stop-on-first-error
   --print-raw
+  --otel / --otel-console
+  --otlp-endpoint <url>
+  --service-name <name>
 """
         )
 
@@ -293,6 +341,244 @@ Common options:
           stopOnFirstError = hasFlag "--stop-on-first-error" args
           recordPath = tryGetArg "--record" args
           printRaw = hasFlag "--print-raw" args }
+
+    let private noopDisposable: IDisposable =
+        { new IDisposable with
+            member _.Dispose() = () }
+
+    let startTelemetryFromArgs (args: string[]) : IDisposable =
+        let consoleExporter = hasFlag "--otel" args || hasFlag "--otel-console" args
+
+        let otlpEndpoint = tryGetArg "--otlp-endpoint" args
+        let otlpEndpointUri = otlpEndpoint |> Option.map Uri
+
+        let serviceName =
+            tryGetArg "--service-name" args
+            |> Option.filter (fun v -> not (String.IsNullOrWhiteSpace v))
+            |> Option.defaultValue "acp-inspector"
+
+        if (not consoleExporter) && otlpEndpointUri.IsNone then
+            noopDisposable
+        else
+            let resource = ResourceBuilder.CreateDefault().AddService(serviceName)
+
+            let configureExporters addOtlp addConsole builder =
+                let builder =
+                    match otlpEndpointUri with
+                    | None -> builder
+                    | Some endpoint -> addOtlp endpoint builder
+
+                if consoleExporter then addConsole builder else builder
+
+            let tracerBuilder =
+                Sdk
+                    .CreateTracerProviderBuilder()
+                    .SetResourceBuilder(resource)
+                    .AddSource(Observability.ActivitySourceName)
+
+            let tracerBuilder =
+                tracerBuilder
+                |> configureExporters
+                    (fun endpoint builder -> builder.AddOtlpExporter(fun o -> o.Endpoint <- endpoint))
+                    (fun builder -> builder.AddConsoleExporter())
+
+            let tracerProvider = tracerBuilder.Build()
+
+            let meterBuilder =
+                Sdk.CreateMeterProviderBuilder().SetResourceBuilder(resource).AddMeter(Observability.MeterName)
+
+            let meterBuilder =
+                meterBuilder
+                |> configureExporters
+                    (fun endpoint builder -> builder.AddOtlpExporter(fun o -> o.Endpoint <- endpoint))
+                    (fun builder -> builder.AddConsoleExporter())
+
+            let meterProvider = meterBuilder.Build()
+
+            { new IDisposable with
+                member _.Dispose() =
+                    tracerProvider.Dispose()
+                    meterProvider.Dispose() }
+
+    let report (args: string[]) =
+        match tryGetArg "--trace" args with
+        | None ->
+            usage ()
+            int ExitCode.Usage
+        | Some tracePath ->
+            let lines = File.ReadAllLines tracePath
+
+            let mutable totalFrames = 0
+            let mutable parseErrors = 0
+            let mutable fromClientFrames = 0
+            let mutable fromAgentFrames = 0
+
+            let mutable requestCount = 0
+            let mutable notificationCount = 0
+            let mutable responseCount = 0
+            let mutable unmatchedResponses = 0
+
+            let pending = Dictionary<string, DateTimeOffset * string>(StringComparer.Ordinal)
+
+            let methodCounts = Dictionary<string, int>(StringComparer.Ordinal)
+
+            let latenciesByMethod =
+                Dictionary<string, ResizeArray<double>>(StringComparer.Ordinal)
+
+            let oppositeDirection =
+                function
+                | Direction.FromClient -> Direction.FromAgent
+                | Direction.FromAgent -> Direction.FromClient
+
+            let directionKey =
+                function
+                | Direction.FromClient -> "fromClient"
+                | Direction.FromAgent -> "fromAgent"
+
+            let pendingKey dir id = $"{directionKey dir}|{id}"
+
+            let incMethodCount methodName =
+                match methodCounts.TryGetValue(methodName) with
+                | true, v -> methodCounts.[methodName] <- v + 1
+                | false, _ -> methodCounts.[methodName] <- 1
+
+            let addLatency methodName ms =
+                let bucket =
+                    match latenciesByMethod.TryGetValue(methodName) with
+                    | true, v -> v
+                    | false, _ ->
+                        let v = ResizeArray()
+                        latenciesByMethod.[methodName] <- v
+                        v
+
+                bucket.Add(ms)
+
+            let tryParseJsonRpc (raw: string) =
+                try
+                    use doc = JsonDocument.Parse(raw)
+                    let root = doc.RootElement
+
+                    if root.ValueKind <> JsonValueKind.Object then
+                        None
+                    else
+                        let mutable methodEl = Unchecked.defaultof<JsonElement>
+                        let hasMethod = root.TryGetProperty("method", &methodEl)
+
+                        let methodOpt =
+                            if hasMethod && methodEl.ValueKind = JsonValueKind.String then
+                                methodEl.GetString() |> Option.ofObj
+                            else
+                                None
+
+                        let mutable idEl = Unchecked.defaultof<JsonElement>
+                        let hasId = root.TryGetProperty("id", &idEl)
+
+                        let idOpt =
+                            if hasId then
+                                match idEl.ValueKind with
+                                | JsonValueKind.String -> idEl.GetString() |> Option.ofObj
+                                | JsonValueKind.Number -> Some(idEl.GetRawText())
+                                | JsonValueKind.Null -> Some "null"
+                                | _ -> None
+                            else
+                                None
+
+                        let mutable tmp = Unchecked.defaultof<JsonElement>
+
+                        let isResponse =
+                            root.TryGetProperty("result", &tmp) || root.TryGetProperty("error", &tmp)
+
+                        Some(methodOpt, idOpt, isResponse)
+                with _ ->
+                    None
+
+            for line in lines do
+                match TraceFrame.tryDecode line with
+                | None -> parseErrors <- parseErrors + 1
+                | Some frame ->
+                    totalFrames <- totalFrames + 1
+
+                    match Direction.tryParse frame.direction with
+                    | None -> parseErrors <- parseErrors + 1
+                    | Some dir ->
+                        match dir with
+                        | Direction.FromClient -> fromClientFrames <- fromClientFrames + 1
+                        | Direction.FromAgent -> fromAgentFrames <- fromAgentFrames + 1
+
+                        match tryParseJsonRpc frame.json with
+                        | None -> parseErrors <- parseErrors + 1
+                        | Some(methodOpt, idOpt, isResponse) ->
+                            match methodOpt, isResponse with
+                            | Some methodName, false ->
+                                // Request or notification
+                                incMethodCount methodName
+
+                                match idOpt with
+                                | Some id ->
+                                    requestCount <- requestCount + 1
+                                    pending.[pendingKey dir id] <- (frame.ts, methodName)
+                                | None -> notificationCount <- notificationCount + 1
+
+                            | None, true ->
+                                // Response
+                                responseCount <- responseCount + 1
+
+                                match idOpt with
+                                | None -> unmatchedResponses <- unmatchedResponses + 1
+                                | Some id ->
+                                    let requestKey = pendingKey (oppositeDirection dir) id
+
+                                    match pending.TryGetValue(requestKey) with
+                                    | true, (startedAt, reqMethod) ->
+                                        pending.Remove(requestKey) |> ignore
+                                        addLatency reqMethod (frame.ts - startedAt).TotalMilliseconds
+                                    | false, _ -> unmatchedResponses <- unmatchedResponses + 1
+                            | _ -> ()
+
+            Console.Out.WriteLine($"trace: {tracePath}")
+            Console.Out.WriteLine($"frames: {totalFrames} (parseErrors={parseErrors})")
+            Console.Out.WriteLine($"by direction: fromClient={fromClientFrames} fromAgent={fromAgentFrames}")
+
+            Console.Out.WriteLine(
+                $"rpc: requests={requestCount} notifications={notificationCount} responses={responseCount}"
+            )
+
+            Console.Out.WriteLine($"unmatched: requests={pending.Count} responses={unmatchedResponses}")
+
+            if latenciesByMethod.Count > 0 then
+                Console.Out.WriteLine("")
+                Console.Out.WriteLine("latency_ms by method (count p50 p95 max):")
+
+                let rows =
+                    latenciesByMethod
+                    |> Seq.map (fun (KeyValue(methodName, values)) ->
+                        let arr = values.ToArray()
+                        Array.sortInPlace arr
+
+                        let count = arr.Length
+
+                        let p50 =
+                            if count % 2 = 1 then
+                                arr.[count / 2]
+                            else
+                                (arr.[(count / 2) - 1] + arr.[count / 2]) / 2.0
+
+                        let p95Idx =
+                            if count = 1 then
+                                0
+                            else
+                                int (Math.Ceiling(0.95 * float (count - 1)))
+
+                        let p95 = arr.[p95Idx]
+                        let max = arr.[count - 1]
+                        (methodName, count, p50, p95, max))
+                    |> Seq.sortByDescending (fun (_, count, _, _, _) -> count)
+                    |> Seq.toList
+
+                for (methodName, count, p50, p95, max) in rows do
+                    Console.Out.WriteLine($"{methodName}: {count} {p50:F1} {p95:F1} {max:F1}")
+
+            int ExitCode.Ok
 
     let replay (args: string[]) =
         match tryGetArg "--trace" args with
@@ -569,8 +855,10 @@ let main argv =
             int Cli.ExitCode.Usage
         | cmd :: rest ->
             let args = rest |> List.toArray
+            use _telemetry = Cli.startTelemetryFromArgs args
 
             match cmd with
+            | "report" -> Cli.report args
             | "replay" -> Cli.replay args
             | "record" -> Cli.record args
             | "tap-stdin" -> Cli.tapStdin args

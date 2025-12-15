@@ -1,6 +1,7 @@
 namespace Acp
 
 open System
+open System.Diagnostics
 
 module Validation =
 
@@ -529,6 +530,18 @@ module Validation =
         (evalProfile: Eval.EvalProfile option)
         : SpecRunResult<Phase> =
 
+        let sessionIdText = SessionId.value sessionId
+
+        use activity =
+            Observability.startActivity
+                "acp.validation.run"
+                ActivityKind.Internal
+                [ Observability.SessionIdTag, sessionIdText
+                  "acp.message.count", messages.Length
+                  "acp.stop_on_first_error", stopOnFirstError ]
+
+        let sw = Stopwatch.StartNew()
+
         let mutable trace = SessionTrace.empty sessionId
         let mutable findings: ValidationFinding list = []
         let mutable phaseResult: Result<Phase, ProtocolError> = Ok spec.initial
@@ -613,13 +626,23 @@ module Validation =
         let sessionConcurrencyFindings = checkSessionPromptConcurrency trace
         let sessionModeFindings = checkSessionModes trace
 
-        { finalPhase = phaseResult
-          trace = trace
-          findings =
+        let combinedFindings =
             findings
             @ sessionCancelFindings
             @ sessionConcurrencyFindings
-            @ sessionModeFindings }
+            @ sessionModeFindings
+
+        sw.Stop()
+        Observability.recordValidationRun sessionIdText sw.Elapsed.TotalMilliseconds
+
+        for f in combinedFindings do
+            let lane = sprintf "%A" f.lane
+            let severity = sprintf "%A" f.severity
+            Observability.recordValidationFinding sessionIdText lane severity
+
+        { finalPhase = phaseResult
+          trace = trace
+          findings = combinedFindings }
 
     module PromptOutcome =
 

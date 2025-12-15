@@ -102,11 +102,24 @@ This repo includes a small CLI to decode JSON-RPC ACP traffic, correlate respons
 
 Common commands:
 
+- Summary report for a recorded trace: `report --trace trace.jsonl`
 - Replay a recorded trace: `replay --trace trace.jsonl`
 - Inspect newline-delimited JSON-RPC from stdin: `tap-stdin --direction fromClient --record trace.jsonl`
 - WebSocket tap (optional stdin send): `ws --url ws://host/path --stdin-send --record trace.jsonl`
 - SSE tap (reads `data:` lines): `sse --url https://host/sse --record trace.jsonl`
 - Stdio proxy between two commands: `proxy-stdio --client-cmd "<cmd>" --agent-cmd "<cmd>" --record trace.jsonl`
+
+### OpenTelemetry (spans + metrics)
+
+The SDK emits operational telemetry via:
+
+- `ActivitySource`: `Acp.Observability.ActivitySourceName` (default: `ACP.Sentinel`)
+- `Meter`: `Acp.Observability.MeterName` (default: `ACP.Sentinel`)
+
+You can export telemetry from the Inspector itself:
+
+- Console export: add `--otel` (or `--otel-console`)
+- OTLP export: add `--otlp-endpoint <url>` (optionally `--service-name <name>`)
 
 ## SDK Modules
 
