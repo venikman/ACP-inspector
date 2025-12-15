@@ -30,6 +30,8 @@
     <Compile Include="Pbt/SessionProperties.fs" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Polly.Core" Version="8.6.5" />
+    <PackageReference Include="Polly.Extensions" Version="8.6.5" />
     <ProjectReference Include="../src/ACP.fsproj" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
     <PackageReference Include="FsCheck" Version="3.3.2" />
