@@ -44,4 +44,7 @@
     <Compile Include="Acp.Contrib.ToolCalls.fs" />
     <Compile Include="Acp.Contrib.Permissions.fs" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="FsToolkit.ErrorHandling" Version="5.1.0" />
+  </ItemGroup>
 </Project>

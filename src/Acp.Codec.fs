@@ -2,6 +2,7 @@ namespace Acp
 
 open System
 open System.Text.Json.Nodes
+open FsToolkit.ErrorHandling
 
 open Domain
 open Domain.JsonRpc
@@ -81,18 +82,7 @@ module Codec =
             { pendingClientRequests = Map.empty
               pendingAgentRequests = Map.empty }
 
-    // -----------------
-    // Result computation expression (local)
-    // -----------------
-
-    type private ResultBuilder() =
-        member _.Bind(m: Result<'a, 'e>, f: 'a -> Result<'b, 'e>) = Result.bind f m
-        member _.Return(x: 'a) : Result<'a, 'e> = Ok x
-        member _.ReturnFrom(m: Result<'a, 'e>) = m
-        member _.Delay(f: unit -> Result<'a, 'e>) = f
-        member _.Run(f: unit -> Result<'a, 'e>) = f ()
-
-    let private result = ResultBuilder()
+    // Note: Using FsToolkit.ErrorHandling's `result` computation expression
 
     // -----------------
     // JSON helpers
