@@ -557,7 +557,12 @@ Common options:
                         Array.sortInPlace arr
 
                         let count = arr.Length
-                        let p50 = arr.[count / 2]
+
+                        let p50 =
+                            if count % 2 = 1 then
+                                arr.[count / 2]
+                            else
+                                (arr.[(count / 2) - 1] + arr.[count / 2]) / 2.0
 
                         let p95Idx =
                             if count = 1 then

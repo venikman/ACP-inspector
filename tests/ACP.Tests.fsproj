@@ -16,6 +16,7 @@
     <Compile Include="Acp.TraceReplay.Tests.fs" />
     <Compile Include="Acp.Transport.Tests.fs" />
     <Compile Include="Acp.Connection.Tests.fs" />
+    <Compile Include="Acp.Observability.Tests.fs" />
     <Compile Include="Acp.SessionState.Tests.fs" />
     <Compile Include="Acp.ToolCalls.Tests.fs" />
     <Compile Include="Acp.Permissions.Tests.fs" />

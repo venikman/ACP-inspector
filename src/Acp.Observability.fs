@@ -149,25 +149,11 @@ module Observability =
         =
         let mutable tags = TagList()
 
-        match transportName with
-        | Some v -> tags.Add(TransportTag, v)
-        | None -> ()
-
-        match direction with
-        | Some v -> tags.Add(DirectionTag, v)
-        | None -> ()
-
-        match methodName with
-        | Some v -> tags.Add(MethodTag, v)
-        | None -> ()
-
-        match requestId with
-        | Some v -> tags.Add(JsonRpcIdTag, v)
-        | None -> ()
-
-        match sessionId with
-        | Some v -> tags.Add(SessionIdTag, v)
-        | None -> ()
+        transportName |> Option.iter (fun v -> tags.Add(TransportTag, v))
+        direction |> Option.iter (fun v -> tags.Add(DirectionTag, v))
+        methodName |> Option.iter (fun v -> tags.Add(MethodTag, v))
+        requestId |> Option.iter (fun v -> tags.Add(JsonRpcIdTag, v))
+        sessionId |> Option.iter (fun v -> tags.Add(SessionIdTag, v))
 
         tags
 
@@ -256,3 +242,7 @@ module Observability =
         tags.Add(ValidationLaneTag, lane)
         tags.Add(ValidationSeverityTag, severity)
         Metrics.validationFindingCount.Add(1L, &tags)
+
+    let dispose () =
+        activitySource.Dispose()
+        meter.Dispose()
