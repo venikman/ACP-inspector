@@ -9,6 +9,8 @@ TestResults/
 *.user
 *.suo
 *.cache
+nupkg/
+coverage/
 
 .fake
 

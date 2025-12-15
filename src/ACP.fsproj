@@ -3,7 +3,30 @@
     <TargetFramework>net9.0</TargetFramework>
     <LangVersion>preview</LangVersion>
     <Nullable>enable</Nullable>
+
+    <!-- NuGet Package Properties -->
+    <PackageId>ACP.Sentinel</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>ACP-Sentinel Contributors</Authors>
+    <Description>F# implementation of the Agent Client Protocol (ACP) with validation and sentinel layer. Provides protocol types, codec, transport abstractions, and runtime validation.</Description>
+    <PackageTags>acp;agent-client-protocol;json-rpc;llm;ai;validation;fsharp</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/your-org/ACP-inspector</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/your-org/ACP-inspector</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <!-- Enable deterministic builds for reproducibility -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+
+    <!-- Generate XML documentation -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
   <ItemGroup>
     <Compile Include="Acp.Domain.fs" />
     <Compile Include="Acp.Codec.fs" />
