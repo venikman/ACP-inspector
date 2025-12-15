@@ -15,6 +15,7 @@ open OpenTelemetry
 open OpenTelemetry.Metrics
 open OpenTelemetry.Resources
 open OpenTelemetry.Trace
+open OpenTelemetry.Instrumentation.Runtime
 
 open Acp
 open Acp.Domain
@@ -315,7 +316,7 @@ Commands:
 Common options:
   --stop-on-first-error
   --print-raw
-  --otel / --otel-console
+  --otel / --otel-console       Enable OpenTelemetry (includes .NET runtime metrics)
   --otlp-endpoint <url>
   --service-name <name>
 """
@@ -385,7 +386,11 @@ Common options:
             let tracerProvider = tracerBuilder.Build()
 
             let meterBuilder =
-                Sdk.CreateMeterProviderBuilder().SetResourceBuilder(resource).AddMeter(Observability.MeterName)
+                Sdk
+                    .CreateMeterProviderBuilder()
+                    .SetResourceBuilder(resource)
+                    .AddMeter(Observability.MeterName)
+                    .AddRuntimeInstrumentation()
 
             let meterBuilder =
                 meterBuilder
