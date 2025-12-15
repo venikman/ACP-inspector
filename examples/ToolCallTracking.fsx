@@ -4,7 +4,7 @@
 /// Demonstrates how to use ToolCallTracker to monitor tool call
 /// lifecycle and filter by status.
 
-#r "../src/bin/Debug/net10.0/ACP.dll"
+#r "../src/bin/Debug/net9.0/ACP.dll"
 
 open System
 open Acp.Domain
@@ -39,10 +39,12 @@ let makeUpdate id status : ToolCallUpdate =
       rawOutput = None }
 
 let notify update =
-    { sessionId = sessionId; update = update }
+    { sessionId = sessionId
+      update = update }
 
 let printStatus (tracker: ToolCallTracker) =
-    printfn $"  Pending: {tracker.Pending().Length}, InProgress: {tracker.InProgress().Length}, Completed: {tracker.Completed().Length}, Failed: {tracker.Failed().Length}"
+    printfn
+        $"  Pending: {tracker.Pending().Length}, InProgress: {tracker.InProgress().Length}, Completed: {tracker.Completed().Length}, Failed: {tracker.Failed().Length}"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Example
@@ -56,7 +58,8 @@ let tracker = ToolCallTracker()
 // Subscribe to changes
 let unsubscribe =
     tracker.Subscribe(fun allCalls _notification ->
-        let inProgress = allCalls |> List.filter (fun tc -> tc.status = ToolCallStatus.InProgress)
+        let inProgress =
+            allCalls |> List.filter (fun tc -> tc.status = ToolCallStatus.InProgress)
 
         if not (List.isEmpty inProgress) then
             printfn $"  [Live] {inProgress.Length} tool(s) running...")
@@ -64,9 +67,17 @@ let unsubscribe =
 // Simulate tool call lifecycle
 printfn "1. Starting three tool calls..."
 
-tracker.Apply(notify (SessionUpdate.ToolCall(makeToolCall "tc1" "Read config.json" ToolKind.Read ToolCallStatus.Pending)))
-tracker.Apply(notify (SessionUpdate.ToolCall(makeToolCall "tc2" "Search for errors" ToolKind.Search ToolCallStatus.Pending)))
-tracker.Apply(notify (SessionUpdate.ToolCall(makeToolCall "tc3" "Execute build" ToolKind.Execute ToolCallStatus.Pending)))
+tracker.Apply(
+    notify (SessionUpdate.ToolCall(makeToolCall "tc1" "Read config.json" ToolKind.Read ToolCallStatus.Pending))
+)
+
+tracker.Apply(
+    notify (SessionUpdate.ToolCall(makeToolCall "tc2" "Search for errors" ToolKind.Search ToolCallStatus.Pending))
+)
+
+tracker.Apply(
+    notify (SessionUpdate.ToolCall(makeToolCall "tc3" "Execute build" ToolKind.Execute ToolCallStatus.Pending))
+)
 
 printStatus tracker
 printfn ""

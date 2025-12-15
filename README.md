@@ -37,11 +37,11 @@ This repo adds a First Principles Framework (FPF) view on assurance and observab
 
 ## 60-second getting started
 
-1. Prereqs: .NET 10 SDK. From repo root: `dotnet build src/ACP.fsproj` (restores + builds).
+1. Prereqs: .NET 9 SDK. From repo root: `dotnet build src/ACP.fsproj` (restores + builds).
 2. Quick probe via F# Interactive (from `src/` after build):
 
 ```fsharp
-#r "bin/Debug/net10.0/ACP.dll"
+#r "bin/Debug/net9.0/ACP.dll"
 open Acp
 open Acp.Domain
 open Acp.Domain.PrimitivesAndParties

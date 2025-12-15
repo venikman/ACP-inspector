@@ -4,7 +4,7 @@
 /// Demonstrates how to set up a client and agent communicating over
 /// in-memory transport, performing a complete session lifecycle.
 
-#r "../src/bin/Debug/net10.0/ACP.dll"
+#r "../src/bin/Debug/net9.0/ACP.dll"
 
 open System
 open System.Threading.Tasks
