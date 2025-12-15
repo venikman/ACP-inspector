@@ -38,7 +38,10 @@ jobs:
             -reporttypes:MarkdownSummaryGithub
 
       - name: Output coverage summary
-        run: cat ./coverage/report/SummaryGithub.md >> $GITHUB_STEP_SUMMARY
+        run: |
+          if [ -f ./coverage/report/SummaryGithub.md ]; then
+            cat ./coverage/report/SummaryGithub.md >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
