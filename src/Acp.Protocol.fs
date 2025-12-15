@@ -48,7 +48,6 @@ module Protocol =
         | SessionAlreadyExists of SessionId
         | PromptAlreadyInFlight of SessionId
         | NoPromptInFlight of SessionId
-    // TODO: add ACP/JSON-RPC error code mapping once spec version is pinned; emit ValidationFinding when unknown codes encountered.
 
     module ProtocolError =
         let code =
@@ -60,6 +59,17 @@ module Protocol =
             | ProtocolError.SessionAlreadyExists _ -> "ACP.PROTOCOL.SESSION_ALREADY_EXISTS"
             | ProtocolError.PromptAlreadyInFlight _ -> "ACP.PROTOCOL.PROMPT_ALREADY_IN_FLIGHT"
             | ProtocolError.NoPromptInFlight _ -> "ACP.PROTOCOL.NO_PROMPT_IN_FLIGHT"
+
+        /// Map ProtocolError to JSON-RPC error code per ACP spec.
+        let jsonRpcCode =
+            function
+            | ProtocolError.UnexpectedMessage _ -> Domain.JsonRpc.ErrorCode.InvalidRequest
+            | ProtocolError.DuplicateInitialize -> Domain.JsonRpc.ErrorCode.InvalidRequest
+            | ProtocolError.InitializeResultWithoutRequest -> Domain.JsonRpc.ErrorCode.InvalidRequest
+            | ProtocolError.UnknownSession _ -> Domain.JsonRpc.ErrorCode.ResourceNotFound
+            | ProtocolError.SessionAlreadyExists _ -> Domain.JsonRpc.ErrorCode.InvalidParams
+            | ProtocolError.PromptAlreadyInFlight _ -> Domain.JsonRpc.ErrorCode.InvalidRequest
+            | ProtocolError.NoPromptInFlight _ -> Domain.JsonRpc.ErrorCode.InvalidRequest
 
         let describe =
             function
@@ -73,6 +83,12 @@ module Protocol =
             | ProtocolError.PromptAlreadyInFlight sid ->
                 sprintf "Prompt already in flight for session %s" (SessionId.value sid)
             | ProtocolError.NoPromptInFlight sid -> sprintf "No prompt in flight for session %s" (SessionId.value sid)
+
+        /// Convert ProtocolError to a JSON-RPC Error object.
+        let toJsonRpcError (err: ProtocolError) : Domain.JsonRpc.Error =
+            { code = jsonRpcCode err
+              message = describe err
+              data = None }
 
     /// A tiny internal DSL: one pure transition function plus an initial phase.
     type Spec<'phase, 'message, 'error> =
