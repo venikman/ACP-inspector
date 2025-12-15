@@ -29,7 +29,9 @@ jobs:
 
       - name: Generate coverage report
         run: |
-          dotnet tool install -g dotnet-reportgenerator-globaltool || true
+          if ! dotnet tool list -g | grep -q dotnet-reportgenerator-globaltool; then
+            dotnet tool install -g dotnet-reportgenerator-globaltool
+          fi
           reportgenerator \
             -reports:./coverage/**/coverage.cobertura.xml \
             -targetdir:./coverage/report \

@@ -335,10 +335,10 @@ module Domain =
             let ResourceNotFound = -32002
 
             /// Check if a code is a standard JSON-RPC error code.
-            let isStandard code = code >= -32700 && code <= -32600
+            let isStandard code = code <= -32600 && code >= -32700
 
             /// Check if a code is in the ACP reserved range.
-            let isAcpReserved code = code >= -32099 && code <= -32000
+            let isAcpReserved code = code <= -32000 && code >= -32099
 
             /// Check if a code is a known ACP error code.
             let isKnownAcp code =

@@ -179,13 +179,14 @@ module TransportTests =
 
     /// Wrapper transport that can inject faults for testing.
     /// Optionally accepts a Random instance for deterministic testing.
+    /// Note: Uses Random.Shared by default for thread-safety in concurrent scenarios.
     type ChaosTransport(inner: Transport.ITransport, ?random: Random) =
         let mutable delayMs = 0
         let mutable dropRate = 0.0
         let mutable corruptRate = 0.0
         let mutable failOnSend = false
         let mutable failOnReceive = false
-        let random = defaultArg random (Random())
+        let random = defaultArg random Random.Shared
 
         member _.SetDelay(ms: int) = delayMs <- ms
         member _.SetDropRate(rate: float) = dropRate <- rate
@@ -326,7 +327,7 @@ module TransportTests =
             // Should return the partial content as-is (or None at EOF)
             let! received = transport.ReceiveAsync()
 
-            // At EOF without newline, ReadLineAsync returns the remaining content
+            // Note: At EOF without newline, ReadLineAsync currently returns the remaining content in the .NET implementation.
             Assert.True(received.IsSome)
             Assert.Contains("incomplete", received.Value)
         }
