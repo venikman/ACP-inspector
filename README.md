@@ -20,6 +20,13 @@ Implementation targets:
 
 This repo adds a First Principles Framework (FPF) view on assurance and observability.
 
+## Documentation
+
+- Tooling (paths, build/run commands): [docs/tooling/acp-sentinel.md](docs/tooling/acp-sentinel.md)
+- Specs (placeholders): [docs/spec/fpf/FPF-Spec.md](docs/spec/fpf/FPF-Spec.md), [docs/spec/spf/tasks/SPF-zadanie.md](docs/spec/spf/tasks/SPF-zadanie.md)
+- SDK docs entrypoint: [docs/index.md](docs/index.md)
+- SDK comparison: [docs/SDK-COMPARISON.md](docs/SDK-COMPARISON.md)
+
 ## Who benefits (and how)
 
 - **Agent platform teams** — drop-in ACP reference that keeps protocol drift low while you ship fast; the sentinel layer catches malformed turns before they hit production.
