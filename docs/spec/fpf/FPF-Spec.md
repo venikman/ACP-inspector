@@ -15,6 +15,7 @@ This specification documents the First Principles Framework (FPF) patterns and v
   - [A.2 Role Taxonomy & Assignment](#a2-role-taxonomy--assignment)
   - [A.10 Evidence Graph](#a10-evidence-graph)
 - [E. Pattern Composition & Authoring](#e-pattern-composition--authoring)
+  - [E.8 Authoring Conventions](#e8-authoring-conventions)
   - [E.17 Multi-View Describing (MVPK)](#e17-multi-view-describing-mvpk)
 - [Implementation References](#implementation-references)
 
@@ -259,6 +260,144 @@ cat core/evidence/pbt/ACP-EVD-PBT-latest-failure.json | jq .
 ---
 
 ## E. Pattern Composition & Authoring
+
+### E.8 Authoring Conventions
+
+**Pattern**: Standardized coding practices that ensure consistency, maintainability, and alignment with FPF architectural patterns.
+
+**Principle**: Code authoring follows explicit conventions that:
+
+- Enforce structural patterns through tooling
+- Make architectural intent visible in code
+- Support automated validation and formatting
+- Align with holonic composition and role taxonomy
+
+**Implementation in ACP-inspector**:
+
+The codebase enforces authoring conventions through multiple layers:
+
+**1. Style Guide Enforcement**:
+
+```bash
+# Fantomas formatter (deterministic, automated)
+dotnet tool restore && dotnet fantomas src tests apps
+
+# CI validation
+dotnet fantomas src tests apps --check
+```
+
+**2. Type-Driven Design**:
+
+```fsharp
+// Single-case DUs enforce semantic type safety (A.1 Holonic Foundation)
+type SessionId = SessionId of string
+type MessageId = MessageId of string
+
+// Record types align with holon composition
+type InitializeParams = {
+    protocolVersion: ProtocolVersion      // Part
+    clientCapabilities: ClientCapabilities // Part
+    clientInfo: ImplementationInfo option  // Part
+}
+```
+
+**3. Module Organization by Role** (A.2 Role Taxonomy):
+
+```fsharp
+// Role: Domain Model
+module Domain =
+    type SessionId = SessionId of string
+
+// Role: Codec
+module Codec =
+    let encode: SessionId -> JsonNode
+    let decode: JsonNode -> SessionId
+
+// Role: Validator
+module Validation =
+    let validate: JsonNode -> ValidationResult
+```
+
+**4. Test Naming Convention** (A.10 Evidence):
+
+```fsharp
+// Pattern: Method_Condition_Expected
+[<TestMethod>]
+member _.SessionId_RoundTrip_PreservesValue() = ...
+
+// Evidence: Property-based tests
+[<Property>]
+let ``SessionId roundtrip preserves value`` (id: SessionId) = ...
+```
+
+**5. Documentation Standards**:
+
+```fsharp
+/// Initializes a new ACP session with the agent.
+/// Returns the session ID and agent capabilities.
+member _.InitializeAsync(params: InitializeParams) : Task<InitializeResult>
+```
+
+**Authoring Workflow**:
+
+```
+Write Code → Format (Fantomas) → Test (140+ tests) → Validate (CI) → Commit
+    ↓             ↓                   ↓                  ↓              ↓
+  Type-safe   Consistent         Evidence          Enforced      Traceable
+  (compile)   (automated)        (PBT/unit)        (pipeline)    (git log)
+```
+
+**Enforcement Layers**:
+
+| Layer        | Mechanism          | When            |
+| ------------ | ------------------ | --------------- |
+| Compile-time | F# type system     | Every build     |
+| Pre-commit   | Fantomas format    | Developer local |
+| CI           | Fantomas --check   | Every PR        |
+| Runtime      | Validation layer   | Production      |
+| Post-mortem  | Evidence artifacts | Test failures   |
+
+**Key Conventions**:
+
+1. **Naming**:
+   - Modules: PascalCase
+   - Types: PascalCase
+   - Functions: camelCase
+   - Test methods: `Method_Condition_Expected`
+
+2. **Type Design**:
+   - Single-case DUs for semantic types
+   - Records for structured data
+   - Discriminated unions for variants
+   - Options for optional values (not null)
+
+3. **Async Patterns**:
+   - Task computation expressions (.NET 10)
+   - Async suffix on async methods
+   - CancellationToken support where applicable
+
+4. **Error Handling**:
+   - Result types for expected failures
+   - Exceptions for unexpected failures
+   - Evidence capture on all failures
+
+**Detailed Reference**: See `docs/tooling/coding-standards.md` for complete coding standards including:
+
+- F# style guide reference
+- Formatting commands
+- Module organization patterns
+- Testing standards
+- Documentation guidelines
+- File organization structure
+
+**Evidence**:
+
+- `docs/tooling/coding-standards.md` - Complete coding standards
+- `.editorconfig` - Editor configuration
+- `dotnet-tools.json` - Fantomas version lock
+- CI pipeline enforces --check
+
+---
 
 ### E.17 Multi-View Describing (MVPK)
 

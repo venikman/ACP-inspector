@@ -15,13 +15,11 @@ This repository follows the official F# style guide for naming, layout, and idio
 Code formatting is enforced with **Fantomas**.
 
 **Format code:**
-
 ```bash
 dotnet tool restore && dotnet fantomas src tests apps
 ```
 
 **Check formatting (CI):**
-
 ```bash
 dotnet tool restore && dotnet fantomas src tests apps --check
 ```
@@ -61,14 +59,12 @@ module Connection =
 ### Type Design
 
 **Single-case discriminated unions** for type safety:
-
 ```fsharp
 type SessionId = SessionId of string  // Not just: type SessionId = string
 type MessageId = MessageId of string
 ```
 
 **Record types** for structured data:
-
 ```fsharp
 type InitializeParams = {
     protocolVersion: ProtocolVersion
@@ -78,7 +74,6 @@ type InitializeParams = {
 ```
 
 **Discriminated unions** for variants:
-
 ```fsharp
 type ContentBlock =
     | Text of TextContent
@@ -89,7 +84,6 @@ type ContentBlock =
 ### Async Patterns
 
 Use **task computation expressions** (.NET 10):
-
 ```fsharp
 member _.InitializeAsync(params) = task {
     let! response = transport.SendAsync(request)
@@ -100,7 +94,6 @@ member _.InitializeAsync(params) = task {
 ### Error Handling
 
 Use **Result types** for expected failures:
-
 ```fsharp
 type ValidationResult =
     | Valid
@@ -115,7 +108,6 @@ Use **exceptions** only for unexpected failures.
 ### Option Handling
 
 Prefer **Option module** functions:
-
 ```fsharp
 // Good
 sessionId |> Option.map SessionId.value |> Option.defaultValue "(none)"
@@ -129,7 +121,6 @@ match sessionId with
 ### Pipeline Style
 
 Use **forward pipe** for data flow:
-
 ```fsharp
 messages
 |> List.filter (fun m -> m.direction = "c2a")
@@ -220,27 +211,6 @@ Use comments for **non-obvious decisions**:
 // Match ACP spec 0.10.x: maxTokens is optional, defaults to None
 let maxTokens = json.TryGetProperty("maxTokens") |> Option.ofObj
 ```
-
-### Documentation Files
-
-**DO NOT create these files**:
-
-- `WORK-SUMMARY.md` - Work tracking belongs in git history and PRs
-- `TODO.md` - Use GitHub Issues instead
-- `CHANGELOG.md` - Use git log and release notes
-- Session summaries or progress tracking files
-
-**Rationale**:
-
-- Git history provides complete work tracking
-- These files go stale and create maintenance burden
-- Information duplicates what's already in commits/PRs/issues
-
-**DO create**:
-
-- `README.md` - Project overview and getting started
-- `docs/**/*.md` - Architecture, specifications, guides
-- API documentation from XML comments
 
 ---
 
