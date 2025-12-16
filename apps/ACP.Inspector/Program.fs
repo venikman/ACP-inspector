@@ -355,6 +355,17 @@ Common options:
         { new IDisposable with
             member _.Dispose() = () }
 
+    let private tryReadTraceFile (tracePath: string) : Result<string[], int> =
+        if not (File.Exists tracePath) then
+            Console.Error.WriteLine($"[error] Trace file not found: {tracePath}")
+            Error(int ExitCode.RuntimeError)
+        else
+            try
+                Ok(File.ReadAllLines tracePath)
+            with ex ->
+                Console.Error.WriteLine($"[error] Failed to read trace file: {ex.Message}")
+                Error(int ExitCode.RuntimeError)
+
     let startTelemetryFromArgs (args: string[]) : IDisposable =
         let consoleExporter = hasFlag "--otel" args || hasFlag "--otel-console" args
 
@@ -427,17 +438,9 @@ Common options:
             usage ()
             int ExitCode.Usage
         | Some tracePath ->
-            if not (File.Exists tracePath) then
-                Console.Error.WriteLine($"[error] Trace file not found: {tracePath}")
-                int ExitCode.RuntimeError
-            else
-
-                let lines =
-                    try
-                        File.ReadAllLines tracePath
-                    with ex ->
-                        Console.Error.WriteLine($"[error] Failed to read trace file: {ex.Message}")
-                        Array.empty
+            match tryReadTraceFile tracePath with
+            | Error code -> code
+            | Ok lines ->
 
                 let mutable totalFrames = 0
                 let mutable parseErrors = 0
@@ -617,20 +620,11 @@ Common options:
             usage ()
             int ExitCode.Usage
         | Some tracePath ->
-            if not (File.Exists tracePath) then
-                Console.Error.WriteLine($"[error] Trace file not found: {tracePath}")
-                int ExitCode.RuntimeError
-            else
+            match tryReadTraceFile tracePath with
+            | Error code -> code
+            | Ok lines ->
 
                 let cfg = buildConfig args
-
-                let lines =
-                    try
-                        File.ReadAllLines tracePath
-                    with ex ->
-                        Console.Error.WriteLine($"[error] Failed to read trace file: {ex.Message}")
-                        Array.empty
-
                 let mutable state = InspectState.empty
                 let recordWriterOpt = None
 

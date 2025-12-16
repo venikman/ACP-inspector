@@ -62,7 +62,7 @@ module Observability =
             null
 
     /// Sanitize exception message to avoid leaking sensitive data in telemetry.
-    /// Truncates long messages and removes potential credential patterns.
+    /// Truncates long messages and replaces HOME directory path with ~.
     let sanitizeExceptionMessage (message: string) =
         if String.IsNullOrEmpty(message) then
             "[empty]"
@@ -73,13 +73,13 @@ module Observability =
                     message.Substring(0, 200) + "..."
                 else
                     message
-            // Remove potential sensitive patterns (basic sanitization)
-            truncated.Replace(
-                Environment.GetEnvironmentVariable("HOME")
-                |> Option.ofObj
-                |> Option.defaultValue "~",
-                "~"
-            )
+            // Replace HOME path with ~ (only if HOME is non-empty)
+            let home = Environment.GetEnvironmentVariable("HOME")
+
+            if String.IsNullOrEmpty(home) then
+                truncated
+            else
+                truncated.Replace(home, "~")
 
     let inline recordException (activity: Activity | null) (ex: exn) =
         match activity with
