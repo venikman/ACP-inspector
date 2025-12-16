@@ -1,6 +1,7 @@
 module Acp.Inspector
 
-#nowarn "3261" // Nullness warning for interop with .NET APIs that use nullable reference types
+// Suppress FS3261: Nullness warnings for interop with OpenTelemetry APIs that expect nullable Uri
+#nowarn "3261"
 
 open System
 open System.Collections.Generic

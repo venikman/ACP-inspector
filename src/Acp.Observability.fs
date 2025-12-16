@@ -1,5 +1,7 @@
 namespace Acp
 
+#nowarn "3261" // Nullness warnings for Environment.GetEnvironmentVariable interop
+
 open System
 open System.Diagnostics
 open System.Diagnostics.Metrics
@@ -79,7 +81,7 @@ module Observability =
             if String.IsNullOrEmpty(home) then
                 truncated
             else
-                truncated.Replace(home |> Option.ofObj |> Option.defaultValue "", "~")
+                truncated.Replace(home, "~")
 
     let inline recordException (activity: Activity | null) (ex: exn) =
         match activity with
