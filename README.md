@@ -20,6 +20,235 @@ Implementation targets:
 
 This repo adds a First Principles Framework (FPF) view on assurance and observability.
 
+## Quick Start Commands
+
+### Build SDK
+
+```bash
+dotnet build src/ACP.fsproj
+```
+
+```mermaid
+flowchart LR
+    A[dotnet build] --> B[Restore packages]
+    B --> C[Compile F# source]
+    C --> D[Output: bin/Debug/net10.0/ACP.dll]
+```
+
+### Build Inspector CLI
+
+```bash
+dotnet build apps/ACP.Inspector/ACP.Inspector.fsproj -c Release
+```
+
+```mermaid
+flowchart LR
+    A[dotnet build -c Release] --> B[Restore packages]
+    B --> C[Compile Inspector CLI]
+    C --> D[Output: Release build in apps/bin/]
+```
+
+### Run Inspector CLI
+
+```bash
+dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -c Release -- <command> [options]
+```
+
+```mermaid
+flowchart LR
+    A[dotnet run] --> B[Build if needed]
+    B --> C[Execute Inspector command]
+    C --> D{Command Type}
+    D -->|report| E[Analyze trace file]
+    D -->|replay| F[Replay recorded trace]
+    D -->|tap-stdin| G[Monitor stdin ACP traffic]
+    D -->|ws| H[WebSocket tap]
+    D -->|sse| I[SSE tap]
+    D -->|proxy-stdio| J[Proxy between client/agent]
+```
+
+### Run All Tests
+
+```bash
+dotnet test tests/ACP.Tests.fsproj -c Release
+```
+
+```mermaid
+flowchart LR
+    A[dotnet test] --> B[Build test project]
+    B --> C[Discover tests]
+    C --> D[Execute 140 tests]
+    D --> E[Report results]
+```
+
+### Run Specific Test Category
+
+```bash
+# Protocol/runtime/sentinel tests
+dotnet test tests/ACP.Tests.fsproj --filter "FullyQualifiedName~TraceReplay"
+
+# SDK component tests
+dotnet test tests/ACP.Tests.fsproj --filter "FullyQualifiedName~Transport|FullyQualifiedName~Connection|FullyQualifiedName~SessionState|FullyQualifiedName~ToolCalls|FullyQualifiedName~Permissions"
+```
+
+```mermaid
+flowchart LR
+    A[dotnet test --filter] --> B{Filter Type}
+    B -->|TraceReplay| C[Run trace replay tests]
+    B -->|Component| D[Run SDK module tests]
+    C --> E[Report filtered results]
+    D --> E
+```
+
+### Format Code with Fantomas
+
+```bash
+# Format all code
+dotnet tool restore && dotnet fantomas src tests apps
+
+# Check formatting only
+dotnet tool restore && dotnet fantomas src tests apps --check
+```
+
+```mermaid
+flowchart LR
+    A[dotnet tool restore] --> B[Ensure Fantomas available]
+    B --> C{Mode}
+    C -->|Format| D[Apply formatting changes]
+    C -->|Check| E[Verify formatting compliance]
+    D --> F[Files updated]
+    E --> G[Report violations]
+```
+
+### Inspector Commands
+
+#### Report Command
+
+```bash
+dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -c Release -- report --trace trace.jsonl
+```
+
+```mermaid
+flowchart TD
+    A[Load trace.jsonl] --> B[Parse JSON-RPC messages]
+    B --> C[Correlate request/response pairs]
+    C --> D[Run sentinel validation]
+    D --> E[Generate summary report]
+    E --> F[Display statistics & findings]
+```
+
+#### Replay Command
+
+```bash
+dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -c Release -- replay --trace trace.jsonl
+```
+
+```mermaid
+flowchart TD
+    A[Load trace.jsonl] --> B[Parse messages in order]
+    B --> C[Replay each message]
+    C --> D[Show message details]
+    D --> E[Validate protocol state]
+    E --> F[Display findings per message]
+```
+
+#### Tap-Stdin Command
+
+```bash
+dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -c Release -- tap-stdin --direction fromClient --record trace.jsonl
+```
+
+```mermaid
+flowchart LR
+    A[Read stdin line by line] --> B[Parse JSON-RPC]
+    B --> C[Validate message]
+    C --> D[Write to trace.jsonl]
+    D --> E[Display findings]
+    E --> A
+```
+
+#### WebSocket Command
+
+```bash
+dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -c Release -- ws --url ws://host/path --stdin-send --record trace.jsonl
+```
+
+```mermaid
+flowchart TD
+    A[Connect to WebSocket] --> B{Message Direction}
+    B -->|Receive| C[Parse incoming WS message]
+    B -->|Send| D[Read from stdin]
+    D --> E[Send via WebSocket]
+    C --> F[Validate & record]
+    E --> F
+    F --> G[Write to trace.jsonl]
+    G --> B
+```
+
+#### SSE Command
+
+```bash
+dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -c Release -- sse --url https://host/sse --record trace.jsonl
+```
+
+```mermaid
+flowchart TD
+    A[Connect to SSE endpoint] --> B[Read data: lines]
+    B --> C[Parse JSON-RPC]
+    C --> D[Validate message]
+    D --> E[Write to trace.jsonl]
+    E --> F[Display findings]
+    F --> B
+```
+
+#### Proxy-Stdio Command
+
+```bash
+dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -c Release -- proxy-stdio --client-cmd "<cmd>" --agent-cmd "<cmd>" --record trace.jsonl
+```
+
+```mermaid
+flowchart TD
+    A[Start client process] --> B[Start agent process]
+    B --> C{Message Flow}
+    C -->|Client → Agent| D[Capture & forward]
+    C -->|Agent → Client| E[Capture & forward]
+    D --> F[Validate both directions]
+    E --> F
+    F --> G[Write to trace.jsonl]
+    G --> H[Display findings]
+    H --> C
+```
+
+### OpenTelemetry Export Options
+
+#### Console Export
+
+```bash
+dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -c Release -- <command> --otel
+```
+
+```mermaid
+flowchart LR
+    A[Inspector command] --> B[Emit spans & metrics]
+    B --> C[Console exporter]
+    C --> D[Display telemetry to stdout]
+```
+
+#### OTLP Export
+
+```bash
+dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -c Release -- <command> --otlp-endpoint http://localhost:4317 --service-name my-inspector
+```
+
+```mermaid
+flowchart LR
+    A[Inspector command] --> B[Emit spans & metrics]
+    B --> C[OTLP exporter]
+    C --> D[Send to OTLP endpoint]
+    D --> E[Backend: Jaeger/Prometheus/etc]
+```
+
 ## Documentation
 
 - Tooling (paths, build/run commands): [docs/tooling/acp-sentinel.md](docs/tooling/acp-sentinel.md)
@@ -38,17 +267,17 @@ This repo adds a First Principles Framework (FPF) view on assurance and observab
 ### Typical scenarios
 
 - You need to enforce ACP correctness at the IO boundary of an LLM agent runner and want ready-made `validateInbound` / `validateOutbound` gates.
-- You’re adding a new tool/capability to an ACP agent and want protocol-safe fixtures plus validation findings instead of hand-rolled checks.
-- You’re mirroring ACP into another language/runtime and need a canonical model + tests to prevent semantic drift.
-- You’re onboarding teammates or stakeholders and need short, high-signal explainers that match the implementation.
+- You're adding a new tool/capability to an ACP agent and want protocol-safe fixtures plus validation findings instead of hand-rolled checks.
+- You're mirroring ACP into another language/runtime and need a canonical model + tests to prevent semantic drift.
+- You're onboarding teammates or stakeholders and need short, high-signal explainers that match the implementation.
 
 ## 60-second getting started
 
-1. Prereqs: .NET 9 SDK. From repo root: `dotnet build src/ACP.fsproj` (restores + builds).
+1. Prereqs: .NET 10 SDK. From repo root: `dotnet build src/ACP.fsproj` (restores + builds).
 2. Quick probe via F# Interactive (from `src/` after build):
 
 ```fsharp
-#r "bin/Debug/net9.0/ACP.dll"
+#r "bin/Debug/net10.0/ACP.dll"
 open Acp
 open Acp.Domain
 open Acp.Domain.PrimitivesAndParties
@@ -99,34 +328,6 @@ printfn "Outbound findings: %A" outbound.findings
 - `src/Acp.Validation.fs` — validation lanes/findings, protocol-error bridge, `runWithValidation` helper.
 - `src/Acp.RuntimeAdapter.fs` — runtime boundary: `validateInbound`/`validateOutbound` with profile-aware checks.
 - `tests/` — protocol/runtime/sentinel tests
-
-## Inspector CLI (apps/ACP.Inspector)
-
-This repo includes a small CLI to decode JSON-RPC ACP traffic, correlate responses, and run the sentinel validation over the full trace.
-
-- Build: `dotnet build apps/ACP.Inspector/ACP.Inspector.fsproj -c Release`
-- Run: `dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -- <command> [options]`
-
-Common commands:
-
-- Summary report for a recorded trace: `report --trace trace.jsonl`
-- Replay a recorded trace: `replay --trace trace.jsonl`
-- Inspect newline-delimited JSON-RPC from stdin: `tap-stdin --direction fromClient --record trace.jsonl`
-- WebSocket tap (optional stdin send): `ws --url ws://host/path --stdin-send --record trace.jsonl`
-- SSE tap (reads `data:` lines): `sse --url https://host/sse --record trace.jsonl`
-- Stdio proxy between two commands: `proxy-stdio --client-cmd "<cmd>" --agent-cmd "<cmd>" --record trace.jsonl`
-
-### OpenTelemetry (spans + metrics)
-
-The SDK emits operational telemetry via:
-
-- `ActivitySource`: `Acp.Observability.ActivitySourceName` (default: `ACP.Sentinel`)
-- `Meter`: `Acp.Observability.MeterName` (default: `ACP.Sentinel`)
-
-You can export telemetry from the Inspector itself:
-
-- Console export: add `--otel` (or `--otel-console`)
-- OTLP export: add `--otlp-endpoint <url>` (optionally `--service-name <name>`)
 
 ## SDK Modules
 
@@ -264,12 +465,6 @@ See the `examples/` directory for complete integration demos:
 - `PermissionHandling.fsx` - Permission request/response
 - `FullIntegration.fsx` - Complete SDK integration
 
-## Running tests
-
-- All tests: `dotnet test tests/ACP.Tests.fsproj -c Release`
-- Optional: only trace replay tests: `dotnet test tests/ACP.Tests.fsproj -c Release --filter FullyQualifiedName~TraceReplay`
-- SDK tests: `dotnet test tests/ACP.Tests.fsproj --filter "FullyQualifiedName~Transport|FullyQualifiedName~Connection|FullyQualifiedName~SessionState|FullyQualifiedName~ToolCalls|FullyQualifiedName~Permissions"`
-
 ---
 
 ## How to work in this repo
@@ -289,7 +484,7 @@ See the `examples/` directory for complete integration demos:
   See `STYLEGUIDE.md` for the canonical conventions used in this repo.
 
 - **Format with Fantomas.**
-  This repo uses Fantomas as the formatter (and as a formatting “linter” in `--check` mode):
+  This repo uses Fantomas as the formatter (and as a formatting "linter" in `--check` mode):
   - Format: `dotnet tool restore && dotnet fantomas src tests apps`
   - Check only: `dotnet tool restore && dotnet fantomas src tests apps --check`
   - Note: `tests/golden/` is ignored via `.fantomasignore` (it contains intentionally-invalid F# samples).
