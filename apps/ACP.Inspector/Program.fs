@@ -413,11 +413,13 @@ Common options:
                 |> configureExporters
                     (fun endpoint builder ->
                         builder.AddOtlpExporter(fun o ->
-                            o.Endpoint <-
-                                if isNull endpoint then
+#nowarn "3261"
+                            let safeEndpoint =
+                                if isNull (box endpoint) then
                                     Uri("http://localhost:4317")
                                 else
-                                    endpoint))
+                                    endpoint
+                            o.Endpoint <- safeEndpoint))
                     (fun builder -> builder.AddConsoleExporter())
 
             let tracerProvider = tracerBuilder.Build()
@@ -434,11 +436,13 @@ Common options:
                 |> configureExporters
                     (fun endpoint builder ->
                         builder.AddOtlpExporter(fun o ->
-                            o.Endpoint <-
-                                if isNull endpoint then
+#nowarn "3261"
+                            let safeEndpoint =
+                                if isNull (box endpoint) then
                                     Uri("http://localhost:4317")
                                 else
-                                    endpoint))
+                                    endpoint
+                            o.Endpoint <- safeEndpoint))
                     (fun builder -> builder.AddConsoleExporter())
 
             let meterProvider = meterBuilder.Build()
