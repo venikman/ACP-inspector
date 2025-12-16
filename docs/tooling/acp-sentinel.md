@@ -18,7 +18,7 @@ dotnet build src/ACP.fsproj
 dotnet build apps/ACP.Inspector/ACP.Inspector.fsproj -c Release
 
 # run the Inspector CLI
-dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -- <command> [options]
+dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -c Release -- <command> [options]
 
 # run tests
 dotnet test

@@ -1,6 +1,6 @@
-# ACP-Sentinel Documentation
+# ACP-sentinel Documentation
 
-ACP-Sentinel is an F# implementation of the Agent Client Protocol (ACP) with a validation and sentinel layer.
+ACP-sentinel is an F# implementation of the Agent Client Protocol (ACP) with a validation and sentinel layer.
 
 ## Quick Links
 
