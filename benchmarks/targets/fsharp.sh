@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # F# SDK Benchmark Target
-# Wrapper for the ACP-Inspector F# SDK
+# Wrapper for the unified ACP CLI
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
@@ -20,23 +20,23 @@ esac
 case "$MODE" in
     cold-start)
         # Measure: dotnet startup + SDK init + first message
-        dotnet run --project "$PROJECT_ROOT/apps/ACP.Benchmark" --configuration Release -- --mode cold-start
+        dotnet run --project "$PROJECT_ROOT/apps/ACP.Cli" --configuration Release -- benchmark --mode cold-start
         ;;
     roundtrip)
         # Measure: single message roundtrip (warm)
-        dotnet run --project "$PROJECT_ROOT/apps/ACP.Benchmark" --configuration Release -- --mode roundtrip
+        dotnet run --project "$PROJECT_ROOT/apps/ACP.Cli" --configuration Release -- benchmark --mode roundtrip
         ;;
     throughput)
         # Measure: process N messages
         COUNT="${2:-100}"
         [[ "$1" == "--count" ]] && COUNT="$2"
-        dotnet run --project "$PROJECT_ROOT/apps/ACP.Benchmark" --configuration Release -- --mode throughput --count "$COUNT"
+        dotnet run --project "$PROJECT_ROOT/apps/ACP.Cli" --configuration Release -- benchmark --mode throughput --count "$COUNT"
         ;;
     codec)
         # Measure: encode/decode N messages
         COUNT="${2:-1000}"
         [[ "$1" == "--count" ]] && COUNT="$2"
-        dotnet run --project "$PROJECT_ROOT/apps/ACP.Benchmark" --configuration Release -- --mode codec --count "$COUNT"
+        dotnet run --project "$PROJECT_ROOT/apps/ACP.Cli" --configuration Release -- benchmark --mode codec --count "$COUNT"
         ;;
     *)
         echo "Unknown mode: $MODE"

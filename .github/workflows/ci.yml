@@ -50,5 +50,5 @@ jobs:
           name: coverage-report
           path: ./coverage/report
 
-      - name: Build inspector
-        run: dotnet build apps/ACP.Inspector/ACP.Inspector.fsproj -c Release
+      - name: Build CLI
+        run: dotnet build apps/ACP.Cli/ACP.Cli.fsproj -c Release

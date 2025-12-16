@@ -4,6 +4,7 @@
 /// Demonstrates how to use SessionAccumulator to merge streaming
 /// session notifications into coherent snapshots.
 
+#r "nuget: FsToolkit.ErrorHandling, 5.1.0"
 #r "../src/bin/Debug/net10.0/ACP.dll"
 
 open System
@@ -25,7 +26,10 @@ let simulatedNotifications =
       { sessionId = sessionId
         update =
           SessionUpdate.AgentThoughtChunk
-              { content = ContentBlock.Text { text = "Let me analyze the request..."; annotations = None } } }
+              { content =
+                  ContentBlock.Text
+                      { text = "Let me analyze the request..."
+                        annotations = None } } }
 
       // First tool call starts
       { sessionId = sessionId
@@ -130,7 +134,13 @@ let finalSnapshot = accumulator.Snapshot()
 
 printfn "=== Final Session State ==="
 printfn $"Session ID: {SessionId.value finalSnapshot.sessionId}"
-printfn $"Current Mode: {finalSnapshot.currentModeId |> Option.map SessionModeId.value |> Option.defaultValue \"(none)\"}"
+
+let modeText =
+    finalSnapshot.currentModeId
+    |> Option.map SessionModeId.value
+    |> Option.defaultValue "(none)"
+
+printfn $"Current Mode: {modeText}"
 printfn $"Tool Calls: {finalSnapshot.toolCalls.Count}"
 printfn ""
 
@@ -141,7 +151,8 @@ for KeyValue(id, tc) in finalSnapshot.toolCalls do
     printfn $"      Kind: {tc.kind}, Status: {tc.status}"
 
     for loc in tc.locations do
-        printfn $"      Location: {loc.path}:{loc.line |> Option.map string |> Option.defaultValue \"?\"}"
+        let lineText = loc.line |> Option.map string |> Option.defaultValue "?"
+        printfn $"      Location: {loc.path}:{lineText}"
 
 printfn ""
 printfn $"Agent Thoughts: {finalSnapshot.agentThoughts.Length} chunk(s)"

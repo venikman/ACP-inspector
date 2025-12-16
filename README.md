@@ -22,6 +22,56 @@ This repo adds a First Principles Framework (FPF) view on assurance and observab
 
 ## Quick Start Commands
 
+### Unified CLI Tool
+
+The **`acp-cli`** provides a unified interface for ACP protocol inspection, validation, replay, analysis, and benchmarking:
+
+```bash
+# Build the CLI
+dotnet build apps/ACP.Cli/ACP.Cli.fsproj -c Release
+
+# Inspect trace files (full validation with colored output)
+dotnet run --project apps/ACP.Cli -- inspect trace.jsonl
+dotnet run --project apps/ACP.Cli -- inspect --raw trace.jsonl  # Raw JSON output
+
+# Validate messages from stdin (real-time validation)
+cat messages.json | dotnet run --project apps/ACP.Cli -- validate --direction c2a
+
+# Interactive replay (step through traces)
+dotnet run --project apps/ACP.Cli -- replay --interactive trace.jsonl
+dotnet run --project apps/ACP.Cli -- replay --stop-at 5 trace.jsonl  # Stop at frame 5
+
+# Statistical analysis
+dotnet run --project apps/ACP.Cli -- analyze trace.jsonl
+
+# Benchmark performance
+dotnet run --project apps/ACP.Cli -- benchmark --mode throughput --count 1000
+dotnet run --project apps/ACP.Cli -- benchmark --mode cold-start
+dotnet run --project apps/ACP.Cli -- benchmark --mode roundtrip
+dotnet run --project apps/ACP.Cli -- benchmark --mode codec
+dotnet run --project apps/ACP.Cli -- benchmark --mode tokens --tokens 1000000
+dotnet run --project apps/ACP.Cli -- benchmark --mode raw-json
+
+# Show version
+dotnet run --project apps/ACP.Cli -- --version
+
+# Get help
+dotnet run --project apps/ACP.Cli -- --help
+dotnet run --project apps/ACP.Cli -- inspect --help
+dotnet run --project apps/ACP.Cli -- validate --help
+dotnet run --project apps/ACP.Cli -- replay --help
+dotnet run --project apps/ACP.Cli -- analyze --help
+dotnet run --project apps/ACP.Cli -- benchmark --help
+```
+
+**Commands Overview:**
+
+- **`inspect`** - Full Inspector validation from JSONL trace files with detailed findings
+- **`validate`** - Real-time validation of ACP messages from stdin
+- **`replay`** - Interactive stepping through trace files with validation
+- **`analyze`** - Statistical analysis: method counts, timing, session stats
+- **`benchmark`** - Performance testing: cold-start, throughput, codec, tokens
+
 ### Build SDK
 
 ```bash
@@ -33,38 +83,6 @@ flowchart LR
     A[dotnet build] --> B[Restore packages]
     B --> C[Compile F# source]
     C --> D[Output: bin/Debug/net10.0/ACP.dll]
-```
-
-### Build Inspector CLI
-
-```bash
-dotnet build apps/ACP.Inspector/ACP.Inspector.fsproj -c Release
-```
-
-```mermaid
-flowchart LR
-    A[dotnet build -c Release] --> B[Restore packages]
-    B --> C[Compile Inspector CLI]
-    C --> D[Output: Release build in apps/bin/]
-```
-
-### Run Inspector CLI
-
-```bash
-dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -c Release -- <command> [options]
-```
-
-```mermaid
-flowchart LR
-    A[dotnet run] --> B[Build if needed]
-    B --> C[Execute Inspector command]
-    C --> D{Command Type}
-    D -->|report| E[Analyze trace file]
-    D -->|replay| F[Replay recorded trace]
-    D -->|tap-stdin| G[Monitor stdin ACP traffic]
-    D -->|ws| H[WebSocket tap]
-    D -->|sse| I[SSE tap]
-    D -->|proxy-stdio| J[Proxy between client/agent]
 ```
 
 ### Run All Tests
@@ -118,135 +136,6 @@ flowchart LR
     C -->|Check| E[Verify formatting compliance]
     D --> F[Files updated]
     E --> G[Report violations]
-```
-
-### Inspector Commands
-
-#### Report Command
-
-```bash
-dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -c Release -- report --trace trace.jsonl
-```
-
-```mermaid
-flowchart TD
-    A[Load trace.jsonl] --> B[Parse JSON-RPC messages]
-    B --> C[Correlate request/response pairs]
-    C --> D[Run sentinel validation]
-    D --> E[Generate summary report]
-    E --> F[Display statistics & findings]
-```
-
-#### Replay Command
-
-```bash
-dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -c Release -- replay --trace trace.jsonl
-```
-
-```mermaid
-flowchart TD
-    A[Load trace.jsonl] --> B[Parse messages in order]
-    B --> C[Replay each message]
-    C --> D[Show message details]
-    D --> E[Validate protocol state]
-    E --> F[Display findings per message]
-```
-
-#### Tap-Stdin Command
-
-```bash
-dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -c Release -- tap-stdin --direction fromClient --record trace.jsonl
-```
-
-```mermaid
-flowchart LR
-    A[Read stdin line by line] --> B[Parse JSON-RPC]
-    B --> C[Validate message]
-    C --> D[Write to trace.jsonl]
-    D --> E[Display findings]
-    E --> A
-```
-
-#### WebSocket Command
-
-```bash
-dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -c Release -- ws --url ws://host/path --stdin-send --record trace.jsonl
-```
-
-```mermaid
-flowchart TD
-    A[Connect to WebSocket] --> B{Message Direction}
-    B -->|Receive| C[Parse incoming WS message]
-    B -->|Send| D[Read from stdin]
-    D --> E[Send via WebSocket]
-    C --> F[Validate & record]
-    E --> F
-    F --> G[Write to trace.jsonl]
-    G --> B
-```
-
-#### SSE Command
-
-```bash
-dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -c Release -- sse --url https://host/sse --record trace.jsonl
-```
-
-```mermaid
-flowchart TD
-    A[Connect to SSE endpoint] --> B[Read data: lines]
-    B --> C[Parse JSON-RPC]
-    C --> D[Validate message]
-    D --> E[Write to trace.jsonl]
-    E --> F[Display findings]
-    F --> B
-```
-
-#### Proxy-Stdio Command
-
-```bash
-dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -c Release -- proxy-stdio --client-cmd "<cmd>" --agent-cmd "<cmd>" --record trace.jsonl
-```
-
-```mermaid
-flowchart TD
-    A[Start client process] --> B[Start agent process]
-    B --> C{Message Flow}
-    C -->|Client → Agent| D[Capture & forward]
-    C -->|Agent → Client| E[Capture & forward]
-    D --> F[Validate both directions]
-    E --> F
-    F --> G[Write to trace.jsonl]
-    G --> H[Display findings]
-    H --> C
-```
-
-### OpenTelemetry Export Options
-
-#### Console Export
-
-```bash
-dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -c Release -- <command> --otel
-```
-
-```mermaid
-flowchart LR
-    A[Inspector command] --> B[Emit spans & metrics]
-    B --> C[Console exporter]
-    C --> D[Display telemetry to stdout]
-```
-
-#### OTLP Export
-
-```bash
-dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -c Release -- <command> --otlp-endpoint http://localhost:4317 --service-name my-inspector
-```
-
-```mermaid
-flowchart LR
-    A[Inspector command] --> B[Emit spans & metrics]
-    B --> C[OTLP exporter]
-    C --> D[Send to OTLP endpoint]
-    D --> E[Backend: Jaeger/Prometheus/etc]
 ```
 
 ## Documentation
