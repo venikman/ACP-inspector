@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <LangVersion>preview</LangVersion>
     <Nullable>enable</Nullable>
 
@@ -46,6 +46,5 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FsToolkit.ErrorHandling" Version="5.1.0" />
-    <PackageReference Include="Microsoft.Extensions.Telemetry" Version="10.1.0" />
   </ItemGroup>
 </Project>

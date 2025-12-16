@@ -93,24 +93,32 @@ module private Cli =
                         && root.TryGetProperty("direction", &directionEl)
                         && root.TryGetProperty("json", &jsonEl)
                     then
-                        let ts =
+                        let tsOpt =
                             match tsEl.ValueKind with
-                            | JsonValueKind.String -> tsEl.GetDateTimeOffset()
-                            | JsonValueKind.Number -> DateTimeOffset.FromUnixTimeMilliseconds(tsEl.GetInt64())
-                            | _ -> DateTimeOffset.MinValue
+                            | JsonValueKind.String ->
+                                try
+                                    Some(tsEl.GetDateTimeOffset())
+                                with _ ->
+                                    None
+                            | JsonValueKind.Number ->
+                                try
+                                    Some(DateTimeOffset.FromUnixTimeMilliseconds(tsEl.GetInt64()))
+                                with _ ->
+                                    None
+                            | _ -> None
 
-                        let direction =
+                        let directionOpt =
                             match directionEl.ValueKind with
                             | JsonValueKind.String -> directionEl.GetString() |> Option.ofObj
                             | _ -> None
 
-                        let json =
+                        let jsonOpt =
                             match jsonEl.ValueKind with
                             | JsonValueKind.String -> jsonEl.GetString() |> Option.ofObj
                             | _ -> None
 
-                        match direction, json with
-                        | Some direction, Some json ->
+                        match tsOpt, directionOpt, jsonOpt with
+                        | Some ts, Some direction, Some json ->
                             Some
                                 { ts = ts
                                   direction = direction
@@ -347,11 +355,30 @@ Common options:
         { new IDisposable with
             member _.Dispose() = () }
 
+    let private tryReadTraceFile (tracePath: string) : Result<string[], int> =
+        if not (File.Exists tracePath) then
+            Console.Error.WriteLine($"[error] Trace file not found: {tracePath}")
+            Error(int ExitCode.RuntimeError)
+        else
+            try
+                Ok(File.ReadAllLines tracePath)
+            with ex ->
+                Console.Error.WriteLine($"[error] Failed to read trace file: {ex.Message}")
+                Error(int ExitCode.RuntimeError)
+
     let startTelemetryFromArgs (args: string[]) : IDisposable =
         let consoleExporter = hasFlag "--otel" args || hasFlag "--otel-console" args
 
         let otlpEndpoint = tryGetArg "--otlp-endpoint" args
-        let otlpEndpointUri = otlpEndpoint |> Option.map Uri
+
+        let otlpEndpointUri =
+            otlpEndpoint
+            |> Option.bind (fun s ->
+                match Uri.TryCreate(s, UriKind.Absolute) with
+                | true, uri -> Some uri
+                | false, _ ->
+                    Console.Error.WriteLine($"[warning] Invalid OTLP endpoint URI: {s}")
+                    None)
 
         let serviceName =
             tryGetArg "--service-name" args
@@ -411,179 +438,181 @@ Common options:
             usage ()
             int ExitCode.Usage
         | Some tracePath ->
-            let lines = File.ReadAllLines tracePath
+            match tryReadTraceFile tracePath with
+            | Error code -> code
+            | Ok lines ->
 
-            let mutable totalFrames = 0
-            let mutable parseErrors = 0
-            let mutable fromClientFrames = 0
-            let mutable fromAgentFrames = 0
+                let mutable totalFrames = 0
+                let mutable parseErrors = 0
+                let mutable fromClientFrames = 0
+                let mutable fromAgentFrames = 0
 
-            let mutable requestCount = 0
-            let mutable notificationCount = 0
-            let mutable responseCount = 0
-            let mutable unmatchedResponses = 0
+                let mutable requestCount = 0
+                let mutable notificationCount = 0
+                let mutable responseCount = 0
+                let mutable unmatchedResponses = 0
 
-            let pending = Dictionary<string, DateTimeOffset * string>(StringComparer.Ordinal)
+                let pending = Dictionary<string, DateTimeOffset * string>(StringComparer.Ordinal)
 
-            let methodCounts = Dictionary<string, int>(StringComparer.Ordinal)
+                let methodCounts = Dictionary<string, int>(StringComparer.Ordinal)
 
-            let latenciesByMethod =
-                Dictionary<string, ResizeArray<double>>(StringComparer.Ordinal)
+                let latenciesByMethod =
+                    Dictionary<string, ResizeArray<double>>(StringComparer.Ordinal)
 
-            let oppositeDirection =
-                function
-                | Direction.FromClient -> Direction.FromAgent
-                | Direction.FromAgent -> Direction.FromClient
+                let oppositeDirection =
+                    function
+                    | Direction.FromClient -> Direction.FromAgent
+                    | Direction.FromAgent -> Direction.FromClient
 
-            let directionKey =
-                function
-                | Direction.FromClient -> "fromClient"
-                | Direction.FromAgent -> "fromAgent"
+                let directionKey =
+                    function
+                    | Direction.FromClient -> "fromClient"
+                    | Direction.FromAgent -> "fromAgent"
 
-            let pendingKey dir id = $"{directionKey dir}|{id}"
+                let pendingKey dir id = $"{directionKey dir}|{id}"
 
-            let incMethodCount methodName =
-                match methodCounts.TryGetValue(methodName) with
-                | true, v -> methodCounts.[methodName] <- v + 1
-                | false, _ -> methodCounts.[methodName] <- 1
+                let incMethodCount methodName =
+                    match methodCounts.TryGetValue(methodName) with
+                    | true, v -> methodCounts.[methodName] <- v + 1
+                    | false, _ -> methodCounts.[methodName] <- 1
 
-            let addLatency methodName ms =
-                let bucket =
-                    match latenciesByMethod.TryGetValue(methodName) with
-                    | true, v -> v
-                    | false, _ ->
-                        let v = ResizeArray()
-                        latenciesByMethod.[methodName] <- v
-                        v
+                let addLatency methodName ms =
+                    let bucket =
+                        match latenciesByMethod.TryGetValue(methodName) with
+                        | true, v -> v
+                        | false, _ ->
+                            let v = ResizeArray()
+                            latenciesByMethod.[methodName] <- v
+                            v
 
-                bucket.Add(ms)
+                    bucket.Add(ms)
 
-            let tryParseJsonRpc (raw: string) =
-                try
-                    use doc = JsonDocument.Parse(raw)
-                    let root = doc.RootElement
+                let tryParseJsonRpc (raw: string) =
+                    try
+                        use doc = JsonDocument.Parse(raw)
+                        let root = doc.RootElement
 
-                    if root.ValueKind <> JsonValueKind.Object then
+                        if root.ValueKind <> JsonValueKind.Object then
+                            None
+                        else
+                            let mutable methodEl = Unchecked.defaultof<JsonElement>
+                            let hasMethod = root.TryGetProperty("method", &methodEl)
+
+                            let methodOpt =
+                                if hasMethod && methodEl.ValueKind = JsonValueKind.String then
+                                    methodEl.GetString() |> Option.ofObj
+                                else
+                                    None
+
+                            let mutable idEl = Unchecked.defaultof<JsonElement>
+                            let hasId = root.TryGetProperty("id", &idEl)
+
+                            let idOpt =
+                                if hasId then
+                                    match idEl.ValueKind with
+                                    | JsonValueKind.String -> idEl.GetString() |> Option.ofObj
+                                    | JsonValueKind.Number -> Some(idEl.GetRawText())
+                                    | JsonValueKind.Null -> Some "null"
+                                    | _ -> None
+                                else
+                                    None
+
+                            let mutable tmp = Unchecked.defaultof<JsonElement>
+
+                            let isResponse =
+                                root.TryGetProperty("result", &tmp) || root.TryGetProperty("error", &tmp)
+
+                            Some(methodOpt, idOpt, isResponse)
+                    with _ ->
                         None
-                    else
-                        let mutable methodEl = Unchecked.defaultof<JsonElement>
-                        let hasMethod = root.TryGetProperty("method", &methodEl)
 
-                        let methodOpt =
-                            if hasMethod && methodEl.ValueKind = JsonValueKind.String then
-                                methodEl.GetString() |> Option.ofObj
-                            else
-                                None
-
-                        let mutable idEl = Unchecked.defaultof<JsonElement>
-                        let hasId = root.TryGetProperty("id", &idEl)
-
-                        let idOpt =
-                            if hasId then
-                                match idEl.ValueKind with
-                                | JsonValueKind.String -> idEl.GetString() |> Option.ofObj
-                                | JsonValueKind.Number -> Some(idEl.GetRawText())
-                                | JsonValueKind.Null -> Some "null"
-                                | _ -> None
-                            else
-                                None
-
-                        let mutable tmp = Unchecked.defaultof<JsonElement>
-
-                        let isResponse =
-                            root.TryGetProperty("result", &tmp) || root.TryGetProperty("error", &tmp)
-
-                        Some(methodOpt, idOpt, isResponse)
-                with _ ->
-                    None
-
-            for line in lines do
-                match TraceFrame.tryDecode line with
-                | None -> parseErrors <- parseErrors + 1
-                | Some frame ->
-                    totalFrames <- totalFrames + 1
-
-                    match Direction.tryParse frame.direction with
+                for line in lines do
+                    match TraceFrame.tryDecode line with
                     | None -> parseErrors <- parseErrors + 1
-                    | Some dir ->
-                        match dir with
-                        | Direction.FromClient -> fromClientFrames <- fromClientFrames + 1
-                        | Direction.FromAgent -> fromAgentFrames <- fromAgentFrames + 1
+                    | Some frame ->
+                        totalFrames <- totalFrames + 1
 
-                        match tryParseJsonRpc frame.json with
+                        match Direction.tryParse frame.direction with
                         | None -> parseErrors <- parseErrors + 1
-                        | Some(methodOpt, idOpt, isResponse) ->
-                            match methodOpt, isResponse with
-                            | Some methodName, false ->
-                                // Request or notification
-                                incMethodCount methodName
+                        | Some dir ->
+                            match dir with
+                            | Direction.FromClient -> fromClientFrames <- fromClientFrames + 1
+                            | Direction.FromAgent -> fromAgentFrames <- fromAgentFrames + 1
 
-                                match idOpt with
-                                | Some id ->
-                                    requestCount <- requestCount + 1
-                                    pending.[pendingKey dir id] <- (frame.ts, methodName)
-                                | None -> notificationCount <- notificationCount + 1
+                            match tryParseJsonRpc frame.json with
+                            | None -> parseErrors <- parseErrors + 1
+                            | Some(methodOpt, idOpt, isResponse) ->
+                                match methodOpt, isResponse with
+                                | Some methodName, false ->
+                                    // Request or notification
+                                    incMethodCount methodName
 
-                            | None, true ->
-                                // Response
-                                responseCount <- responseCount + 1
+                                    match idOpt with
+                                    | Some id ->
+                                        requestCount <- requestCount + 1
+                                        pending.[pendingKey dir id] <- (frame.ts, methodName)
+                                    | None -> notificationCount <- notificationCount + 1
 
-                                match idOpt with
-                                | None -> unmatchedResponses <- unmatchedResponses + 1
-                                | Some id ->
-                                    let requestKey = pendingKey (oppositeDirection dir) id
+                                | None, true ->
+                                    // Response
+                                    responseCount <- responseCount + 1
 
-                                    match pending.TryGetValue(requestKey) with
-                                    | true, (startedAt, reqMethod) ->
-                                        pending.Remove(requestKey) |> ignore
-                                        addLatency reqMethod (frame.ts - startedAt).TotalMilliseconds
-                                    | false, _ -> unmatchedResponses <- unmatchedResponses + 1
-                            | _ -> ()
+                                    match idOpt with
+                                    | None -> unmatchedResponses <- unmatchedResponses + 1
+                                    | Some id ->
+                                        let requestKey = pendingKey (oppositeDirection dir) id
 
-            Console.Out.WriteLine($"trace: {tracePath}")
-            Console.Out.WriteLine($"frames: {totalFrames} (parseErrors={parseErrors})")
-            Console.Out.WriteLine($"by direction: fromClient={fromClientFrames} fromAgent={fromAgentFrames}")
+                                        match pending.TryGetValue(requestKey) with
+                                        | true, (startedAt, reqMethod) ->
+                                            pending.Remove(requestKey) |> ignore
+                                            addLatency reqMethod (frame.ts - startedAt).TotalMilliseconds
+                                        | false, _ -> unmatchedResponses <- unmatchedResponses + 1
+                                | _ -> ()
 
-            Console.Out.WriteLine(
-                $"rpc: requests={requestCount} notifications={notificationCount} responses={responseCount}"
-            )
+                Console.Out.WriteLine($"trace: {tracePath}")
+                Console.Out.WriteLine($"frames: {totalFrames} (parseErrors={parseErrors})")
+                Console.Out.WriteLine($"by direction: fromClient={fromClientFrames} fromAgent={fromAgentFrames}")
 
-            Console.Out.WriteLine($"unmatched: requests={pending.Count} responses={unmatchedResponses}")
+                Console.Out.WriteLine(
+                    $"rpc: requests={requestCount} notifications={notificationCount} responses={responseCount}"
+                )
 
-            if latenciesByMethod.Count > 0 then
-                Console.Out.WriteLine("")
-                Console.Out.WriteLine("latency_ms by method (count p50 p95 max):")
+                Console.Out.WriteLine($"unmatched: requests={pending.Count} responses={unmatchedResponses}")
 
-                let rows =
-                    latenciesByMethod
-                    |> Seq.map (fun (KeyValue(methodName, values)) ->
-                        let arr = values.ToArray()
-                        Array.sortInPlace arr
+                if latenciesByMethod.Count > 0 then
+                    Console.Out.WriteLine("")
+                    Console.Out.WriteLine("latency_ms by method (count p50 p95 max):")
 
-                        let count = arr.Length
+                    let rows =
+                        latenciesByMethod
+                        |> Seq.map (fun (KeyValue(methodName, values)) ->
+                            let arr = values.ToArray()
+                            Array.sortInPlace arr
 
-                        let p50 =
-                            if count % 2 = 1 then
-                                arr.[count / 2]
-                            else
-                                (arr.[(count / 2) - 1] + arr.[count / 2]) / 2.0
+                            let count = arr.Length
 
-                        let p95Idx =
-                            if count = 1 then
-                                0
-                            else
-                                int (Math.Ceiling(0.95 * float (count - 1)))
+                            let p50 =
+                                if count % 2 = 1 then
+                                    arr.[count / 2]
+                                else
+                                    (arr.[(count / 2) - 1] + arr.[count / 2]) / 2.0
 
-                        let p95 = arr.[p95Idx]
-                        let max = arr.[count - 1]
-                        (methodName, count, p50, p95, max))
-                    |> Seq.sortByDescending (fun (_, count, _, _, _) -> count)
-                    |> Seq.toList
+                            let p95Idx =
+                                if count = 1 then
+                                    0
+                                else
+                                    int (Math.Ceiling(0.95 * float (count - 1)))
 
-                for (methodName, count, p50, p95, max) in rows do
-                    Console.Out.WriteLine($"{methodName}: {count} {p50:F1} {p95:F1} {max:F1}")
+                            let p95 = arr.[p95Idx]
+                            let max = arr.[count - 1]
+                            (methodName, count, p50, p95, max))
+                        |> Seq.sortByDescending (fun (_, count, _, _, _) -> count)
+                        |> Seq.toList
 
-            int ExitCode.Ok
+                    for (methodName, count, p50, p95, max) in rows do
+                        Console.Out.WriteLine($"{methodName}: {count} {p50:F1} {p95:F1} {max:F1}")
+
+                int ExitCode.Ok
 
     let replay (args: string[]) =
         match tryGetArg "--trace" args with
@@ -591,22 +620,24 @@ Common options:
             usage ()
             int ExitCode.Usage
         | Some tracePath ->
-            let cfg = buildConfig args
-            let lines = File.ReadAllLines tracePath
+            match tryReadTraceFile tracePath with
+            | Error code -> code
+            | Ok lines ->
 
-            let mutable state = InspectState.empty
-            let recordWriterOpt = None
+                let cfg = buildConfig args
+                let mutable state = InspectState.empty
+                let recordWriterOpt = None
 
-            for line in lines do
-                match TraceFrame.tryDecode line with
-                | None -> Console.Error.WriteLine($"[trace-error] could not parse line: {line}")
-                | Some frame ->
-                    match Direction.tryParse frame.direction with
-                    | None -> Console.Error.WriteLine($"[trace-error] unknown direction: {frame.direction}")
-                    | Some dir -> state <- processRawJson cfg recordWriterOpt dir frame.json state
+                for line in lines do
+                    match TraceFrame.tryDecode line with
+                    | None -> Console.Error.WriteLine($"[trace-error] could not parse line: {line}")
+                    | Some frame ->
+                        match Direction.tryParse frame.direction with
+                        | None -> Console.Error.WriteLine($"[trace-error] unknown direction: {frame.direction}")
+                        | Some dir -> state <- processRawJson cfg recordWriterOpt dir frame.json state
 
-            Console.Out.WriteLine($"done: messages={state.messages.Length} rawFrames={state.rawCount}")
-            int ExitCode.Ok
+                Console.Out.WriteLine($"done: messages={state.messages.Length} rawFrames={state.rawCount}")
+                int ExitCode.Ok
 
     let record (args: string[]) =
         match tryGetArg "--out" args, tryGetArg "--direction" args with
