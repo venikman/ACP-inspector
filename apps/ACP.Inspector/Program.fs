@@ -1,6 +1,6 @@
 module Acp.Inspector
 
-#nowarn "3261"
+#nowarn "3261" // Nullness warning for interop with .NET APIs that use nullable reference types
 
 open System
 open System.Collections.Generic
@@ -396,11 +396,7 @@ Common options:
                 let builder =
                     match otlpEndpointUri with
                     | None -> builder
-                    | Some endpoint ->
-                        if not (isNull (box endpoint)) then
-                            addOtlp endpoint builder
-                        else
-                            builder
+                    | Some endpoint -> addOtlp endpoint builder
 
                 if consoleExporter then addConsole builder else builder
 
@@ -413,15 +409,7 @@ Common options:
             let tracerBuilder =
                 tracerBuilder
                 |> configureExporters
-                    (fun endpoint builder ->
-                        builder.AddOtlpExporter(fun o ->
-                            let safeEndpoint =
-                                if isNull (box endpoint) then
-                                    Uri("http://localhost:4317")
-                                else
-                                    endpoint
-
-                            o.Endpoint <- safeEndpoint))
+                    (fun endpoint builder -> builder.AddOtlpExporter(fun o -> o.Endpoint <- endpoint))
                     (fun builder -> builder.AddConsoleExporter())
 
             let tracerProvider = tracerBuilder.Build()
@@ -436,15 +424,7 @@ Common options:
             let meterBuilder =
                 meterBuilder
                 |> configureExporters
-                    (fun endpoint builder ->
-                        builder.AddOtlpExporter(fun o ->
-                            let safeEndpoint =
-                                if isNull (box endpoint) then
-                                    Uri("http://localhost:4317")
-                                else
-                                    endpoint
-
-                            o.Endpoint <- safeEndpoint))
+                    (fun endpoint builder -> builder.AddOtlpExporter(fun o -> o.Endpoint <- endpoint))
                     (fun builder -> builder.AddConsoleExporter())
 
             let meterProvider = meterBuilder.Build()
