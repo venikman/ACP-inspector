@@ -1,5 +1,7 @@
 module Acp.Inspector
 
+#nowarn "3261"
+
 open System
 open System.Collections.Generic
 open System.Diagnostics
@@ -413,12 +415,12 @@ Common options:
                 |> configureExporters
                     (fun endpoint builder ->
                         builder.AddOtlpExporter(fun o ->
-#nowarn "3261"
                             let safeEndpoint =
                                 if isNull (box endpoint) then
                                     Uri("http://localhost:4317")
                                 else
                                     endpoint
+
                             o.Endpoint <- safeEndpoint))
                     (fun builder -> builder.AddConsoleExporter())
 
@@ -436,12 +438,12 @@ Common options:
                 |> configureExporters
                     (fun endpoint builder ->
                         builder.AddOtlpExporter(fun o ->
-#nowarn "3261"
                             let safeEndpoint =
                                 if isNull (box endpoint) then
                                     Uri("http://localhost:4317")
                                 else
                                     endpoint
+
                             o.Endpoint <- safeEndpoint))
                     (fun builder -> builder.AddConsoleExporter())
 
