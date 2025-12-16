@@ -9,5 +9,8 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ACP.Tests.fsproj" />
+    <Project Path="tests/Epistemology.Harness/Epistemology.Harness.fsproj" />
+    <Project Path="tests/SDK.Harness/SDK.Harness.fsproj" />
+    <Project Path="tests/Validation.Harness/Validation.Harness.fsproj" />
   </Folder>
 </Solution>
