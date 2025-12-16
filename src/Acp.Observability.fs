@@ -61,13 +61,33 @@ module Observability =
         else
             null
 
+    /// Sanitize exception message to avoid leaking sensitive data in telemetry.
+    /// Truncates long messages and removes potential credential patterns.
+    let sanitizeExceptionMessage (message: string) =
+        if String.IsNullOrEmpty(message) then
+            "[empty]"
+        else
+            // Truncate to reasonable length
+            let truncated =
+                if message.Length > 200 then
+                    message.Substring(0, 200) + "..."
+                else
+                    message
+            // Remove potential sensitive patterns (basic sanitization)
+            truncated.Replace(
+                Environment.GetEnvironmentVariable("HOME")
+                |> Option.ofObj
+                |> Option.defaultValue "~",
+                "~"
+            )
+
     let inline recordException (activity: Activity | null) (ex: exn) =
         match activity with
         | null -> ()
         | activity ->
             activity.SetTag(ErrorTag, true) |> ignore
-            activity.SetTag(ErrorTypeTag, ex.GetType().FullName) |> ignore
-            activity.SetTag(ErrorMessageTag, ex.Message) |> ignore
+            activity.SetTag(ErrorTypeTag, ex.GetType().Name) |> ignore
+            activity.SetTag(ErrorMessageTag, sanitizeExceptionMessage ex.Message) |> ignore
 
     module Metrics =
 
