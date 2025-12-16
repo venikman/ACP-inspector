@@ -1,5 +1,8 @@
 module Acp.Inspector
 
+// Suppress FS3261: Nullness warnings for interop with OpenTelemetry APIs that expect nullable Uri
+#nowarn "3261"
+
 open System
 open System.Collections.Generic
 open System.Diagnostics

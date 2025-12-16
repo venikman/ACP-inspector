@@ -1,5 +1,7 @@
 namespace Acp
 
+#nowarn "3261" // Nullness warnings for Environment.GetEnvironmentVariable interop
+
 open System
 open System.Diagnostics
 open System.Diagnostics.Metrics

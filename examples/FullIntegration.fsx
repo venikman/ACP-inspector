@@ -7,7 +7,7 @@
 /// - Tool call tracking
 /// - Permission handling
 
-#r "../src/bin/Debug/net9.0/ACP.dll"
+#r "../src/bin/Debug/net10.0/ACP.dll"
 
 open System
 open System.Threading.Tasks

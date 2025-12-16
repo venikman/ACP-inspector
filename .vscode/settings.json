@@ -1,0 +1,12 @@
+{
+  "FSharp.workspacePath": "ACP-inspector.slnx",
+  "FSharp.enableAnalyzers": true,
+  "FSharp.enableMSBuildProjectGraph": true,
+  "FSharp.workspaceModePeekDeepLevel": 4,
+  "files.exclude": {
+    "**/.ionide": true
+  },
+  "FSharp.excludeProjectDirectories": [
+    "examples"
+  ]
+}
