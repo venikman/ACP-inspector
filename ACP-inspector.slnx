@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/apps/">
+    <Project Path="apps/ACP.Benchmark/ACP.Benchmark.fsproj" />
+    <Project Path="apps/ACP.Inspector/ACP.Inspector.fsproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/ACP.fsproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ACP.Tests.fsproj" />
+  </Folder>
+</Solution>
