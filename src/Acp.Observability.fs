@@ -79,7 +79,7 @@ module Observability =
             if String.IsNullOrEmpty(home) then
                 truncated
             else
-                truncated.Replace(home, "~")
+                truncated.Replace(home |> Option.ofObj |> Option.defaultValue "", "~")
 
     let inline recordException (activity: Activity | null) (ex: exn) =
         match activity with
