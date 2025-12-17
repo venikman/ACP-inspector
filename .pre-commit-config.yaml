@@ -1,0 +1,10 @@
+repos:
+  - repo: local
+    hooks:
+      - id: fantomas
+        name: Fantomas F# Formatter
+        entry: bash -c 'dotnet tool restore && dotnet fantomas --check'
+        language: system
+        files: \.(fs|fsx|fsi)$
+        exclude: ^(tests/golden/|.*obj/.*|.*\.AssemblyInfo\.fs)
+        pass_filenames: false
