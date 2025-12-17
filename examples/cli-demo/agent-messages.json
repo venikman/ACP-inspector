@@ -1,0 +1,3 @@
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":1,"agentCapabilities":{"loadSession":true,"mcpCapabilities":{"http":false,"sse":false},"promptCapabilities":{"audio":false,"image":false,"embeddedContext":false}},"authMethods":[]}}
+{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"ses-001","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"Hello from agent"}}}}
+{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"ses-001","update":{"sessionUpdate":"tool_call","toolCallId":"tc-001","title":"Read file","kind":"read","status":"pending","content":[{"type":"content","content":{"type":"text","text":"Reading..."}}],"locations":[{"path":"test.txt"}]}}}

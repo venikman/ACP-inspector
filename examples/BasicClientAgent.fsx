@@ -4,13 +4,17 @@
 /// Demonstrates how to set up a client and agent communicating over
 /// in-memory transport, performing a complete session lifecycle.
 
+#r "nuget: FsToolkit.ErrorHandling, 5.1.0"
 #r "../src/bin/Debug/net10.0/ACP.dll"
 
 open System
 open System.Threading.Tasks
 open Acp.Domain
 open Acp.Domain.PrimitivesAndParties
+open Acp.Domain.Capabilities
+open Acp.Domain.Initialization
 open Acp.Domain.Prompting
+open Acp.Domain.SessionSetup
 open Acp.Domain.SessionModes
 open Acp.Transport
 open Acp.Connection
@@ -27,7 +31,24 @@ let createAgentHandlers () =
         fun _params ->
             task {
                 printfn "[Agent] Received initialize request"
-                return Ok { agentName = "Example Agent"; agentVersion = "1.0.0" }
+
+                return
+                    Ok
+                        { protocolVersion = ProtocolVersion.current
+                          agentCapabilities =
+                            { loadSession = false
+                              mcpCapabilities = { http = false; sse = false }
+                              promptCapabilities =
+                                { audio = false
+                                  image = false
+                                  embeddedContext = false }
+                              sessionCapabilities = Capabilities.SessionCapabilities }
+                          agentInfo =
+                            Some
+                                { name = "example-agent"
+                                  title = Some "Example Agent"
+                                  version = "1.0.0" }
+                          authMethods = [] }
             }
 
       onNewSession =
@@ -40,8 +61,13 @@ let createAgentHandlers () =
                 return
                     Ok
                         { sessionId = sessionId
-                          modes = [ { modeId = SessionModeId "default"; name = "Default Mode" } ]
-                          currentModeId = SessionModeId "default" }
+                          modes =
+                            Some
+                                { currentModeId = SessionModeId "default"
+                                  availableModes =
+                                    [ { id = SessionModeId "default"
+                                        name = "Default Mode"
+                                        description = None } ] } }
             }
 
       onPrompt =
@@ -52,22 +78,18 @@ let createAgentHandlers () =
                 // Extract user message if present
                 let userText =
                     params'.prompt
-                    |> List.tryPick (fun item ->
-                        match item with
-                        | PromptItem.UserMessage msg ->
-                            msg.content
-                            |> List.tryPick (fun block ->
-                                match block with
-                                | ContentBlock.Text t -> Some t.text
-                                | _ -> None)
+                    |> List.tryPick (fun block ->
+                        match block with
+                        | ContentBlock.Text t -> Some t.text
                         | _ -> None)
 
-                printfn $"[Agent] User said: {userText |> Option.defaultValue \"(no text)\"}"
+                let displayText = userText |> Option.defaultValue "(no text)"
+                printfn $"[Agent] User said: {displayText}"
 
                 return
                     Ok
                         { sessionId = params'.sessionId
-                          outputTurnId = params'.expectedTurnId |> Option.defaultValue (TurnId "turn-1") }
+                          stopReason = StopReason.EndTurn }
             }
 
       onCancel =
@@ -81,7 +103,11 @@ let createAgentHandlers () =
         fun params' ->
             task {
                 printfn $"[Agent] Mode set to: {SessionModeId.value params'.modeId}"
-                return Ok { currentModeId = params'.modeId }
+
+                return
+                    Ok
+                        { sessionId = params'.sessionId
+                          modeId = params'.modeId }
             } }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -106,45 +132,70 @@ let runExample () =
 
         // 1. Initialize
         printfn "[Client] Sending initialize..."
-        let! initResult = client.InitializeAsync({ clientName = "Example Client"; clientVersion = "1.0.0" })
+
+        let! initResult =
+            client.InitializeAsync(
+                { protocolVersion = ProtocolVersion.current
+                  clientCapabilities =
+                    { fs =
+                        { readTextFile = false
+                          writeTextFile = false }
+                      terminal = false }
+                  clientInfo =
+                    Some
+                        { name = "example-client"
+                          title = Some "Example Client"
+                          version = "1.0.0" } }
+            )
 
         match initResult with
         | Error e -> printfn $"[Client] Initialize failed: {e}"
-        | Ok init -> printfn $"[Client] Connected to: {init.agentName} v{init.agentVersion}"
+        | Ok init ->
+            let agentName =
+                init.agentInfo |> Option.map (fun i -> i.name) |> Option.defaultValue "Unknown"
+
+            let agentVersion =
+                init.agentInfo |> Option.map (fun i -> i.version) |> Option.defaultValue "?"
+
+            printfn $"[Client] Connected to: {agentName} v{agentVersion}"
 
         printfn ""
 
         // 2. Create session
         printfn "[Client] Creating new session..."
-        let! sessionResult = client.NewSessionAsync({})
+
+        let! sessionResult = client.NewSessionAsync({ cwd = "."; mcpServers = [] })
 
         match sessionResult with
         | Error e -> printfn $"[Client] NewSession failed: {e}"
         | Ok session ->
             printfn $"[Client] Session created: {SessionId.value session.sessionId}"
-            printfn $"[Client] Available modes: {session.modes |> List.length}"
+
+            let modeCount =
+                session.modes
+                |> Option.map (fun m -> m.availableModes.Length)
+                |> Option.defaultValue 0
+
+            printfn $"[Client] Available modes: {modeCount}"
             printfn ""
 
             // 3. Send a prompt
             printfn "[Client] Sending prompt..."
 
             let prompt =
-                [ PromptItem.UserMessage
-                      { content =
-                          [ ContentBlock.Text
-                                { text = "Hello, Agent! How are you today?"
-                                  annotations = None } ] } ]
+                [ ContentBlock.Text
+                      { text = "Hello, Agent! How are you today?"
+                        annotations = None } ]
 
             let! promptResult =
                 client.PromptAsync(
                     { sessionId = session.sessionId
-                      prompt = prompt
-                      expectedTurnId = None }
+                      prompt = prompt }
                 )
 
             match promptResult with
             | Error e -> printfn $"[Client] Prompt failed: {e}"
-            | Ok result -> printfn $"[Client] Response received, turn: {TurnId.value result.outputTurnId}"
+            | Ok result -> printfn $"[Client] Response received with stop reason: {result.stopReason}"
 
         printfn ""
 

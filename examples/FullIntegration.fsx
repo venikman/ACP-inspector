@@ -7,13 +7,17 @@
 /// - Tool call tracking
 /// - Permission handling
 
+#r "nuget: FsToolkit.ErrorHandling, 5.1.0"
 #r "../src/bin/Debug/net10.0/ACP.dll"
 
 open System
 open System.Threading.Tasks
 open Acp.Domain
 open Acp.Domain.PrimitivesAndParties
+open Acp.Domain.Capabilities
+open Acp.Domain.Initialization
 open Acp.Domain.Prompting
+open Acp.Domain.SessionSetup
 open Acp.Domain.SessionModes
 open Acp.Transport
 open Acp.Connection
@@ -48,12 +52,25 @@ type SmartClient(transport: ITransport) =
         task {
             let! result =
                 connection.InitializeAsync(
-                    { clientName = "SmartClient"
-                      clientVersion = "1.0.0" }
+                    { protocolVersion = ProtocolVersion.current
+                      clientCapabilities =
+                        { fs =
+                            { readTextFile = false
+                              writeTextFile = false }
+                          terminal = false }
+                      clientInfo =
+                        Some
+                            { name = "SmartClient"
+                              title = Some "Smart Client"
+                              version = "1.0.0" } }
                 )
 
             match result with
-            | Ok init -> printfn $"[SmartClient] Connected to {init.agentName}"
+            | Ok init ->
+                let agentName =
+                    init.agentInfo |> Option.map (fun i -> i.name) |> Option.defaultValue "Unknown"
+
+                printfn $"[SmartClient] Connected to {agentName}"
             | Error e -> printfn $"[SmartClient] Init failed: {e}"
 
             return result
@@ -61,7 +78,7 @@ type SmartClient(transport: ITransport) =
 
     member _.StartSessionAsync() =
         task {
-            let! result = connection.NewSessionAsync({ })
+            let! result = connection.NewSessionAsync({ cwd = "."; mcpServers = [] })
 
             match result with
             | Ok session ->
@@ -77,15 +94,9 @@ type SmartClient(transport: ITransport) =
             match currentSession with
             | None -> return Error(ConnectionError.ProtocolError "No session")
             | Some sid ->
-                let prompt =
-                    [ PromptItem.UserMessage { content = [ ContentBlock.Text { text = text; annotations = None } ] } ]
+                let prompt = [ ContentBlock.Text { text = text; annotations = None } ]
 
-                return!
-                    connection.PromptAsync(
-                        { sessionId = sid
-                          prompt = prompt
-                          expectedTurnId = None }
-                    )
+                return! connection.PromptAsync({ sessionId = sid; prompt = prompt })
         }
 
     /// Process a session update notification
@@ -162,8 +173,21 @@ let createAgent (transport: ITransport) =
                 task {
                     return
                         Ok
-                            { agentName = "DemoAgent"
-                              agentVersion = "1.0.0" }
+                            { protocolVersion = ProtocolVersion.current
+                              agentCapabilities =
+                                { loadSession = false
+                                  mcpCapabilities = { http = false; sse = false }
+                                  promptCapabilities =
+                                    { audio = false
+                                      image = false
+                                      embeddedContext = false }
+                                  sessionCapabilities = Capabilities.SessionCapabilities }
+                              agentInfo =
+                                Some
+                                    { name = "DemoAgent"
+                                      title = Some "Demo Agent"
+                                      version = "1.0.0" }
+                              authMethods = [] }
                 }
 
           onNewSession =
@@ -175,9 +199,12 @@ let createAgent (transport: ITransport) =
                         Ok
                             { sessionId = SessionId $"demo-{sessionCounter}"
                               modes =
-                                [ { modeId = SessionModeId "default"
-                                    name = "Default" } ]
-                              currentModeId = SessionModeId "default" }
+                                Some
+                                    { currentModeId = SessionModeId "default"
+                                      availableModes =
+                                        [ { id = SessionModeId "default"
+                                            name = "Default"
+                                            description = None } ] } }
                 }
 
           onPrompt =
@@ -188,11 +215,18 @@ let createAgent (transport: ITransport) =
                     return
                         Ok
                             { sessionId = p.sessionId
-                              outputTurnId = TurnId "turn-1" }
+                              stopReason = StopReason.EndTurn }
                 }
 
           onCancel = fun _ -> Task.FromResult()
-          onSetMode = fun p -> task { return Ok { currentModeId = p.modeId } } }
+          onSetMode =
+            fun p ->
+                task {
+                    return
+                        Ok
+                            { sessionId = p.sessionId
+                              modeId = p.modeId }
+                } }
 
     AgentConnection(transport, handlers)
 

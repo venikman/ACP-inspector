@@ -5,23 +5,53 @@ This document collects repo-local operational notes (paths, build/run commands, 
 ## Projects
 
 - SDK/library: `src/ACP.fsproj`
-- Inspector CLI: `apps/ACP.Inspector/ACP.Inspector.fsproj`
+- Unified CLI: `apps/ACP.Cli/ACP.Cli.fsproj`
 - Tests: `tests/`
 
 ## Common commands
 
+### Unified CLI
+
+The `acp-cli` tool provides inspection, validation, replay, analysis, and benchmarking capabilities:
+
+```bash
+# Build the CLI
+dotnet build apps/ACP.Cli/ACP.Cli.fsproj -c Release
+
+# Inspect trace files
+dotnet run --project apps/ACP.Cli -- inspect trace.jsonl
+
+# Validate messages from stdin
+cat messages.json | dotnet run --project apps/ACP.Cli -- validate --direction c2a
+
+# Interactive replay
+dotnet run --project apps/ACP.Cli -- replay --interactive trace.jsonl
+
+# Statistical analysis
+dotnet run --project apps/ACP.Cli -- analyze trace.jsonl
+
+# Benchmark performance
+dotnet run --project apps/ACP.Cli -- benchmark --mode throughput --count 1000
+
+# Help
+dotnet run --project apps/ACP.Cli -- --help
+```
+
+### SDK
+
 ```bash
 # restore + build the SDK
 dotnet build src/ACP.fsproj
+```
 
-# build the Inspector CLI
-dotnet build apps/ACP.Inspector/ACP.Inspector.fsproj -c Release
+### Tests
 
-# run the Inspector CLI
-dotnet run --project apps/ACP.Inspector/ACP.Inspector.fsproj -c Release -- <command> [options]
-
-# run tests
+```bash
+# run all tests
 dotnet test
+
+# run specific test category
+dotnet test --filter "FullyQualifiedName~Codec"
 ```
 
 ## Docs layout

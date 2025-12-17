@@ -1,0 +1,38 @@
+repos:
+  - repo: local
+    hooks:
+      - id: fantomas
+        name: Fantomas F# Formatter
+        entry: bash -c 'dotnet tool restore > /dev/null 2>&1 && dotnet fantomas --check src tests apps'
+        language: system
+        files: \.(fs|fsx|fsi)$
+        exclude: ^(tests/golden/|.*obj/.*|.*\.AssemblyInfo\.fs)
+        pass_filenames: false
+
+      - id: dotnet-test-main
+        name: Run ACP.Tests (main test suite)
+        entry: bash -c 'dotnet test tests/ACP.Tests.fsproj --configuration Release --logger "console;verbosity=minimal"'
+        language: system
+        files: \.(fs|fsx|fsi|fsproj)$
+        pass_filenames: false
+
+      - id: dotnet-test-epistemology
+        name: Run Epistemology.Harness tests
+        entry: bash -c 'dotnet test tests/Epistemology.Harness/Epistemology.Harness.fsproj --configuration Release --logger "console;verbosity=minimal"'
+        language: system
+        files: \.(fs|fsx|fsi|fsproj)$
+        pass_filenames: false
+
+      - id: dotnet-test-validation
+        name: Run Validation.Harness tests
+        entry: bash -c 'dotnet test tests/Validation.Harness/Validation.Harness.fsproj --configuration Release --logger "console;verbosity=minimal"'
+        language: system
+        files: \.(fs|fsx|fsi|fsproj)$
+        pass_filenames: false
+
+      - id: dotnet-test-sdk
+        name: Run SDK.Harness tests
+        entry: bash -c 'dotnet test tests/SDK.Harness/SDK.Harness.fsproj --configuration Release --logger "console;verbosity=minimal"'
+        language: system
+        files: \.(fs|fsx|fsi|fsproj)$
+        pass_filenames: false

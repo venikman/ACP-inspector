@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/apps/">
+    <Project Path="apps/ACP.Cli/ACP.Cli.fsproj" />
     <Project Path="apps/ACP.Benchmark/ACP.Benchmark.fsproj" />
     <Project Path="apps/ACP.Inspector/ACP.Inspector.fsproj" />
   </Folder>
@@ -8,5 +9,8 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ACP.Tests.fsproj" />
+    <Project Path="tests/Epistemology.Harness/Epistemology.Harness.fsproj" />
+    <Project Path="tests/SDK.Harness/SDK.Harness.fsproj" />
+    <Project Path="tests/Validation.Harness/Validation.Harness.fsproj" />
   </Folder>
 </Solution>
