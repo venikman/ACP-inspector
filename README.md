@@ -146,6 +146,7 @@ flowchart LR
 - Decisions (DRR): [docs/decisions/DRR-0001-spf-g14.md](docs/decisions/DRR-0001-spf-g14.md)
 - SDK docs entrypoint: [docs/index.md](docs/index.md)
 - SDK comparison: [docs/SDK-COMPARISON.md](docs/SDK-COMPARISON.md)
+- Examples: [examples/](examples/)
 
 ## Who benefits (and how)
 

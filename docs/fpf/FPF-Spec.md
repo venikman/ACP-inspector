@@ -535,7 +535,7 @@ Each view provides essential perspective:
 - `src/Acp.Domain.fs` - Value/Knowledge views
 - `src/Acp.Connection.fs` - Method view
 - `src/Acp.Contrib.SessionState.fs` - Process view
-- `docs/spec/protocol.md` - Knowledge view documentation
+- `docs/protocol.md` - Knowledge view documentation
 
 ---
 
@@ -589,15 +589,15 @@ SPF is published as a **discipline pack** under `docs/spf/packs/<discipline>/`, 
 
 **Publication rule**:
 
-- SPF‑Lite/Full may include SoTA‑Echoing sections in CHR/CAL/E.TGA/Realization docs.
+- SPF-Lite/Full may include SoTA-Echoing sections in CHR/CAL/E.TGA/Realization docs.
 - Those sections must cite sources and record adopt/adapt/reject decisions (directly or by reference to the SoTA-Pack).
 
 ### G.3 CHR (Characterization)
 
 **Pattern**: CHR records the discipline’s characterization in two coordinated views:
 
-- **CHR‑Sys**: system characterization (scope, boundaries, operational environment)
-- **CHR‑Epi**: epistemic characterization (claims, evidence expectations, uncertainty)
+- **CHR-Sys**: system characterization (scope, boundaries, operational environment)
+- **CHR-Epi**: epistemic characterization (claims, evidence expectations, uncertainty)
 
 **Principle**: CHR makes the discipline pack falsifiable: it states what is being claimed and what evidence would change the claim.
 
@@ -606,7 +606,7 @@ SPF is published as a **discipline pack** under `docs/spf/packs/<discipline>/`, 
 - `CHR-Sys.md`
 - `CHR-Epi.md`
 
-**Minimum sections** (SPF‑Min):
+**Minimum sections** (SPF-Min):
 
 - Scope + boundaries
 - Assumptions + constraints
@@ -624,7 +624,7 @@ SPF is published as a **discipline pack** under `docs/spf/packs/<discipline>/`, 
 
 - `CAL.md`
 
-**Minimum sections** (SPF‑Min):
+**Minimum sections** (SPF-Min):
 
 - Metrics/signals being calibrated (UTS)
 - Thresholds + rationale
@@ -667,12 +667,14 @@ SPF is published as a **discipline pack** under `docs/spf/packs/<discipline>/`, 
 
 **Pattern**: A “one-button” orchestrator that generates an SPF pack as a **pattern-set output**, using E.8 templates per pattern (not one monolithic document).
 
+**Status**: Documented (spec); tooling implementation is not yet present in ACP-inspector (planned Stage 3+).
+
 **Principle**:
 
 - Input: `U.AppliedDiscipline` + profile + SoTA sources/decisions.
 - Output: a stable set of authored pattern documents (CHR/CAL/E.TGA/Realization), plus pack metadata.
 
-**Output contract (SPF‑Min)**:
+**Output contract (SPF-Min)**:
 
 ```
 docs/spf/packs/<discipline>/
@@ -686,6 +688,8 @@ docs/spf/packs/<discipline>/
 ```
 
 #### G.14.1 Passport & Signature (skeleton)
+
+**Status**: Documented (template + requirements; implementation pending).
 
 **Passport** is the pack’s identity and provenance (minimum):
 
@@ -702,7 +706,9 @@ docs/spf/packs/<discipline>/
 
 #### G.14.2 Vertical slice + E.TGA
 
-SPF‑Min must contain at least one **vertical slice**: a crossing (`E.TGA`) that is:
+**Status**: Documented (requirement; implementation pending).
+
+SPF-Min must contain at least one **vertical slice**: a crossing (`E.TGA`) that is:
 
 - Referenced by CHR claims (what is enforced / tested)
 - Parameterized by CAL thresholds (what “good enough” means)
@@ -710,32 +716,40 @@ SPF‑Min must contain at least one **vertical slice**: a crossing (`E.TGA`) tha
 
 #### G.14.3 CHR profile hook (reuses G.3)
 
+**Status**: Documented (hook contract; implementation pending).
+
 The orchestrator reuses **G.3** and applies profile strictness:
 
-- **SPF‑Min**: generate CHR‑Sys + CHR‑Epi with minimum sections.
-- **SPF‑Lite/Full**: add SoTA‑Echoing sections and stricter conformance checks.
+- **SPF-Min**: generate CHR-Sys + CHR-Epi with minimum sections.
+- **SPF-Lite/Full**: add SoTA-Echoing sections and stricter conformance checks.
 
 #### G.14.4 CAL profile hook (reuses G.4)
 
+**Status**: Documented (hook contract; implementation pending).
+
 The orchestrator reuses **G.4** and applies profile strictness:
 
-- **SPF‑Min**: generate CAL with explicit thresholds and penalty links.
-- **SPF‑Lite/Full**: expand rationale, include SoTA‑Echoing, add broader calibration coverage.
+- **SPF-Min**: generate CAL with explicit thresholds and penalty links.
+- **SPF-Lite/Full**: expand rationale, include SoTA-Echoing, add broader calibration coverage.
 
 #### G.14.5 Realization minimum
 
-SPF‑Min must include at least one **realization case** that references:
+**Status**: Documented (minimum contract; implementation pending).
 
-- CHR‑Sys + CHR‑Epi (what is being claimed)
+SPF-Min must include at least one **realization case** that references:
+
+- CHR-Sys + CHR-Epi (what is being claimed)
 - CAL (what thresholds apply)
 - ≥1 E.TGA crossing (what is enforced/measured)
 
 #### G.14.6 SoTA-Echo binding
 
-SoTA‑Echoing is a **projection**, not duplicated SoTA:
+**Status**: Documented (binding rule; implementation pending).
+
+SoTA-Echoing is a **projection**, not duplicated SoTA:
 
 - Echoing sections cite sources and record adopt/adapt/reject decisions.
-- If a SoTA‑Pack exists, echoing sections must reference it instead of re-stating it.
+- If a SoTA-Pack exists, echoing sections must reference it instead of re-stating it.
 
 ---
 
@@ -748,7 +762,7 @@ SoTA‑Echoing is a **projection**, not duplicated SoTA:
 | A.1 Holonic Foundation | `src/Acp.Domain.fs:30-500`                    | `src/Acp.Contrib.SessionState.fs` |
 | A.2 Role Taxonomy      | `src/Acp.Connection.fs:1-300`                 | `src/Acp.Contrib.*.fs`            |
 | A.10 Evidence Graph    | `tests/Pbt/EvidenceRunner.fs:1-50`            | `apps/ACP.Cli/Commands/*.fs`      |
-| E.17 Multi-View (MVPK) | `src/Acp.Domain.fs` + `src/Acp.Connection.fs` | `docs/spec/protocol.md`           |
+| E.17 Multi-View (MVPK) | `src/Acp.Domain.fs` + `src/Acp.Connection.fs` | `docs/protocol.md`                |
 
 ### Testing Evidence
 
@@ -814,7 +828,7 @@ The FPF patterns support multiple validation levels:
 
 ## References
 
-1. **ACP Protocol Specification**: `docs/spec/protocol.md`
+1. **ACP Protocol Specification**: `docs/protocol.md`
 2. **Domain Model**: `src/Acp.Domain.fs`
 3. **Evidence Directory**: `core/evidence/`
 4. **Test Suite**: `tests/` (140 passing tests)

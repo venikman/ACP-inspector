@@ -20,7 +20,7 @@ See: `docs/spf/README.md`
 1. **DRR**: record the architectural decisions that pin SPF scope and bindings.
 2. **G.14**: write the first increment of the orchestrator (Part G).
 3. **ATS → E.TGA**: migration by references (no breakage), with a compatibility layer.
-4. **Canary pack**: ship one usable SPF‑Min discipline pack with ≥1 realization.
+4. **Canary pack**: ship one usable SPF-Min discipline pack with ≥1 realization.
 
 ## Step → pattern mapping (short)
 
@@ -28,7 +28,7 @@ See: `docs/spf/README.md`
 - Step 1 (DRR) → **E.9** (Decision Records / DRR)
 - Step 2 (G.14) → **G.14** (SPF orchestrator; profile hooks + pattern-set outputs)
 - Step 3 (ATS → `E.TGA`) → **G.10** (hook surface) + **E.TGA** (GateCrossing) + **G.14.2** (vertical slice requirement)
-- Step 4 (Canary SPF‑Min pack) → **G.3** (CHR), **G.4** (CAL), **E.TGA** (crossing doc), **G.14.5** (realization minimum)
+- Step 4 (Canary SPF-Min pack) → **G.3** (CHR), **G.4** (CAL), **E.TGA** (crossing doc), **G.14.5** (realization minimum)
 
 ## Repo staging plan (each stage = one clean commit)
 
@@ -57,7 +57,7 @@ Deliverables:
   - G.14.3 CHR profile hook (reuse G.3)
   - G.14.4 CAL profile hook (reuse G.4)
   - G.14.5 Realization minimum
-  - G.14.6 SoTA‑Echo binding
+  - G.14.6 SoTA-Echo binding
 - Add a short “Step-to-pattern mapping” note (each SPF step tied to existing patterns).
 
 Definition of Done:
@@ -73,14 +73,14 @@ Deliverables (FPF Spec):
 
 Definition of Done:
 
-- No normative text still requires AH‑1..AH‑4 as the only compliance route.
+- No normative text still requires AH-1..AH-4 as the only compliance route.
 - Crossings are expressed in `E.TGA` terms (GateCrossing + Bridge + UTS + penalties → `R_eff`).
 
-### Stage 3 — Canary SPF‑Min pack (Evolutionary Architecture)
+### Stage 3 — Canary SPF-Min pack (Evolutionary Architecture)
 
 Deliverables (docs-only is acceptable):
 
-- `docs/spf/packs/evolutionary-architecture/` with E.8‑conformant patterns:
+- `docs/spf/packs/evolutionary-architecture/` with E.8-conformant patterns:
   - `CHR-Sys.md`
   - `CHR-Epi.md`
   - `CAL.md`
@@ -89,8 +89,16 @@ Deliverables (docs-only is acceptable):
 
 Definition of Done:
 
-- You can honestly execute: “generate SPF‑Min for <discipline> and get a usable pack.”
-- SoTA‑Echoing sections cite chosen SoTA sources and record adopt/adapt/reject decisions.
+- You can honestly execute: “generate SPF-Min for <discipline> and get a usable pack.”
+- SoTA-Echoing sections cite chosen SoTA sources and record adopt/adapt/reject decisions.
+
+Validation checklist (Stage 3+):
+
+- All referenced paths exist under `docs/spf/packs/<discipline>/`.
+- Each pack file follows E.8 authoring conventions and includes a conformance checklist.
+- All intra-pack references resolve (CHR ↔ CAL ↔ E-TGA ↔ Realization).
+- SoTA-Echoing sections cite sources and reference SoTA-Pack decisions (no duplicated SoTA).
+- Any code snippets are either executable against the repo or clearly marked as pseudocode.
 
 ## Decision record
 
