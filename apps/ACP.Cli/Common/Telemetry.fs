@@ -28,7 +28,7 @@ let mutable private meterProvider: MeterProvider option = None
 
 /// Module-level ActivitySource singleton for creating telemetry spans.
 /// ActivitySource is designed to be long-lived and reused across many activities.
-let private activitySource = new ActivitySource("Acp.Cli")
+let activitySource = new ActivitySource("Acp.Cli")
 
 /// Initialize OpenTelemetry with the given configuration
 let initialize (config: TelemetryConfig) =
