@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Prevent accidental direct pushes to protected branches.
+# Use a PR (feature branch → master) instead.
+
+blocked_remote_refs_regex='^refs/heads/(master|main)$'
+
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  if [[ "${remote_ref}" =~ ${blocked_remote_refs_regex} ]]; then
+    branch="${remote_ref#refs/heads/}"
+    echo "Blocked: direct pushes to '${branch}' are disabled. Create a PR instead." >&2
+    exit 1
+  fi
+done

@@ -216,7 +216,8 @@ module EvidenceRunner =
    ```
 
 3. **Validation Evidence** (CLI output):
-   ```
+
+   ```text
    [ERROR] Frame 15 (a2c): Invalid tool response
      - Missing required field: result.content
      - Location: tools/response line 42
@@ -224,7 +225,7 @@ module EvidenceRunner =
 
 **Evidence Graph Structure**:
 
-```
+```text
 core/evidence/
 ├── pbt/
 │   └── ACP-EVD-PBT-latest-failure.json    # Latest PBT counterexample
@@ -348,7 +349,7 @@ member _.InitializeAsync(params: InitializeParams) : Task<InitializeResult>
 
 **Authoring Workflow**:
 
-```
+```text
 Write Code → Format (Fantomas) → Test (140+ tests) → Validate (CI) → Commit
     ↓             ↓                   ↓                  ↓              ↓
   Type-safe   Consistent         Evidence          Enforced      Traceable
@@ -676,7 +677,7 @@ SPF is published as a **discipline pack** under `docs/spf/packs/<discipline>/`, 
 
 **Output contract (SPF-Min)**:
 
-```
+```text
 docs/spf/packs/<discipline>/
   Passport.md
   Signature.md

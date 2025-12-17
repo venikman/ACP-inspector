@@ -8,7 +8,7 @@ This document defines the coding standards and style conventions for the ACP-ins
 
 This repository follows the official F# style guide for naming, layout, and idioms.
 
-**Source of Truth**: https://github.com/fsharp/fslang-design#style-guide
+**Source of Truth**: <https://github.com/fsharp/fslang-design#style-guide>
 
 ### Formatting
 
@@ -227,7 +227,7 @@ let maxTokens = json.TryGetProperty("maxTokens") |> Option.ofObj
 
 ### Source Structure
 
-```
+```text
 src/
 ├── Acp.Domain.fs           # Core types and protocol model
 ├── Acp.Codec.fs            # JSON encoding/decoding
@@ -238,7 +238,7 @@ src/
 
 ### Test Structure
 
-```
+```text
 tests/
 ├── Unit/                   # Unit tests (fast, deterministic)
 ├── Pbt/                    # Property-based tests (FsCheck)

@@ -4,7 +4,7 @@ ACP-sentinel is an F# implementation of the Agent Client Protocol (ACP) with a v
 
 ## Quick Links
 
-- [API Reference](reference/index.html) - Generated API documentation
+- [API Reference](#building-docs) - Generated API documentation (output: `docs/_site/reference/index.html`)
 
 ## Modules
 

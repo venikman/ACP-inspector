@@ -10,8 +10,8 @@ It aims to give you:
 
 Normative behavior follows the published ACP spec and schema:
 
-- Spec source of truth (GitHub): https://github.com/agentclientprotocol/agent-client-protocol
-- Overview/intro (website): https://agentclientprotocol.com/overview/introduction
+- Spec source of truth (GitHub): <https://github.com/agentclientprotocol/agent-client-protocol>
+- Overview/intro (website): <https://agentclientprotocol.com/overview/introduction>
 
 Implementation targets:
 
@@ -213,7 +213,7 @@ printfn "Outbound findings: %A" outbound.findings
 
 3. Want to wire it into a runtime?
 
-**Tooling Reference (Holon 2)**
+### Tooling Reference (Holon 2)
 
 - `src/Acp.Domain.fs` — F# domain model: protocol versions, sessions, capabilities, messages, tool calls, etc.
 - `src/Acp.Protocol.fs` — protocol state machine (initialize → sessions → prompt turns → updates → cancel).
@@ -363,8 +363,8 @@ See the `examples/` directory for complete integration demos:
 
 - **Treat the ACP spec as normative.**
   If this repo and the published spec disagree, the spec wins; open an issue and tag the discrepancy.
-  - Spec source of truth (GitHub): https://github.com/agentclientprotocol/agent-client-protocol
-  - Overview/intro (website): https://agentclientprotocol.com/overview/introduction
+  - Spec source of truth (GitHub): <https://github.com/agentclientprotocol/agent-client-protocol>
+  - Overview/intro (website): <https://agentclientprotocol.com/overview/introduction>
 
 - **Keep holons separate.**
   Avoid mixing protocol types, runtime IO concerns, and sentinel rules in the same module.
@@ -381,8 +381,8 @@ See the `examples/` directory for complete integration demos:
   - Check only: `dotnet tool restore && dotnet fantomas src tests apps --check`
   - Note: `tests/golden/` is ignored via `.fantomasignore` (it contains intentionally-invalid F# samples).
 
-- **Optional: enable pre-commit auto-formatting.**
-  This repo includes a `pre-commit` hook that auto-runs Fantomas and re-stages changes:
+- **Optional: enable repo git hooks.**
+  This repo includes `.githooks/pre-commit` (Fantomas auto-format + restage) and `.githooks/pre-push` (blocks direct pushes to `master`/`main`):
   - One-time setup: `git config core.hooksPath .githooks`
 
 - **No Python in this repo.**

@@ -286,7 +286,7 @@ outcome = await broker.wait_for_response(request_id)
 
 ### Test Count Comparison
 
-```
+```text
 F# SDK Tests by Module:
 ├── Acp.Transport.Tests.fs        9 tests
 ├── Acp.Connection.Tests.fs       5 tests
@@ -312,7 +312,7 @@ Python SDK Tests by Module:
 
 ### Lines of Code Comparison
 
-```
+```text
 F# SDK (SDK modules only):
 ├── Acp.Transport.fs              210 lines
 ├── Acp.Connection.fs             447 lines
@@ -333,7 +333,7 @@ Python SDK (equivalent modules):
 
 ### Test Lines of Code
 
-```
+```text
 F# SDK Tests (SDK modules only):
 ├── Acp.Transport.Tests.fs        174 lines
 ├── Acp.Connection.Tests.fs       348 lines

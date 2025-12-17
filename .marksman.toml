@@ -1,0 +1,8 @@
+# Marksman (Markdown LSP) project marker/config.
+#
+# This file enables multi-file Markdown intelligence (links, symbols, rename, etc.)
+# even when opening subfolders in an editor, and provides a stable place for any
+# future Marksman configuration.
+
+[core]
+title_from_heading = true

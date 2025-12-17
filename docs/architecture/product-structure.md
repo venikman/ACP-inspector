@@ -99,7 +99,7 @@ This document defines the three-product architecture for the ACP ecosystem with 
 
 ## Product Dependency Graph
 
-```
+```text
 ACP.Epistemology (foundation)
     ↑
     |
@@ -124,7 +124,7 @@ Each product has a dedicated test harness that:
 
 ### Harness Structure
 
-```
+```text
 tests/
 ├── Epistemology.Harness/
 │   ├── Epistemology.Harness.fsproj
@@ -268,7 +268,7 @@ tests/
 
 ### NuGet Packages (Future)
 
-```
+```text
 ACP.Epistemology
 ├── Version: 1.0.0
 ├── Dependencies: None

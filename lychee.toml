@@ -1,0 +1,16 @@
+# Lychee link checker configuration (CI + local).
+#
+# Goal: keep CI stable by validating only repo-local links in Markdown.
+
+scheme = ["file"]
+offline = true
+no_progress = true
+include_fragments = true
+
+exclude_path = [
+  '(^|/)node_modules/',
+  '(^|/)coverage/',
+  '(^|/)benchmarks/',
+  '(^|/)tests/golden/',
+  '(^|/)docs/_site/',
+]
