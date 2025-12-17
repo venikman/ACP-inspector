@@ -80,11 +80,15 @@ let main argv =
                 let exitCode =
                     try
                         match results.GetSubCommand() with
-                        | Command.Inspect args -> InspectCommand.run args
-                        | Command.Validate args -> ValidateCommand.run args
-                        | Command.Replay args -> ReplayCommand.run args
-                        | Command.Analyze args -> AnalyzeCommand.run args
-                        | Command.Benchmark args -> BenchmarkCommand.run args
+                        | Command.Inspect args ->
+                            Telemetry.withSpan "command.inspect" (fun () -> InspectCommand.run args)
+                        | Command.Validate args ->
+                            Telemetry.withSpan "command.validate" (fun () -> ValidateCommand.run args)
+                        | Command.Replay args -> Telemetry.withSpan "command.replay" (fun () -> ReplayCommand.run args)
+                        | Command.Analyze args ->
+                            Telemetry.withSpan "command.analyze" (fun () -> AnalyzeCommand.run args)
+                        | Command.Benchmark args ->
+                            Telemetry.withSpan "command.benchmark" (fun () -> BenchmarkCommand.run args)
                     with ex ->
                         Output.printError $"Command failed: {ex.Message}"
                         eprintfn "Stack trace: %s" ex.StackTrace

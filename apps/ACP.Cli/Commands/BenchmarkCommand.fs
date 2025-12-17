@@ -129,6 +129,7 @@ let private runThroughput (count: int) =
     let sw = Stopwatch.StartNew()
     let mutable state = CodecState.empty
     let mutable decoded = 0
+    let mutable errors = 0
 
     for i in 0 .. (count - 1) do
         let (msg, direction) = messages[i % messages.Length]
@@ -139,7 +140,7 @@ let private runThroughput (count: int) =
             decoded <- decoded + 1
         | Error _ ->
             state <- CodecState.empty
-            decoded <- decoded + 1
+            errors <- errors + 1
 
     sw.Stop()
 
@@ -150,8 +151,9 @@ let private runThroughput (count: int) =
             float decoded * 1000.0
 
     printfn
-        """{"status":"ok","mode":"throughput","count":%d,"elapsed_ms":%d,"msgs_per_sec":%.0f}"""
+        """{"status":"ok","mode":"throughput","count":%d,"errors":%d,"elapsed_ms":%d,"msgs_per_sec":%.0f}"""
         decoded
+        errors
         sw.ElapsedMilliseconds
         msgsPerSec
 
@@ -166,13 +168,14 @@ let private runCodec (count: int) =
 
     let sw = Stopwatch.StartNew()
     let mutable ops = 0
+    let mutable errors = 0
 
     for i in 0 .. (count - 1) do
         let (msg, direction) = messages[i % messages.Length]
 
         match Codec.decode direction CodecState.empty msg with
         | Ok _ -> ops <- ops + 1
-        | Error _ -> ()
+        | Error _ -> errors <- errors + 1
 
         let responseMsg =
             Messaging.AgentToClientMessage.SessionNewResult
@@ -181,7 +184,7 @@ let private runCodec (count: int) =
 
         match Codec.encode (Some(JsonRpc.RequestId.Number(int64 i))) (Messaging.Message.FromAgent responseMsg) with
         | Ok _ -> ops <- ops + 1
-        | Error _ -> ()
+        | Error _ -> errors <- errors + 1
 
     sw.Stop()
 
@@ -192,8 +195,9 @@ let private runCodec (count: int) =
             float ops * 1000.0
 
     printfn
-        """{"status":"ok","mode":"codec","ops":%d,"elapsed_ms":%d,"ops_per_sec":%.0f}"""
+        """{"status":"ok","mode":"codec","ops":%d,"errors":%d,"elapsed_ms":%d,"ops_per_sec":%.0f}"""
         ops
+        errors
         sw.ElapsedMilliseconds
         opsPerSec
 
@@ -208,6 +212,7 @@ let private runRawJson (count: int) =
 
     let sw = Stopwatch.StartNew()
     let mutable ops = 0
+    let mutable errors = 0
 
     for i in 0 .. (count - 1) do
         let msg = messages[i % messages.Length]
@@ -225,8 +230,7 @@ let private runRawJson (count: int) =
 
             ops <- ops + 1
         with _ ->
-            // Ignore parse errors in benchmark (counted as failed op)
-            ()
+            errors <- errors + 1
 
     sw.Stop()
 
@@ -237,8 +241,9 @@ let private runRawJson (count: int) =
             float ops * 1000.0
 
     printfn
-        """{"status":"ok","mode":"raw-json","ops":%d,"elapsed_ms":%d,"ops_per_sec":%.0f}"""
+        """{"status":"ok","mode":"raw-json","ops":%d,"errors":%d,"elapsed_ms":%d,"ops_per_sec":%.0f}"""
         ops
+        errors
         sw.ElapsedMilliseconds
         opsPerSec
 
@@ -249,6 +254,7 @@ let private runTokens (count: int) (tokensPerMessage: int) =
 
     let sw = Stopwatch.StartNew()
     let mutable decoded = 0
+    let mutable errors = 0
     let mutable totalTokens = 0L
 
     for _ in 1..count do
@@ -256,7 +262,7 @@ let private runTokens (count: int) (tokensPerMessage: int) =
         | Ok _ ->
             decoded <- decoded + 1
             totalTokens <- totalTokens + int64 tokensPerMessage
-        | Error _ -> ()
+        | Error _ -> errors <- errors + 1
 
     sw.Stop()
 
@@ -275,8 +281,9 @@ let private runTokens (count: int) (tokensPerMessage: int) =
             float decoded * 1000.0
 
     printfn
-        """{"status":"ok","mode":"tokens","messages":%d,"tokens_per_msg":%d,"total_tokens":%d,"elapsed_ms":%d,"tokens_per_sec":%.0f,"msgs_per_sec":%.0f}"""
+        """{"status":"ok","mode":"tokens","messages":%d,"errors":%d,"tokens_per_msg":%d,"total_tokens":%d,"elapsed_ms":%d,"tokens_per_sec":%.0f,"msgs_per_sec":%.0f}"""
         decoded
+        errors
         tokensPerMessage
         totalTokens
         sw.ElapsedMilliseconds

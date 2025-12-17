@@ -26,6 +26,10 @@ module TelemetryConfig =
 let mutable private tracerProvider: TracerProvider option = None
 let mutable private meterProvider: MeterProvider option = None
 
+/// Module-level ActivitySource singleton for creating telemetry spans.
+/// ActivitySource is designed to be long-lived and reused across many activities.
+let private activitySource = new ActivitySource("Acp.Cli")
+
 /// Initialize OpenTelemetry with the given configuration
 let initialize (config: TelemetryConfig) =
     // Build resource attributes
@@ -82,8 +86,8 @@ let shutdown () =
     | Some provider -> provider.Dispose()
     | None -> ()
 
-/// Create a telemetry span for the given operation
+/// Create a telemetry span for the given operation.
+/// Uses the module-level ActivitySource singleton to avoid resource leaks.
 let inline withSpan<'T> (name: string) (operation: unit -> 'T) : 'T =
-    let activitySource = new ActivitySource("Acp.Cli")
     use activity = activitySource.StartActivity(name)
     operation ()

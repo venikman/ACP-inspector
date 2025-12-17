@@ -8,57 +8,53 @@ open System.IO
 let MaxInputFileSizeBytes = 100L * 1024L * 1024L
 
 /// Validate that a file path is safe to read from.
-/// Prevents directory traversal attacks and ensures the path is normalized.
+/// Prevents directory traversal attacks via relative paths while allowing absolute paths.
+/// For a CLI tool, we trust the user's filesystem permissions - validation prevents
+/// accidental traversal but doesn't restrict legitimate absolute path access.
 let validateInputPath (path: string) : Result<string, string> =
     if String.IsNullOrWhiteSpace(path) then
         Error "Path cannot be empty"
     else
         try
-            // Get current working directory as base
-            let baseDir = Directory.GetCurrentDirectory()
-            let baseDirNormalized = Path.GetFullPath(baseDir)
-
-            // Get full normalized path
-            let fullPath = Path.GetFullPath(path)
-
-            // Ensure the resolved path is within or equal to the base directory
-            // This prevents directory traversal even after normalization
-            if not (fullPath.StartsWith(baseDirNormalized, StringComparison.OrdinalIgnoreCase)) then
-                Error $"Path '{path}' resolves outside the current directory and is not allowed"
-            elif not (File.Exists(fullPath)) then
-                Error $"File not found: {fullPath}"
+            // Prevent directory traversal in relative paths
+            // Check for ".." before normalization to catch traversal attempts
+            if path.Contains("..") then
+                Error $"Path contains directory traversal sequence '..' which is not allowed: {path}"
             else
-                // Check file size
-                let fileInfo = FileInfo(fullPath)
+                // Get full normalized path (handles ~, ./, and converts relative to absolute)
+                let fullPath = Path.GetFullPath(path)
 
-                if fileInfo.Length > MaxInputFileSizeBytes then
-                    let sizeMB = float fileInfo.Length / (1024.0 * 1024.0)
-
-                    Error
-                        $"File size ({sizeMB:F1} MB) exceeds maximum allowed size ({MaxInputFileSizeBytes / 1024L / 1024L} MB)"
+                if not (File.Exists(fullPath)) then
+                    Error $"File not found: {fullPath}"
                 else
-                    Ok fullPath
+                    // Check file size to prevent DoS from extremely large files
+                    let fileInfo = FileInfo(fullPath)
+
+                    if fileInfo.Length > MaxInputFileSizeBytes then
+                        let sizeMB = float fileInfo.Length / (1024.0 * 1024.0)
+
+                        Error
+                            $"File size ({sizeMB:F1} MB) exceeds maximum allowed size ({MaxInputFileSizeBytes / 1024L / 1024L} MB)"
+                    else
+                        Ok fullPath
         with ex ->
             Error $"Invalid path: {ex.Message}"
 
 /// Validate that an output path is safe to write to.
-/// Prevents directory traversal and ensures parent directory exists.
+/// Prevents directory traversal via relative paths while allowing absolute paths.
+/// Ensures parent directory exists.
 let validateOutputPath (path: string) : Result<string, string> =
     if String.IsNullOrWhiteSpace(path) then
         Error "Path cannot be empty"
     else
         try
-            // Get current working directory as base
-            let baseDir = Directory.GetCurrentDirectory()
-            let baseDirNormalized = Path.GetFullPath(baseDir)
-
-            // Get full normalized path
-            let fullPath = Path.GetFullPath(path)
-
-            // Ensure the resolved path is within or equal to the base directory
-            if not (fullPath.StartsWith(baseDirNormalized, StringComparison.OrdinalIgnoreCase)) then
-                Error $"Path '{path}' resolves outside the current directory and is not allowed"
+            // Prevent directory traversal in relative paths
+            if path.Contains("..") then
+                Error $"Path contains directory traversal sequence '..' which is not allowed: {path}"
             else
+                // Get full normalized path
+                let fullPath = Path.GetFullPath(path)
+
                 // Ensure parent directory exists
                 let dir = Path.GetDirectoryName(fullPath)
 
