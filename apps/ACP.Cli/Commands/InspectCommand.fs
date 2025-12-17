@@ -144,14 +144,15 @@ let run (args: ParseResults<InspectArgs>) : int =
 
     Output.printHeading $"Inspecting trace: {tracePath}"
 
-    if not (File.Exists(tracePath)) then
-        Output.printError $"Trace file not found: {tracePath}"
+    match Security.validateInputPath tracePath with
+    | Error err ->
+        Output.printError err
         1
-    else
+    | Ok validatedPath ->
         Output.printInfo "Loading trace file..."
 
         try
-            let lines = File.ReadAllLines(tracePath)
+            let lines = File.ReadAllLines(validatedPath)
             Output.printSuccess $"Loaded {lines.Length} frames"
 
             Output.printInfo "Configuration:"
@@ -164,7 +165,7 @@ let run (args: ParseResults<InspectArgs>) : int =
 
             // Process trace frames
             let mutable state = Codec.CodecState.empty
-            let mutable messages: Message list = []
+            let messages = ResizeArray<Message>()
             let mutable frameCount = 0
             let mutable decodeErrors = 0
             let seenFindings = HashSet<string>(StringComparer.Ordinal)
@@ -193,14 +194,14 @@ let run (args: ParseResults<InspectArgs>) : int =
                                 ()
                         | Ok(newState, msg) ->
                             state <- newState
-                            messages <- messages @ [ msg ]
+                            messages.Add(msg)
 
                             let dirStr =
                                 match direction with
                                 | Codec.Direction.FromClient -> "C→A"
                                 | Codec.Direction.FromAgent -> "A→C"
 
-                            Console.WriteLine($"[{messages.Length}] {dirStr} {methodTag msg}")
+                            Console.WriteLine($"[{messages.Count}] {dirStr} {methodTag msg}")
 
                             if printRaw then
                                 Output.printColored Output.Colors.gray frame.json
@@ -211,9 +212,10 @@ let run (args: ParseResults<InspectArgs>) : int =
             Output.printHeading "Validation results"
 
             let connectionId = SessionId(Guid.NewGuid().ToString())
+            let messageList = messages |> Seq.toList
 
             let spec =
-                Validation.runWithValidation connectionId Protocol.spec messages stopOnError None None
+                Validation.runWithValidation connectionId Protocol.spec messageList stopOnError None None
 
             for f in spec.findings do
                 let key =
@@ -226,7 +228,7 @@ let run (args: ParseResults<InspectArgs>) : int =
             Console.WriteLine()
             Output.printHeading "Summary"
             Output.printKeyValue "Total frames" (string frameCount)
-            Output.printKeyValue "Messages decoded" (string messages.Length)
+            Output.printKeyValue "Messages decoded" (string messages.Count)
             Output.printKeyValue "Decode errors" (string decodeErrors)
             Output.printKeyValue "Validation findings" (string spec.findings.Length)
             Output.printKeyValue "Unique issues" (string seenFindings.Count)

@@ -30,12 +30,13 @@ let run (args: ParseResults<ReplayArgs>) : int =
 
     Output.printHeading $"Replaying trace: {tracePath}"
 
-    if not (File.Exists(tracePath)) then
-        Output.printError $"Trace file not found: {tracePath}"
+    match Security.validateInputPath tracePath with
+    | Error err ->
+        Output.printError err
         1
-    else
+    | Ok validatedPath ->
         try
-            let lines = File.ReadAllLines(tracePath)
+            let lines = File.ReadAllLines(validatedPath)
             Output.printSuccess $"Loaded {lines.Length} frames"
 
             if interactive then

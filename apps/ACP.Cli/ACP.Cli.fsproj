@@ -21,6 +21,7 @@
     <!-- Common utilities -->
     <Compile Include="Common/Telemetry.fs" />
     <Compile Include="Common/Output.fs" />
+    <Compile Include="Common/Security.fs" />
 
     <!-- Command implementations -->
     <Compile Include="Commands/BenchmarkCommand.fs" />

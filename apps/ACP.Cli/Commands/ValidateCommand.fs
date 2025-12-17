@@ -70,7 +70,7 @@ let run (args: ParseResults<ValidateArgs>) : int =
             Console.WriteLine()
 
         let mutable state = Codec.CodecState.empty
-        let mutable messages: Message list = []
+        let messages = ResizeArray<Message>()
         let mutable lineNum = 0
         let mutable decodeErrors = 0
         let mutable validationErrors = 0
@@ -91,40 +91,35 @@ let run (args: ParseResults<ValidateArgs>) : int =
                         if stopOnError then () else line <- Console.In.ReadLine()
                     | Ok(newState, msg) ->
                         state <- newState
-                        messages <- messages @ [ msg ]
+                        messages.Add(msg)
 
                         if verbose then
                             Output.printSuccess $"Line {lineNum}: Valid message"
 
-                        // Validate accumulated messages
-                        let connectionId = SessionId(Guid.NewGuid().ToString())
-
-                        let spec =
-                            Validation.runWithValidation connectionId Protocol.spec messages false None None
-
-                        if spec.findings.Length > 0 then
-                            for f in spec.findings do
-                                if f.severity = Validation.Severity.Error then
-                                    validationErrors <- validationErrors + 1
-
-                                if verbose || f.severity = Validation.Severity.Error then
-                                    printFinding f
-
-                            if stopOnError && validationErrors > 0 then
-                                ()
-                            else
-                                line <- Console.In.ReadLine()
-                        else
-                            line <- Console.In.ReadLine()
+                        line <- Console.In.ReadLine()
                 else
                     line <- Console.In.ReadLine()
+
+            // Validate all collected messages
+            let connectionId = SessionId(Guid.NewGuid().ToString())
+            let messageList = messages |> Seq.toList
+
+            let spec =
+                Validation.runWithValidation connectionId Protocol.spec messageList false None None
+
+            for f in spec.findings do
+                if f.severity = Validation.Severity.Error then
+                    validationErrors <- validationErrors + 1
+
+                if verbose || f.severity = Validation.Severity.Error then
+                    printFinding f
 
             // Summary
             if verbose then
                 Console.WriteLine()
                 Output.printHeading "Validation summary"
                 Output.printKeyValue "Lines read" (string lineNum)
-                Output.printKeyValue "Messages decoded" (string messages.Length)
+                Output.printKeyValue "Messages decoded" (string messages.Count)
                 Output.printKeyValue "Decode errors" (string decodeErrors)
                 Output.printKeyValue "Validation errors" (string validationErrors)
 
