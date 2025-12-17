@@ -574,8 +574,8 @@ SPF is published as a **discipline pack** under `docs/spf/packs/<discipline>/`, 
 | Profile      | Intent                           | Minimum output                                                        |
 | ------------ | -------------------------------- | --------------------------------------------------------------------- |
 | **SPF-Min**  | Smallest usable vertical slice   | CHR + CAL + ≥1 `E.TGA` crossing + ≥1 realization case                 |
-| **SPF-Lite** | Practical pack with SoTA echoing | SPF‑Min + SoTA‑Echoing sections (projection over sources / SoTA data) |
-| **SPF-Full** | Strongest publication profile    | SPF‑Lite + full conformance + broader crossings/realizations          |
+| **SPF-Lite** | Practical pack with SoTA echoing | SPF-Min + SoTA-Echoing sections (projection over sources / SoTA data) |
+| **SPF-Full** | Strongest publication profile    | SPF-Lite + full conformance + broader crossings/realizations          |
 
 ### G.2 SoTA Packs & SoTA-Echoing
 
