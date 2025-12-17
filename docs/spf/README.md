@@ -7,8 +7,8 @@ SPF is a **publication profile** of `U.AppliedDiscipline` (not a new root entity
 | Profile      | Intent                           | Minimum output                                                 |
 | ------------ | -------------------------------- | -------------------------------------------------------------- |
 | **SPF-Min**  | Smallest usable vertical slice   | CHR + CAL + ≥1 `E.TGA` crossing + ≥1 realization case          |
-| **SPF-Lite** | Practical pack with SoTA echoing | SPF‑Min + SoTA‑Echoing sections (projection over SoTA sources) |
-| **SPF-Full** | Strongest publication profile    | SPF‑Lite + full conformance + broader crossings/realizations   |
+| **SPF-Lite** | Practical pack with SoTA echoing | SPF-Min + SoTA-Echoing sections (projection over SoTA sources) |
+| **SPF-Full** | Strongest publication profile    | SPF-Lite + full conformance + broader crossings/realizations   |
 
 ## Where artifacts live
 
