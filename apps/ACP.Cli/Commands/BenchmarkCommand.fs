@@ -85,7 +85,9 @@ let private runColdStart () =
 
 let private runRoundtrip () =
     let sw = Stopwatch.StartNew()
-    let decodeResult = Codec.decode Direction.FromClient CodecState.empty sessionNewRequest
+
+    let decodeResult =
+        Codec.decode Direction.FromClient CodecState.empty sessionNewRequest
 
     match decodeResult with
     | Ok(state, msg) ->
@@ -170,11 +172,7 @@ let private runCodec (count: int) =
                 { sessionId = PrimitivesAndParties.SessionId "sess-bench"
                   modes = None }
 
-        match
-            Codec.encode
-                (Some(JsonRpc.RequestId.Number(int64 i)))
-                (Messaging.Message.FromAgent responseMsg)
-        with
+        match Codec.encode (Some(JsonRpc.RequestId.Number(int64 i))) (Messaging.Message.FromAgent responseMsg) with
         | Ok _ -> ops <- ops + 1
         | Error _ -> ()
 

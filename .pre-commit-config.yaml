@@ -3,7 +3,7 @@ repos:
     hooks:
       - id: fantomas
         name: Fantomas F# Formatter
-        entry: bash -c 'dotnet tool restore && dotnet fantomas --check'
+        entry: bash -c 'dotnet tool restore > /dev/null 2>&1 && dotnet fantomas --check src tests apps'
         language: system
         files: \.(fs|fsx|fsi)$
         exclude: ^(tests/golden/|.*obj/.*|.*\.AssemblyInfo\.fs)
