@@ -7,7 +7,7 @@ This repo implements the Agent Client Protocol (ACP) schema and semantics. The n
 - Spec + schema (GitHub): <https://github.com/agentclientprotocol/agent-client-protocol>
 - Overview/intro (website): <https://agentclientprotocol.com/overview/introduction>
 
-This document exists to provide repo-local navigation and stable links from other docs (FPF patterns, MVPK references, etc.).
+This document exists to provide repo-local navigation and stable links from other docs (architecture notes, references, etc.).
 
 ## Implementation pointers
 

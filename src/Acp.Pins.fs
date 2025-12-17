@@ -1,7 +1,7 @@
 namespace Acp
 
-/// Transport-agnostic FPF pin shapes for attaching to findings and telemetry.
-module FpfPins =
+/// Transport-agnostic pin shapes for attaching to findings and telemetry.
+module Pins =
 
     [<Struct>]
     type PathId = PathId of string
@@ -12,8 +12,8 @@ module FpfPins =
     [<Struct>]
     type GateCrossingId = GateCrossingId of string
 
-    /// Minimal pin bundle aligned to FPF lane separation.
-    type FpfPins =
+    /// Minimal pin bundle for attaching optional metadata to findings.
+    type PinBundle =
         { pathId: PathId
           pathSliceId: PathSliceId
           policyId: string option

@@ -7,9 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Domain and FPF Pattern Tests -->
+    <!-- Domain and Pattern Tests -->
     <Compile Include="DomainModelTests.fs" />
-    <Compile Include="FpfPatternTests.fs" />
+    <Compile Include="PatternTests.fs" />
     <Compile Include="ValidationTaxonomyTests.fs" />
     <Compile Include="EvalTests.fs" />
   </ItemGroup>

@@ -18,7 +18,7 @@ Implementation targets:
 - ACP schema: `Acp.Domain.Spec.Schema` (currently `0.10.x`)
 - Negotiated major `protocolVersion`: `Acp.Domain.PrimitivesAndParties.ProtocolVersion.current` (currently `1`)
 
-This repo adds a First Principles Framework (FPF) view on assurance and observability.
+This repo adds an architecture-first view on assurance and observability.
 
 ## Quick Start Commands
 
@@ -141,9 +141,7 @@ flowchart LR
 ## Documentation
 
 - Tooling (paths, build/run commands): [docs/tooling/acp-sentinel.md](docs/tooling/acp-sentinel.md)
-- Specs: [docs/fpf/FPF-Spec.md](docs/fpf/FPF-Spec.md), [docs/spf/SPF-zadanie.md](docs/spf/SPF-zadanie.md)
-- SPF profiles + artifact layout: [docs/spf/README.md](docs/spf/README.md)
-- Decisions (DRR): [docs/decisions/DRR-0001-spf-g14.md](docs/decisions/DRR-0001-spf-g14.md)
+- FPF (external): <https://github.com/ailev/FPF>
 - SDK docs entrypoint: [docs/index.md](docs/index.md)
 - SDK comparison: [docs/SDK-COMPARISON.md](docs/SDK-COMPARISON.md)
 - Examples: [examples/](examples/)

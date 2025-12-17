@@ -245,21 +245,6 @@ tests/
 └── Integration/            # Integration tests (if needed)
 ```
 
----
-
-## FPF Alignment
-
-These coding standards align with FPF patterns:
-
-- **E.8 Authoring Conventions**: This document
-- **A.1 Holonic Foundation**: Type composition guidelines
-- **A.2 Role Taxonomy**: Module organization by role
-- **A.10 Evidence Graph**: Test naming and PBT evidence
-
-See `docs/fpf/FPF-Spec.md` for architectural patterns.
-
----
-
 ## Tools
 
 ### Required

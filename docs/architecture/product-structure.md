@@ -12,11 +12,11 @@ This document defines the three-product architecture for the ACP ecosystem with 
 
 ### 1. ACP.Epistemology
 
-**Purpose**: Knowledge representation, FPF patterns, and domain modeling
+**Purpose**: Knowledge representation and domain modeling
 
 **Responsibilities**:
 
-- FPF pattern implementations (Holonic Foundation, Role Taxonomy, Evidence Graph, MVPK)
+- Architecture pattern implementations (Holonic Foundation, Role Taxonomy, Evidence Graph, MVPK)
 - Domain model (Domain.fs types)
 - Validation finding pins and error taxonomy
 - Epistemic reasoning and knowledge composition
@@ -24,10 +24,9 @@ This document defines the three-product architecture for the ACP ecosystem with 
 **Core Files**:
 
 - `src/Acp.Domain.fs` - Protocol domain model
-- `src/Acp.FpfPins.fs` - FPF pattern pins
+- `src/Acp.Pins.fs` - Finding pins
 - `src/Acp.ValidationFindingPins.fs` - Validation taxonomy
 - `src/Acp.Eval.fs` - Evaluation and reasoning
-- `docs/fpf/` - FPF specification
 
 **Dependencies**:
 
@@ -129,7 +128,7 @@ tests/
 ├── Epistemology.Harness/
 │   ├── Epistemology.Harness.fsproj
 │   ├── DomainModelTests.fs           # Holon composition tests
-│   ├── FpfPatternTests.fs            # FPF pattern validation
+│   ├── PatternTests.fs               # Pattern validation
 │   ├── ValidationTaxonomyTests.fs    # Finding pins tests
 │   └── Examples/
 │       ├── HolonicComposition.fsx
@@ -167,7 +166,7 @@ tests/
 
 - Holonic composition (Entity → Holon patterns)
 - Role taxonomy and assignment
-- FPF pattern validation
+- Pattern validation
 - Domain model invariants
 - Type safety and constraints
 
@@ -245,7 +244,7 @@ tests/
 
 ### Phase 2: Move Existing Tests
 
-1. Move domain/FPF tests → Epistemology.Harness
+1. Move domain/pattern tests → Epistemology.Harness
 2. Move codec/validation tests → Validation.Harness
 3. Move connection/transport tests → SDK.Harness
 4. Keep existing `tests/` for shared utilities
@@ -272,7 +271,7 @@ tests/
 ACP.Epistemology
 ├── Version: 1.0.0
 ├── Dependencies: None
-└── Contains: Domain model, FPF patterns
+└── Contains: Domain model, patterns/markers
 
 ACP.Validation
 ├── Version: 1.0.0
@@ -338,10 +337,9 @@ Each product has separate:
 
 ## References
 
-- **FPF Spec**: `docs/fpf/FPF-Spec.md`
+- **Protocol pointers**: `docs/protocol.md`
 - **Current Tests**: `tests/` (to be migrated)
 - **Examples**: `examples/` (to be migrated to harnesses)
-- **Architecture Patterns**: A.1 (Holonic), A.2 (Roles), E.17 (MVPK)
 
 ---
 
