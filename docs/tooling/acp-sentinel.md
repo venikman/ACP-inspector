@@ -57,5 +57,4 @@ dotnet test --filter "FullyQualifiedName~Codec"
 ## Docs layout
 
 - Docs live under `docs/`.
-- `docs/spec/` contains compatibility pointers for older links.
 - Tooling/how-to-run notes live under `docs/tooling/`.
