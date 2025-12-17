@@ -23,7 +23,7 @@ This specification documents the First Principles Framework (FPF) patterns and v
   - [G.2 SoTA Packs & SoTA-Echoing](#g2-sota-packs--sota-echoing)
   - [G.3 CHR (Characterization)](#g3-chr-characterization)
   - [G.4 CAL (Calibration)](#g4-cal-calibration)
-  - [G.10 Hook Surfaces (ATS)](#g10-hook-surfaces-ats)
+  - [G.10 Hook Surfaces (ATS / TGA)](#g10-hook-surfaces-ats--tga)
   - [G.14 SPF Orchestrator](#g14-spf-orchestrator)
 - [Implementation References](#implementation-references)
 
@@ -631,21 +631,37 @@ SPF is published as a **discipline pack** under `docs/spf/packs/<discipline>/`, 
 - Failure modes + penalties (ties into `R_eff`)
 - Conformance checklist (E.8)
 
-### G.10 Hook Surfaces (ATS)
+### G.10 Hook Surfaces (ATS / TGA)
 
 **Pattern**: A standardized hook surface for attaching enforcement and evidence capture to a runtime pipeline.
 
 **Principle**: Hooks separate **where you can intervene** from **what policy you apply** (policy lives in crossings like E.TGA).
 
-**ATS (legacy route)**:
+**Normative rule**:
 
-- A compliant system **MUST expose ATS hooks** (AH‑1..AH‑4) for attaching enforcement/evidence:
-  - **AH‑1 Intake**: capture inputs and required context
-  - **AH‑2 Evaluate**: compute required signals/UTS
-  - **AH‑3 Gate**: apply allow/deny/degrade decisions
-  - **AH‑4 Record**: persist evidence and outcomes
+- A compliant system **MUST expose crossing hooks** via either:
+  - **ATS hooks** (AH‑1..AH‑4) — legacy compatibility route, or
+  - **TGA crossing hooks** (TH‑1..TH‑4) — preferred route aligned to `E.TGA` (GateCrossing + Bridge + UTS + penalties → `R_eff`).
 
-_(Stage 2 updates this to allow crossing hooks via ATS or `E.TGA`, then formally deprecates ATS over 1–2 editions.)_
+**ATS hooks (legacy route)**:
+
+- **AH‑1 Intake**: capture inputs and required context
+- **AH‑2 Evaluate**: compute required signals/UTS
+- **AH‑3 Gate**: apply allow/deny/degrade decisions
+- **AH‑4 Record**: persist evidence and outcomes
+
+**TGA crossing hooks (preferred route)**:
+
+- **TH‑1 Observe**: emit required UTS signals for the crossing
+- **TH‑2 Bridge**: evaluate the crossing Bridge (UTS → decision inputs)
+- **TH‑3 Gate**: apply GateCrossing decision (allow/deny/degrade) and penalties → `R_eff`
+- **TH‑4 Record**: persist evidence (inputs, UTS, decision, `R_eff`) for auditability
+
+**Deprecation policy**:
+
+- ATS is **deprecated**. New systems **SHOULD** implement TGA crossing hooks.
+- ATS remains compliant for **1–2 editions** of this spec; after that, ATS **MAY** be removed from compliance language.
+- Migration path: keep ATS behavior, add a compatibility layer that maps AH‑1..AH‑4 into TH‑1..TH‑4 per crossing.
 
 ### G.14 SPF Orchestrator
 
