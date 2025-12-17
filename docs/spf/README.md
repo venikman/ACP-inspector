@@ -1,5 +1,9 @@
 # SPF (publication profiles)
 
+**Status**: Normative (terminology + artifact layout)
+**Version**: 0.1
+**Last Updated**: 2025-12-17
+
 SPF is a **publication profile** of `U.AppliedDiscipline` (not a new root entity).
 
 ## Profiles (strictness)

@@ -1,6 +1,8 @@
 # SPF — zadanie (task)
 
 **Status**: Active (Stage 0: docs spine + terminology + DRR)
+**Version**: 0.1
+**Last Updated**: 2025-12-17
 
 This artifact defines the SPF workstream: terminology, key decisions, required patterns, and acceptance criteria.
 
