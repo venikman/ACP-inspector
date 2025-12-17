@@ -21,18 +21,6 @@ type ValidateArgs =
             | Stop_On_Error -> "Stop on first validation error"
             | Verbose -> "Print detailed validation output"
 
-let private parseDirection (dirStr: string) =
-    match dirStr.Trim().ToLowerInvariant() with
-    | "client"
-    | "fromclient"
-    | "c2a"
-    | "c->a" -> Some Codec.Direction.FromClient
-    | "agent"
-    | "fromagent"
-    | "a2c"
-    | "a->c" -> Some Codec.Direction.FromAgent
-    | _ -> None
-
 let private printFinding (f: Validation.ValidationFinding) =
     let sev =
         match f.severity with
@@ -62,7 +50,7 @@ let run (args: ParseResults<ValidateArgs>) : int =
     let stopOnError = args.Contains(ValidateArgs.Stop_On_Error)
     let verbose = args.Contains(ValidateArgs.Verbose)
 
-    match parseDirection directionStr with
+    match Parsing.parseDirection directionStr with
     | None ->
         Output.printError $"Invalid direction '{directionStr}'"
         Output.printInfo "Valid directions: client, agent, c2a, a2c, fromclient, fromagent"

@@ -139,7 +139,8 @@ let private runThroughput (count: int) =
             state <- newState
             decoded <- decoded + 1
         | Error _ ->
-            state <- CodecState.empty
+            // Continue with existing state to detect stateful decode issues
+            // (resetting masks bugs where codec state becomes corrupted)
             errors <- errors + 1
 
     sw.Stop()

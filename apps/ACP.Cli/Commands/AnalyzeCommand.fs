@@ -93,29 +93,26 @@ let run (args: ParseResults<AnalyzeArgs>) : int =
                 let mutable state = Codec.CodecState.empty
                 let messages = ResizeArray<Message>()
                 let timestamps = ResizeArray<DateTimeOffset>()
+                let mutable skippedInvalidDirection = 0
+                let mutable skippedDecodeError = 0
 
                 for (idx, frame) in frames do
-                    let parseDirection (dirStr: string) =
-                        match dirStr.Trim().ToLowerInvariant() with
-                        | "fromclient"
-                        | "client"
-                        | "c2a"
-                        | "c->a" -> Some Codec.Direction.FromClient
-                        | "fromagent"
-                        | "agent"
-                        | "a2c"
-                        | "a->c" -> Some Codec.Direction.FromAgent
-                        | _ -> None
-
-                    match parseDirection frame.direction with
+                    match Parsing.parseDirection frame.direction with
                     | Some direction ->
                         match Codec.decode direction state frame.json with
                         | Ok(newState, msg) ->
                             state <- newState
                             messages.Add(msg)
                             timestamps.Add(frame.ts)
-                        | Error _ -> ()
-                    | None -> ()
+                        | Error _ -> skippedDecodeError <- skippedDecodeError + 1
+                    | None -> skippedInvalidDirection <- skippedInvalidDirection + 1
+
+                // Report skipped frames if any
+                if skippedInvalidDirection > 0 || skippedDecodeError > 0 then
+                    Output.printWarning
+                        $"Skipped {skippedInvalidDirection + skippedDecodeError} frames: {skippedInvalidDirection} invalid direction, {skippedDecodeError} decode errors"
+
+                    Console.WriteLine()
 
                 Console.WriteLine()
 

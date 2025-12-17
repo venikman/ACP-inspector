@@ -86,18 +86,6 @@ module TraceFrame =
         with _ ->
             None
 
-let private parseDirection (dirStr: string) =
-    match dirStr.Trim().ToLowerInvariant() with
-    | "fromclient"
-    | "client"
-    | "c2a"
-    | "c->a" -> Some Codec.Direction.FromClient
-    | "fromagent"
-    | "agent"
-    | "a2c"
-    | "a->c" -> Some Codec.Direction.FromAgent
-    | _ -> None
-
 let private methodTag (msg: Message) =
     match msg with
     | Message.FromClient c ->
@@ -186,7 +174,7 @@ let run (args: ParseResults<InspectArgs>) : int =
                 | Some frame ->
                     frameCount <- frameCount + 1
 
-                    match parseDirection frame.direction with
+                    match Parsing.parseDirection frame.direction with
                     | None -> Output.printWarning $"Unknown direction '{frame.direction}' at frame {frameCount}"
                     | Some direction ->
                         match Codec.decode direction state frame.json with
