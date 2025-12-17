@@ -51,7 +51,12 @@ let private printFinding (f: Validation.ValidationFinding) =
         let note = f.note |> Option.defaultValue ""
         Output.printColored sev $"[{laneStr}/{sevStr}] {note}\n"
 
-/// Run validate command (read from stdin)
+/// Execute the validate command to check ACP messages from standard input.
+///
+/// Reads JSON-RPC messages from stdin, decodes them, accumulates the message history,
+/// and validates the entire sequence against the ACP protocol specification.
+///
+/// Returns 0 if all messages are valid, 1 if there are decode or validation errors.
 let run (args: ParseResults<ValidateArgs>) : int =
     let directionStr = args.GetResult(ValidateArgs.Direction)
     let stopOnError = args.Contains(ValidateArgs.Stop_On_Error)

@@ -56,7 +56,12 @@ let private methodName (msg: Message) =
         | AgentToClientMessage.ExtError(name, _) -> name
         | _ -> "agent-other"
 
-/// Run analyze command
+/// Execute the analyze command to generate statistics from an ACP trace file.
+///
+/// Parses a JSONL trace file and produces statistical analysis including:
+/// method call frequencies, timing information, and session statistics.
+///
+/// Returns 0 on success, 1 on error.
 let run (args: ParseResults<AnalyzeArgs>) : int =
     let tracePath = args.GetResult(AnalyzeArgs.Trace)
     let showMethods = args.Contains(AnalyzeArgs.Show_Methods)

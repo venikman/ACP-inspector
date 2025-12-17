@@ -21,7 +21,12 @@ type ReplayArgs =
             | Stop_At _ -> "Stop replay at message index"
             | Verbose -> "Show detailed message information"
 
-/// Run replay command
+/// Execute the replay command to step through an ACP trace file.
+///
+/// Loads a JSONL trace file and displays each frame sequentially.
+/// Supports interactive mode (pause after each frame) and stopping at a specific index.
+///
+/// Returns 0 on success, 1 on error.
 let run (args: ParseResults<ReplayArgs>) : int =
     let tracePath = args.GetResult(ReplayArgs.Trace)
     let interactive = args.Contains(ReplayArgs.Interactive)

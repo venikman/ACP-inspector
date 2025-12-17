@@ -66,9 +66,16 @@ let private promptRequest =
 let private makeTokenUpdate (tokenCount: int) =
     let text = String.replicate tokenCount "word "
 
-    sprintf
-        """{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess-001","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"%s"}}}}"""
-        text
+    // Use proper JSON serialization to prevent malformed JSON from escaping
+    System.Text.Json.JsonSerializer.Serialize(
+        {| jsonrpc = "2.0"
+           method = "session/update"
+           ``params`` =
+            {| sessionId = "sess-001"
+               update =
+                {| sessionUpdate = "agent_message_chunk"
+                   content = {| ``type`` = "text"; text = text |} |} |} |}
+    )
 
 let private runColdStart () =
     let sw = Stopwatch.StartNew()
@@ -278,7 +285,12 @@ let private runTokens (count: int) (tokensPerMessage: int) =
 
     0
 
-/// Run benchmark command
+/// Execute the benchmark command to measure ACP codec and protocol performance.
+///
+/// Runs performance tests in various modes: cold-start initialization, roundtrip encoding/decoding,
+/// throughput measurement, codec performance, token processing speed, and raw JSON parsing.
+///
+/// Returns 0 on success, 1 on error or unknown benchmark mode.
 let run (args: ParseResults<BenchmarkArgs>) : int =
     let modeStr = args.GetResult(BenchmarkArgs.Mode)
     let count = args.GetResult(BenchmarkArgs.Count, defaultValue = 100)

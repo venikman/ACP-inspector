@@ -1,9 +1,20 @@
 module Acp.Cli.Program
 
 open System
+open System.Reflection
 open Argu
 open Acp.Cli.Common
 open Acp.Cli.Commands
+
+/// CLI version - loaded from assembly if available
+let private getVersion () =
+    let assembly = Assembly.GetExecutingAssembly()
+    let version = assembly.GetName().Version
+
+    if version <> null then
+        $"{version.Major}.{version.Minor}.{version.Build}"
+    else
+        "0.1.0"
 
 [<RequireQualifiedAccess>]
 type Command =
@@ -23,12 +34,14 @@ type Command =
             | Benchmark _ -> "Benchmark codec and protocol performance"
 
 let private printBanner () =
+    let version = getVersion ()
+
     if Output.supportsColor () then
         Output.printColored Output.Colors.cyan "acp-cli"
-        Console.Write(" v0.1.0")
+        Console.Write($" v{version}")
         Output.printColored Output.Colors.gray " (ACP.Sentinel)\n"
     else
-        Console.WriteLine("acp-cli v0.1.0 (ACP.Sentinel)")
+        Console.WriteLine($"acp-cli v{version} (ACP.Sentinel)")
 
 let private printVersion () =
     printBanner ()

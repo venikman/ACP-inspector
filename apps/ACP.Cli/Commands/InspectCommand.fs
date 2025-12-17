@@ -135,7 +135,12 @@ let private printFinding (f: Validation.ValidationFinding) =
         let note = f.note |> Option.defaultValue ""
         Output.printWarning $"[{lane}/{sev}] ({subject}) {note}"
 
-/// Run inspect command
+/// Execute the inspect command to validate and analyze ACP protocol trace files.
+///
+/// Reads a JSONL trace file, decodes each message, validates protocol compliance,
+/// and reports any validation findings. Optionally records validated traces to output.
+///
+/// Returns 0 on success, 1 on error or validation failures.
 let run (args: ParseResults<InspectArgs>) : int =
     let tracePath = args.GetResult(InspectArgs.Trace)
     let stopOnError = args.Contains(InspectArgs.Stop_On_Error)
