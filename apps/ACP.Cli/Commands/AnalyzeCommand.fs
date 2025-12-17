@@ -120,26 +120,14 @@ let run (args: ParseResults<AnalyzeArgs>) : int =
                 if showMethods || showAll then
                     Output.printHeading "Method Statistics"
 
-                    let methodCounts = Dictionary<string, int>()
+                    let methodCounts =
+                        messages
+                        |> Seq.countBy methodName
+                        |> Seq.sortByDescending snd
+                        |> Seq.truncate 10
 
-                    for msg in messages do
-                        let method = methodName msg
-
-                        let count =
-                            if methodCounts.ContainsKey(method) then
-                                methodCounts[method]
-                            else
-                                0
-
-                        methodCounts[method] <- count + 1
-
-                    let sorted =
-                        methodCounts
-                        |> Seq.sortByDescending (fun kvp -> kvp.Value)
-                        |> Seq.take (min 10 methodCounts.Count)
-
-                    for kvp in sorted do
-                        Output.printKeyValue $"  {kvp.Key}" (string kvp.Value)
+                    for (method, count) in methodCounts do
+                        Output.printKeyValue $"  {method}" (string count)
 
                     Console.WriteLine()
 

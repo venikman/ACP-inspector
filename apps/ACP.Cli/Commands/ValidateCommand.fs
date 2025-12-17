@@ -70,8 +70,9 @@ let run (args: ParseResults<ValidateArgs>) : int =
 
         try
             let mutable line = Console.In.ReadLine()
+            let mutable shouldContinue = true
 
-            while line <> null do
+            while line <> null && shouldContinue do
                 lineNum <- lineNum + 1
 
                 if not (String.IsNullOrWhiteSpace(line)) then
@@ -81,7 +82,9 @@ let run (args: ParseResults<ValidateArgs>) : int =
                         eprintfn "  %A" e
                         decodeErrors <- decodeErrors + 1
 
-                        if stopOnError then () else line <- Console.In.ReadLine()
+                        if stopOnError then
+                            Output.printError "Stopping on first decode error"
+                            shouldContinue <- false
                     | Ok(newState, msg) ->
                         state <- newState
                         messages.Add(msg)
@@ -89,8 +92,7 @@ let run (args: ParseResults<ValidateArgs>) : int =
                         if verbose then
                             Output.printSuccess $"Line {lineNum}: Valid message"
 
-                        line <- Console.In.ReadLine()
-                else
+                if shouldContinue then
                     line <- Console.In.ReadLine()
 
             // Validate all collected messages
@@ -100,12 +102,19 @@ let run (args: ParseResults<ValidateArgs>) : int =
             let spec =
                 Validation.runWithValidation connectionId Protocol.spec messageList false None None
 
-            for f in spec.findings do
-                if f.severity = Validation.Severity.Error then
-                    validationErrors <- validationErrors + 1
+            let mutable stopValidation = false
 
-                if verbose || f.severity = Validation.Severity.Error then
-                    printFinding f
+            for f in spec.findings do
+                if not stopValidation then
+                    if f.severity = Validation.Severity.Error then
+                        validationErrors <- validationErrors + 1
+
+                    if verbose || f.severity = Validation.Severity.Error then
+                        printFinding f
+
+                        if stopOnError && f.severity = Validation.Severity.Error then
+                            Output.printError "Stopping on first validation error"
+                            stopValidation <- true
 
             // Summary
             if verbose then
