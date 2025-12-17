@@ -27,6 +27,15 @@ jobs:
             --collect:"XPlat Code Coverage" \
             --results-directory ./coverage
 
+      - name: Test Epistemology Harness
+        run: dotnet test tests/Epistemology.Harness/Epistemology.Harness.fsproj -c Release
+
+      - name: Test Validation Harness
+        run: dotnet test tests/Validation.Harness/Validation.Harness.fsproj -c Release
+
+      - name: Test SDK Harness
+        run: dotnet test tests/SDK.Harness/SDK.Harness.fsproj -c Release
+
       - name: Generate coverage report
         run: |
           if ! dotnet tool list -g | grep -q dotnet-reportgenerator-globaltool; then
