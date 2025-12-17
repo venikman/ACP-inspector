@@ -12,5 +12,6 @@ module ConnectionTests =
 
     [<Fact>]
     let ``Connection API is available`` () =
-        // Placeholder - will test ClientConnection and AgentConnection
+        // TODO: Implement tests for ClientConnection and AgentConnection lifecycle
+        // This is a placeholder stub for future test implementation
         Assert.True(true)

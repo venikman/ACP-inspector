@@ -7,5 +7,6 @@ module EvalTests =
 
     [<Fact>]
     let ``Eval module basic functionality`` () =
-        // Placeholder - will test epistemic reasoning
+        // TODO: Implement tests for epistemic reasoning and evaluation logic
+        // This is a placeholder stub for future test implementation
         Assert.True(true)

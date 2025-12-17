@@ -12,5 +12,7 @@ module CodecTests =
 
     [<Fact>]
     let ``Codec roundtrip preserves structure`` () =
+        // TODO: Implement actual tests
+        // This is a placeholder stub for future test implementation
         // Placeholder - will test encode → decode → encode
         Assert.True(true)

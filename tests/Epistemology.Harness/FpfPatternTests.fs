@@ -12,5 +12,7 @@ module FpfPatternTests =
 
     [<Fact>]
     let ``FPF patterns are documented`` () =
+        // TODO: Implement actual tests
+        // This is a placeholder stub for future test implementation
         // Placeholder - will validate FPF pattern implementations
         Assert.True(true)

@@ -7,5 +7,7 @@ module ValidationTaxonomyTests =
 
     [<Fact>]
     let ``Validation taxonomy is well-defined`` () =
+        // TODO: Implement actual tests
+        // This is a placeholder stub for future test implementation
         // Placeholder - will validate finding pins structure
         Assert.True(true)

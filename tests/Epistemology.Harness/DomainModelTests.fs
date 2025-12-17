@@ -28,16 +28,27 @@ module DomainModelTests =
     [<Fact>]
     let ``InitializeParams is a composite holon`` () =
         // A.1 Holonic Foundation: InitializeParams composes multiple parts
-        let initParams: ProtocolVersion * ClientCapabilities * ImplementationInfo option =
-            (ProtocolVersion.current,
-             { fs =
-                 { readTextFile = false
-                   writeTextFile = false }
-               terminal = false },
-             Some
-                 { name = "test"
-                   title = None
-                   version = "1.0" })
+        let protocolVer = ProtocolVersion.current
 
-        // Validate it's a proper holon composition
-        Assert.NotNull(initParams)
+        let clientCaps =
+            { fs =
+                { readTextFile = false
+                  writeTextFile = false }
+              terminal = false }
+
+        let clientInfo =
+            Some
+                { name = "test"
+                  title = None
+                  version = "1.0" }
+
+        let initParams: ProtocolVersion * ClientCapabilities * ImplementationInfo option =
+            (protocolVer, clientCaps, clientInfo)
+
+        // Validate holon composition: each component is accessible and has correct type
+        let (pv, caps, info) = initParams
+        Assert.Equal(ProtocolVersion.current, pv)
+        Assert.False(caps.fs.readTextFile)
+        Assert.False(caps.terminal)
+        Assert.True(info.IsSome)
+        Assert.Equal("test", info.Value.name)
