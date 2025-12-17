@@ -22,6 +22,14 @@ See: `docs/spf/README.md`
 3. **ATS → E.TGA**: migration by references (no breakage), with a compatibility layer.
 4. **Canary pack**: ship one usable SPF‑Min discipline pack with ≥1 realization.
 
+## Step → pattern mapping (short)
+
+- Step 0 (Terminology) → **E.8** (authoring conventions + stable artifact layout) + **G.14 output contract** (what gets generated)
+- Step 1 (DRR) → **E.9** (Decision Records / DRR)
+- Step 2 (G.14) → **G.14** (SPF orchestrator; profile hooks + pattern-set outputs)
+- Step 3 (ATS → `E.TGA`) → **G.10** (hook surface) + **E.TGA** (GateCrossing) + **G.14.2** (vertical slice requirement)
+- Step 4 (Canary SPF‑Min pack) → **G.3** (CHR), **G.4** (CAL), **E.TGA** (crossing doc), **G.14.5** (realization minimum)
+
 ## Repo staging plan (each stage = one clean commit)
 
 ### Stage 0 — Docs spine + terminology + DRR

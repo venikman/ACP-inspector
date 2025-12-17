@@ -2,7 +2,7 @@
 
 **Status**: Normative
 **Version**: 1.0
-**Last Updated**: 2025-12-16
+**Last Updated**: 2025-12-17
 
 This specification documents the First Principles Framework (FPF) patterns and valuable objects used throughout the ACP-inspector codebase.
 
@@ -16,7 +16,15 @@ This specification documents the First Principles Framework (FPF) patterns and v
   - [A.10 Evidence Graph](#a10-evidence-graph)
 - [E. Pattern Composition & Authoring](#e-pattern-composition--authoring)
   - [E.8 Authoring Conventions](#e8-authoring-conventions)
+  - [E.9 Decision Records (DRR)](#e9-decision-records-drr)
   - [E.17 Multi-View Describing (MVPK)](#e17-multi-view-describing-mvpk)
+  - [E.TGA GateCrossing](#etga-gatecrossing)
+- [G. Publication Profiles & Orchestration (SPF)](#g-publication-profiles--orchestration-spf)
+  - [G.2 SoTA Packs & SoTA-Echoing](#g2-sota-packs--sota-echoing)
+  - [G.3 CHR (Characterization)](#g3-chr-characterization)
+  - [G.4 CAL (Calibration)](#g4-cal-calibration)
+  - [G.10 Hook Surfaces (ATS)](#g10-hook-surfaces-ats)
+  - [G.14 SPF Orchestrator](#g14-spf-orchestrator)
 - [Implementation References](#implementation-references)
 
 ---
@@ -399,6 +407,28 @@ Write Code → Format (Fantomas) → Test (140+ tests) → Validate (CI) → Com
 
 ---
 
+### E.9 Decision Records (DRR)
+
+**Pattern**: Lean decision records that pin a small set of architectural choices that affect specs, implementation, and migrations.
+
+**Principle**: A DRR is short, explicit, and stable:
+
+- Capture only what must not drift: context, decision, consequences, alternatives.
+- Link to specs/patterns instead of duplicating prose.
+- Preserve history via git; avoid rewriting old DRRs.
+
+**Authoring (aligns with E.8)**:
+
+- Location: `docs/decisions/DRR-####-<slug>.md`
+- Size: 1–2 pages
+- Required sections: Context, Decision, Consequences, Rejected alternatives, Follow-ups
+
+**Evidence**:
+
+- `docs/decisions/DRR-0001-spf-g14.md`
+
+---
+
 ### E.17 Multi-View Describing (MVPK)
 
 **Pattern**: Multiple coordinated views of the same entity to support different stakeholder perspectives and use cases.
@@ -506,6 +536,190 @@ Each view provides essential perspective:
 - `src/Acp.Connection.fs` - Method view
 - `src/Acp.Contrib.SessionState.fs` - Process view
 - `docs/spec/protocol.md` - Knowledge view documentation
+
+---
+
+### E.TGA GateCrossing
+
+**Pattern**: Author enforceable controls as **GateCrossings** (E.8-conformant pattern docs) that bind observables (UTS), evaluation logic (Bridge), penalties, and an effective rating (`R_eff`).
+
+**Principle**: Controls are enforceable when they are:
+
+- **Named + versioned** (stable identity and change history)
+- **Observable** (defined in terms of UTS signals)
+- **Actionable** (produce allow/deny/degrade outcomes)
+- **Composable** (referenced by orchestrators like G.14 and by realizations)
+
+**Core objects**:
+
+- **GateCrossing**: the crossing point and its policy (what is being gated).
+- **Bridge**: mapping from UTS signals → crossing decision (how you evaluate).
+- **UTS**: universal test signals (what must be observable/measurable).
+- **Penalty model**: how violations reduce confidence/score.
+- **`R_eff`**: effective rating after penalties.
+
+**Artifact shape (E.8 template)**:
+
+- File: `E-TGA-<nn>.md`
+- Includes: identity, inputs (UTS), decision rule (Bridge), penalties, outputs (`R_eff`), conformance checklist.
+
+---
+
+## G. Publication Profiles & Orchestration (SPF)
+
+**SPF** is a **publication profile** of `U.AppliedDiscipline` (it is not a new root entity).
+
+SPF is published as a **discipline pack** under `docs/spf/packs/<discipline>/`, with strictness controlled by profile:
+
+| Profile      | Intent                           | Minimum output                                                        |
+| ------------ | -------------------------------- | --------------------------------------------------------------------- |
+| **SPF-Min**  | Smallest usable vertical slice   | CHR + CAL + ≥1 `E.TGA` crossing + ≥1 realization case                 |
+| **SPF-Lite** | Practical pack with SoTA echoing | SPF‑Min + SoTA‑Echoing sections (projection over sources / SoTA data) |
+| **SPF-Full** | Strongest publication profile    | SPF‑Lite + full conformance + broader crossings/realizations          |
+
+### G.2 SoTA Packs & SoTA-Echoing
+
+**Pattern**: Bind discipline packs to a traceable State-of-the-Art (SoTA) source base without duplicating SoTA content.
+
+**Principle**:
+
+- **SoTA-Pack** is the curated bundle of sources plus explicit adopt/adapt/reject decisions.
+- **SoTA-Echoing** is a **projection/face** over SoTA data and cited sources, embedded into SPF artifacts.
+- SoTA-Echoing **must not** fork SoTA: it references sources and the SoTA decisions it projects from.
+
+**Publication rule**:
+
+- SPF‑Lite/Full may include SoTA‑Echoing sections in CHR/CAL/E.TGA/Realization docs.
+- Those sections must cite sources and record adopt/adapt/reject decisions (directly or by reference to the SoTA-Pack).
+
+### G.3 CHR (Characterization)
+
+**Pattern**: CHR records the discipline’s characterization in two coordinated views:
+
+- **CHR‑Sys**: system characterization (scope, boundaries, operational environment)
+- **CHR‑Epi**: epistemic characterization (claims, evidence expectations, uncertainty)
+
+**Principle**: CHR makes the discipline pack falsifiable: it states what is being claimed and what evidence would change the claim.
+
+**Minimum artifact set**:
+
+- `CHR-Sys.md`
+- `CHR-Epi.md`
+
+**Minimum sections** (SPF‑Min):
+
+- Scope + boundaries
+- Assumptions + constraints
+- Claims/hypotheses + what would falsify them
+- Evidence expectations (link to E.TGA crossings and UTS)
+- Conformance checklist (E.8)
+
+### G.4 CAL (Calibration)
+
+**Pattern**: CAL defines calibration targets, thresholds, and scoring rules used by crossings and realizations.
+
+**Principle**: Calibration is explicit and testable: thresholds and tradeoffs (false positives/negatives, costs) are documented and referenced by crossings.
+
+**Minimum artifact**:
+
+- `CAL.md`
+
+**Minimum sections** (SPF‑Min):
+
+- Metrics/signals being calibrated (UTS)
+- Thresholds + rationale
+- Failure modes + penalties (ties into `R_eff`)
+- Conformance checklist (E.8)
+
+### G.10 Hook Surfaces (ATS)
+
+**Pattern**: A standardized hook surface for attaching enforcement and evidence capture to a runtime pipeline.
+
+**Principle**: Hooks separate **where you can intervene** from **what policy you apply** (policy lives in crossings like E.TGA).
+
+**ATS (legacy route)**:
+
+- A compliant system **MUST expose ATS hooks** (AH‑1..AH‑4) for attaching enforcement/evidence:
+  - **AH‑1 Intake**: capture inputs and required context
+  - **AH‑2 Evaluate**: compute required signals/UTS
+  - **AH‑3 Gate**: apply allow/deny/degrade decisions
+  - **AH‑4 Record**: persist evidence and outcomes
+
+_(Stage 2 updates this to allow crossing hooks via ATS or `E.TGA`, then formally deprecates ATS over 1–2 editions.)_
+
+### G.14 SPF Orchestrator
+
+**Pattern**: A “one-button” orchestrator that generates an SPF pack as a **pattern-set output**, using E.8 templates per pattern (not one monolithic document).
+
+**Principle**:
+
+- Input: `U.AppliedDiscipline` + profile + SoTA sources/decisions.
+- Output: a stable set of authored pattern documents (CHR/CAL/E.TGA/Realization), plus pack metadata.
+
+**Output contract (SPF‑Min)**:
+
+```
+docs/spf/packs/<discipline>/
+  Passport.md
+  Signature.md
+  CHR-Sys.md
+  CHR-Epi.md
+  CAL.md
+  E-TGA-01.md
+  Realization-Case-01.md
+```
+
+#### G.14.1 Passport & Signature (skeleton)
+
+**Passport** is the pack’s identity and provenance (minimum):
+
+- Discipline id + title
+- Profile (Min/Lite/Full)
+- Pack version + date
+- Source links (SoTA-Pack and/or cited sources)
+- Generator identity (tool + commit hash)
+
+**Signature** is the pack’s integrity envelope (minimum):
+
+- Hashes of generated files (manifest)
+- Optional signature mechanism (out of scope in this increment)
+
+#### G.14.2 Vertical slice + E.TGA
+
+SPF‑Min must contain at least one **vertical slice**: a crossing (`E.TGA`) that is:
+
+- Referenced by CHR claims (what is enforced / tested)
+- Parameterized by CAL thresholds (what “good enough” means)
+- Usable in a realization case (how it behaves in context)
+
+#### G.14.3 CHR profile hook (reuses G.3)
+
+The orchestrator reuses **G.3** and applies profile strictness:
+
+- **SPF‑Min**: generate CHR‑Sys + CHR‑Epi with minimum sections.
+- **SPF‑Lite/Full**: add SoTA‑Echoing sections and stricter conformance checks.
+
+#### G.14.4 CAL profile hook (reuses G.4)
+
+The orchestrator reuses **G.4** and applies profile strictness:
+
+- **SPF‑Min**: generate CAL with explicit thresholds and penalty links.
+- **SPF‑Lite/Full**: expand rationale, include SoTA‑Echoing, add broader calibration coverage.
+
+#### G.14.5 Realization minimum
+
+SPF‑Min must include at least one **realization case** that references:
+
+- CHR‑Sys + CHR‑Epi (what is being claimed)
+- CAL (what thresholds apply)
+- ≥1 E.TGA crossing (what is enforced/measured)
+
+#### G.14.6 SoTA-Echo binding
+
+SoTA‑Echoing is a **projection**, not duplicated SoTA:
+
+- Echoing sections cite sources and record adopt/adapt/reject decisions.
+- If a SoTA‑Pack exists, echoing sections must reference it instead of re-stating it.
 
 ---
 
