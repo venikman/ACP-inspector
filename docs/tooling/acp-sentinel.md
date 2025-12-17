@@ -56,5 +56,6 @@ dotnet test --filter "FullyQualifiedName~Codec"
 
 ## Docs layout
 
-- Normative specs live under `docs/spec/` (FPF + SPF artifacts).
+- Normative specs live under `docs/fpf/` (FPF) and `docs/spf/` (SPF).
+- `docs/spec/` contains compatibility pointers for older links.
 - Tooling/how-to-run notes live under `docs/tooling/`.

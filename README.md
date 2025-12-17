@@ -141,7 +141,9 @@ flowchart LR
 ## Documentation
 
 - Tooling (paths, build/run commands): [docs/tooling/acp-sentinel.md](docs/tooling/acp-sentinel.md)
-- Specs (placeholders): [docs/spec/fpf/FPF-Spec.md](docs/spec/fpf/FPF-Spec.md), [docs/spec/spf/tasks/SPF-zadanie.md](docs/spec/spf/tasks/SPF-zadanie.md)
+- Specs: [docs/fpf/FPF-Spec.md](docs/fpf/FPF-Spec.md), [docs/spf/SPF-zadanie.md](docs/spf/SPF-zadanie.md)
+- SPF profiles + artifact layout: [docs/spf/README.md](docs/spf/README.md)
+- Decisions (DRR): [docs/decisions/DRR-0001-spf-g14.md](docs/decisions/DRR-0001-spf-g14.md)
 - SDK docs entrypoint: [docs/index.md](docs/index.md)
 - SDK comparison: [docs/SDK-COMPARISON.md](docs/SDK-COMPARISON.md)
 

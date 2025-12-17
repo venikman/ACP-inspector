@@ -15,11 +15,13 @@ This repository follows the official F# style guide for naming, layout, and idio
 Code formatting is enforced with **Fantomas**.
 
 **Format code:**
+
 ```bash
 dotnet tool restore && dotnet fantomas src tests apps
 ```
 
 **Check formatting (CI):**
+
 ```bash
 dotnet tool restore && dotnet fantomas src tests apps --check
 ```
@@ -59,12 +61,14 @@ module Connection =
 ### Type Design
 
 **Single-case discriminated unions** for type safety:
+
 ```fsharp
 type SessionId = SessionId of string  // Not just: type SessionId = string
 type MessageId = MessageId of string
 ```
 
 **Record types** for structured data:
+
 ```fsharp
 type InitializeParams = {
     protocolVersion: ProtocolVersion
@@ -74,6 +78,7 @@ type InitializeParams = {
 ```
 
 **Discriminated unions** for variants:
+
 ```fsharp
 type ContentBlock =
     | Text of TextContent
@@ -84,6 +89,7 @@ type ContentBlock =
 ### Async Patterns
 
 Use **task computation expressions** (.NET 10):
+
 ```fsharp
 member _.InitializeAsync(params) = task {
     let! response = transport.SendAsync(request)
@@ -94,6 +100,7 @@ member _.InitializeAsync(params) = task {
 ### Error Handling
 
 Use **Result types** for expected failures:
+
 ```fsharp
 type ValidationResult =
     | Valid
@@ -108,6 +115,7 @@ Use **exceptions** only for unexpected failures.
 ### Option Handling
 
 Prefer **Option module** functions:
+
 ```fsharp
 // Good
 sessionId |> Option.map SessionId.value |> Option.defaultValue "(none)"
@@ -121,6 +129,7 @@ match sessionId with
 ### Pipeline Style
 
 Use **forward pipe** for data flow:
+
 ```fsharp
 messages
 |> List.filter (fun m -> m.direction = "c2a")
@@ -247,7 +256,7 @@ These coding standards align with FPF patterns:
 - **A.2 Role Taxonomy**: Module organization by role
 - **A.10 Evidence Graph**: Test naming and PBT evidence
 
-See `docs/spec/fpf/FPF-Spec.md` for architectural patterns.
+See `docs/fpf/FPF-Spec.md` for architectural patterns.
 
 ---
 

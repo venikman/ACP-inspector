@@ -11,22 +11,26 @@ This document defines the three-product architecture for the ACP ecosystem with 
 ## Three Products
 
 ### 1. ACP.Epistemology
+
 **Purpose**: Knowledge representation, FPF patterns, and domain modeling
 
 **Responsibilities**:
+
 - FPF pattern implementations (Holonic Foundation, Role Taxonomy, Evidence Graph, MVPK)
 - Domain model (Domain.fs types)
 - Validation finding pins and error taxonomy
 - Epistemic reasoning and knowledge composition
 
 **Core Files**:
+
 - `src/Acp.Domain.fs` - Protocol domain model
 - `src/Acp.FpfPins.fs` - FPF pattern pins
 - `src/Acp.ValidationFindingPins.fs` - Validation taxonomy
 - `src/Acp.Eval.fs` - Evaluation and reasoning
-- `docs/spec/fpf/` - FPF specifications
+- `docs/fpf/` - FPF specification
 
 **Dependencies**:
+
 - None (foundational layer)
 
 **Test Harness**: `tests/Epistemology.Harness/`
@@ -34,9 +38,11 @@ This document defines the three-product architecture for the ACP ecosystem with 
 ---
 
 ### 2. ACP.Validation
+
 **Purpose**: Protocol validation, codec, and compliance checking
 
 **Responsibilities**:
+
 - JSON-RPC codec (encode/decode)
 - Protocol validation against schema
 - Message validation
@@ -44,12 +50,14 @@ This document defines the three-product architecture for the ACP ecosystem with 
 - Compliance reporting
 
 **Core Files**:
+
 - `src/Acp.Validation.fs` - Validation logic
 - `src/Acp.Codec.fs` - JSON encoding/decoding
 - `src/Acp.Protocol.fs` - Protocol layer
 - `apps/ACP.Cli/` - CLI tools (inspect, validate, replay, analyze)
 
 **Dependencies**:
+
 - ACP.Epistemology (for domain model and validation pins)
 
 **Test Harness**: `tests/Validation.Harness/`
@@ -57,9 +65,11 @@ This document defines the three-product architecture for the ACP ecosystem with 
 ---
 
 ### 3. ACP.SDK
+
 **Purpose**: Client and agent connection layer for building ACP applications
 
 **Responsibilities**:
+
 - Transport abstractions (stdio, HTTP, duplex)
 - Client connection API
 - Agent connection API
@@ -69,6 +79,7 @@ This document defines the three-product architecture for the ACP ecosystem with 
 - Observability/telemetry
 
 **Core Files**:
+
 - `src/Acp.Connection.fs` - Client/Agent connection
 - `src/Acp.Transport.fs` - Transport layer
 - `src/Acp.Contrib.SessionState.fs` - Session accumulator
@@ -78,6 +89,7 @@ This document defines the three-product architecture for the ACP ecosystem with 
 - `src/Acp.RuntimeAdapter.fs` - Runtime integration
 
 **Dependencies**:
+
 - ACP.Epistemology (for domain model)
 - ACP.Validation (for codec and protocol)
 
@@ -104,6 +116,7 @@ ACP.SDK (application layer)
 ## Test Harness Architecture
 
 Each product has a dedicated test harness that:
+
 1. **Exercises the product boundary** - Tests public API surface
 2. **Validates invariants** - Ensures core properties hold
 3. **Provides examples** - Demonstrates typical usage patterns
@@ -151,6 +164,7 @@ tests/
 ### 1. Epistemology.Harness
 
 **Tests**:
+
 - Holonic composition (Entity → Holon patterns)
 - Role taxonomy and assignment
 - FPF pattern validation
@@ -158,11 +172,13 @@ tests/
 - Type safety and constraints
 
 **Property-Based Tests**:
+
 - Holon composition is associative
 - Role assignment is type-safe
 - Domain types roundtrip correctly
 
 **Evidence**:
+
 - Domain model constraint violations
 - Type system boundary errors
 
@@ -171,6 +187,7 @@ tests/
 ### 2. Validation.Harness
 
 **Tests**:
+
 - Codec roundtrip (encode → decode → encode)
 - Protocol message validation
 - Schema conformance checking
@@ -178,11 +195,13 @@ tests/
 - Validation finding generation
 
 **Property-Based Tests**:
+
 - All valid messages pass validation
 - Codec preserves structure (roundtrip)
 - Validation is deterministic
 
 **Evidence**:
+
 - Invalid message examples
 - Codec serialization failures
 - Schema violations with locations
@@ -192,6 +211,7 @@ tests/
 ### 3. SDK.Harness
 
 **Tests**:
+
 - Client connection lifecycle
 - Agent connection lifecycle
 - Transport layer reliability
@@ -200,12 +220,14 @@ tests/
 - Permission broker correctness
 
 **Integration Tests**:
+
 - Full client-agent interaction
 - Multi-session scenarios
 - Tool call with permission flow
 - Error handling and recovery
 
 **Evidence**:
+
 - Connection failures
 - State corruption scenarios
 - Permission denial traces
@@ -215,23 +237,27 @@ tests/
 ## Migration Plan
 
 ### Phase 1: Create Harness Projects
+
 1. Create `tests/Epistemology.Harness/` project
 2. Create `tests/Validation.Harness/` project
 3. Create `tests/SDK.Harness/` project
 4. Set up project references (following dependency graph)
 
 ### Phase 2: Move Existing Tests
+
 1. Move domain/FPF tests → Epistemology.Harness
 2. Move codec/validation tests → Validation.Harness
 3. Move connection/transport tests → SDK.Harness
 4. Keep existing `tests/` for shared utilities
 
 ### Phase 3: Add Examples
+
 1. Move existing examples to appropriate harnesses
 2. Create new examples demonstrating each product
 3. Ensure all examples run successfully
 
 ### Phase 4: Update CI/CD
+
 1. Update `.github/workflows/ci.yml` to run all harnesses
 2. Generate separate test reports per product
 3. Track coverage per product
@@ -292,6 +318,7 @@ Use F# project references to enforce dependencies:
 ### Runtime Boundaries
 
 Each product has separate:
+
 - Namespace prefix (`Acp.Epistemology.*`, `Acp.Validation.*`, `Acp.SDK.*`)
 - Assembly/DLL
 - Documentation folder (`docs/products/{epistemology,validation,sdk}/`)
@@ -311,7 +338,7 @@ Each product has separate:
 
 ## References
 
-- **FPF Spec**: `docs/spec/fpf/FPF-Spec.md`
+- **FPF Spec**: `docs/fpf/FPF-Spec.md`
 - **Current Tests**: `tests/` (to be migrated)
 - **Examples**: `examples/` (to be migrated to harnesses)
 - **Architecture Patterns**: A.1 (Holonic), A.2 (Roles), E.17 (MVPK)
@@ -319,6 +346,7 @@ Each product has separate:
 ---
 
 **Next Steps**:
+
 1. Review and approve this architecture
 2. Create harness projects (Phase 1)
 3. Migrate existing tests (Phase 2)
