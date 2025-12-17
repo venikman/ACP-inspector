@@ -2,14 +2,14 @@ namespace Acp
 
 open Domain.Metadata
 open Validation
-open FpfPins
+open Pins
 
-/// Helpers for attaching optional FPF pins to validator findings.
+/// Helpers for attaching optional pins to validator findings.
 module ValidationFindingPins =
 
     type ValidationFindingWithPins =
         { finding: ValidationFinding
-          pins: FpfPins option }
+          pins: PinBundle option }
 
     /// Attach pins to a finding when the runtime profile provides them.
     /// Today the runtime profile does not carry pins, so this is a thin wrapper.

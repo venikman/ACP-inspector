@@ -1,0 +1,21 @@
+config:
+  # Keep defaults, but disable a few rules that are noisy for specs/docs.
+  default: true
+
+  # Line-length is not meaningful for specs with long URLs/code.
+  MD013: false
+
+  # Allow explicit ordered-list numbering (1., 2., 3.) without forcing 1/1/1.
+  MD029: false
+
+  # Allow inline HTML when needed for GitHub-rendered docs (e.g., details/summary).
+  MD033: false
+
+  # Don't require the first line to be a top-level heading (some generated/aux docs differ).
+  MD041: false
+
+ignores:
+  - "**/node_modules/**"
+  - "benchmarks/**"
+  - "coverage/**"
+  - "tests/golden/**"

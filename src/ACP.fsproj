@@ -31,7 +31,7 @@
     <Compile Include="Acp.Domain.fs" />
     <Compile Include="Acp.Observability.fs" />
     <Compile Include="Acp.Codec.fs" />
-    <Compile Include="Acp.FpfPins.fs" />
+    <Compile Include="Acp.Pins.fs" />
     <Compile Include="Acp.FSharpTokenizer.fs" />
     <Compile Include="Acp.Protocol.fs" />
     <Compile Include="Acp.Eval.fs" />

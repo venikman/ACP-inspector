@@ -265,7 +265,7 @@ cat analysis-*.txt | grep "Method calls:" | sort | uniq -c
 
 ### File Not Found
 
-```
+```text
 Error: File not found: demo-session.jsonl
 ```
 
@@ -273,7 +273,7 @@ Error: File not found: demo-session.jsonl
 
 ### Invalid JSON
 
-```
+```text
 Error: Failed to parse JSON on line 5
 ```
 
@@ -281,7 +281,7 @@ Error: Failed to parse JSON on line 5
 
 ### Direction Mismatch
 
-```
+```text
 Warning: Expected fromClient, got fromAgent
 ```
 
