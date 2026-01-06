@@ -170,6 +170,7 @@ module SessionState =
             | :? JsonObject as cloned -> cloned
             | _ -> JsonObject()
 
+        // Returns a new JsonObject with cloned values.
         let mergeMeta (current: JsonObject option) (update: JsonObject) =
             let merged =
                 match current with
@@ -194,7 +195,7 @@ module SessionState =
             | Some meta -> sessionMeta <- mergeMeta sessionMeta meta
 
         let applyUsageUpdate (payload: JsonObject) =
-            usageUpdates <- usageUpdates @ [ cloneObject payload ]
+            usageUpdates <- cloneObject payload :: usageUpdates
 
         let applyUpdate (update: SessionUpdate) =
             match update with
@@ -234,7 +235,7 @@ module SessionState =
                 { sessionId = sid
                   title = sessionTitle
                   meta = sessionMeta |> Option.map cloneObject
-                  usageUpdates = usageUpdates |> List.map cloneObject
+                  usageUpdates = usageUpdates |> List.rev |> List.map cloneObject
                   toolCalls = toolCallViews
                   planEntries = List.map id planEntries
                   currentModeId = currentModeId

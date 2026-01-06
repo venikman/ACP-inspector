@@ -86,36 +86,6 @@ module TraceFrame =
         with _ ->
             None
 
-let private methodTag (msg: Message) =
-    match msg with
-    | Message.FromClient c ->
-        match c with
-        | ClientToAgentMessage.Initialize p -> $"initialize pv={p.protocolVersion}"
-        | ClientToAgentMessage.SessionNew _ -> "session/new"
-        | ClientToAgentMessage.SessionPrompt _ -> "session/prompt"
-        | ClientToAgentMessage.SessionCancel _ -> "session/cancel"
-        | _ -> "other-client-msg"
-    | Message.FromAgent a ->
-        match a with
-        | AgentToClientMessage.InitializeResult r -> $"initialize (result) pv={r.protocolVersion}"
-        | AgentToClientMessage.SessionNewResult _ -> "session/new (result)"
-        | AgentToClientMessage.SessionPromptResult _ -> "session/prompt (result)"
-        | AgentToClientMessage.SessionUpdate u ->
-            let updateTag =
-                match u.update with
-                | SessionUpdate.UserMessageChunk _ -> "user_message_chunk"
-                | SessionUpdate.AgentMessageChunk _ -> "agent_message_chunk"
-                | SessionUpdate.AgentThoughtChunk _ -> "agent_thought_chunk"
-                | SessionUpdate.ToolCall _ -> "tool_call"
-                | SessionUpdate.ToolCallUpdate _ -> "tool_call_update"
-                | SessionUpdate.Plan _ -> "plan"
-                | SessionUpdate.AvailableCommandsUpdate _ -> "available_commands_update"
-                | SessionUpdate.CurrentModeUpdate _ -> "current_mode_update"
-                | SessionUpdate.Ext(tag, _) -> $"ext:{tag}"
-
-            $"session/update ({updateTag})"
-        | _ -> "other-agent-msg"
-
 let private printFinding (f: Validation.ValidationFinding) =
     let lane = sprintf "%A" f.lane
     let sev = sprintf "%A" f.severity
@@ -207,7 +177,7 @@ let run (args: ParseResults<InspectArgs>) : int =
                                 | Codec.Direction.FromClient -> "C→A"
                                 | Codec.Direction.FromAgent -> "A→C"
 
-                            Console.WriteLine($"[{messages.Count}] {dirStr} {methodTag msg}")
+                            Console.WriteLine($"[{messages.Count}] {dirStr} {MessageTag.render msg}")
 
                             if printRaw then
                                 Output.printColored Output.Colors.gray frame.json

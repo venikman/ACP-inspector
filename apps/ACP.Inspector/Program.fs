@@ -153,78 +153,6 @@ module private Cli =
               messages = []
               seenFindings = HashSet(StringComparer.Ordinal) }
 
-    let private methodTag (msg: Message) =
-        match msg with
-        | Message.FromClient c ->
-            match c with
-            | ClientToAgentMessage.Initialize p -> $"initialize pv={p.protocolVersion}"
-            | ClientToAgentMessage.Authenticate _ -> "authenticate"
-            | ClientToAgentMessage.SessionNew _ -> "session/new"
-            | ClientToAgentMessage.SessionLoad _ -> "session/load"
-            | ClientToAgentMessage.SessionPrompt _ -> "session/prompt"
-            | ClientToAgentMessage.SessionSetMode _ -> "session/set_mode"
-            | ClientToAgentMessage.SessionCancel _ -> "session/cancel"
-            | ClientToAgentMessage.ExtRequest(methodName, _) -> methodName
-            | ClientToAgentMessage.ExtNotification(methodName, _) -> methodName
-            | ClientToAgentMessage.ExtResponse(methodName, _) -> methodName
-            | ClientToAgentMessage.ExtError(methodName, _) -> methodName
-            | ClientToAgentMessage.FsReadTextFileResult _ -> "fs/read_text_file (result)"
-            | ClientToAgentMessage.FsWriteTextFileResult _ -> "fs/write_text_file (result)"
-            | ClientToAgentMessage.SessionRequestPermissionResult _ -> "session/request_permission (result)"
-            | ClientToAgentMessage.TerminalCreateResult _ -> "terminal/create (result)"
-            | ClientToAgentMessage.TerminalOutputResult _ -> "terminal/output (result)"
-            | ClientToAgentMessage.TerminalWaitForExitResult _ -> "terminal/wait_for_exit (result)"
-            | ClientToAgentMessage.TerminalKillResult _ -> "terminal/kill (result)"
-            | ClientToAgentMessage.TerminalReleaseResult _ -> "terminal/release (result)"
-            | ClientToAgentMessage.FsReadTextFileError _ -> "fs/read_text_file (error)"
-            | ClientToAgentMessage.FsWriteTextFileError _ -> "fs/write_text_file (error)"
-            | ClientToAgentMessage.SessionRequestPermissionError _ -> "session/request_permission (error)"
-            | ClientToAgentMessage.TerminalCreateError _ -> "terminal/create (error)"
-            | ClientToAgentMessage.TerminalOutputError _ -> "terminal/output (error)"
-            | ClientToAgentMessage.TerminalWaitForExitError _ -> "terminal/wait_for_exit (error)"
-            | ClientToAgentMessage.TerminalKillError _ -> "terminal/kill (error)"
-            | ClientToAgentMessage.TerminalReleaseError _ -> "terminal/release (error)"
-        | Message.FromAgent a ->
-            match a with
-            | AgentToClientMessage.InitializeResult r -> $"initialize (result) pv={r.protocolVersion}"
-            | AgentToClientMessage.AuthenticateResult _ -> "authenticate (result)"
-            | AgentToClientMessage.SessionNewResult _ -> "session/new (result)"
-            | AgentToClientMessage.SessionLoadResult _ -> "session/load (result)"
-            | AgentToClientMessage.SessionPromptResult _ -> "session/prompt (result)"
-            | AgentToClientMessage.SessionSetModeResult _ -> "session/set_mode (result)"
-            | AgentToClientMessage.ExtResponse(methodName, _) -> methodName
-            | AgentToClientMessage.InitializeError _ -> "initialize (error)"
-            | AgentToClientMessage.AuthenticateError _ -> "authenticate (error)"
-            | AgentToClientMessage.SessionNewError _ -> "session/new (error)"
-            | AgentToClientMessage.SessionLoadError _ -> "session/load (error)"
-            | AgentToClientMessage.SessionPromptError _ -> "session/prompt (error)"
-            | AgentToClientMessage.SessionSetModeError _ -> "session/set_mode (error)"
-            | AgentToClientMessage.ExtError(methodName, _) -> methodName
-            | AgentToClientMessage.SessionUpdate u ->
-                let updateTag =
-                    match u.update with
-                    | SessionUpdate.UserMessageChunk _ -> "user_message_chunk"
-                    | SessionUpdate.AgentMessageChunk _ -> "agent_message_chunk"
-                    | SessionUpdate.AgentThoughtChunk _ -> "agent_thought_chunk"
-                    | SessionUpdate.ToolCall _ -> "tool_call"
-                    | SessionUpdate.ToolCallUpdate _ -> "tool_call_update"
-                    | SessionUpdate.Plan _ -> "plan"
-                    | SessionUpdate.AvailableCommandsUpdate _ -> "available_commands_update"
-                    | SessionUpdate.CurrentModeUpdate _ -> "current_mode_update"
-                    | SessionUpdate.Ext(tag, _) -> $"ext:{tag}"
-
-                $"session/update ({updateTag})"
-            | AgentToClientMessage.ExtNotification(methodName, _) -> methodName
-            | AgentToClientMessage.FsReadTextFileRequest _ -> "fs/read_text_file"
-            | AgentToClientMessage.FsWriteTextFileRequest _ -> "fs/write_text_file"
-            | AgentToClientMessage.SessionRequestPermissionRequest _ -> "session/request_permission"
-            | AgentToClientMessage.TerminalCreateRequest _ -> "terminal/create"
-            | AgentToClientMessage.TerminalOutputRequest _ -> "terminal/output"
-            | AgentToClientMessage.TerminalWaitForExitRequest _ -> "terminal/wait_for_exit"
-            | AgentToClientMessage.TerminalKillRequest _ -> "terminal/kill"
-            | AgentToClientMessage.TerminalReleaseRequest _ -> "terminal/release"
-            | AgentToClientMessage.ExtRequest(methodName, _) -> methodName
-
     let private findingKey (f: Validation.ValidationFinding) =
         let failureCode = f.failure |> Option.map _.code |> Option.defaultValue ""
         let failureMessage = f.failure |> Option.map _.message |> Option.defaultValue ""
@@ -288,7 +216,7 @@ module private Cli =
             | :? JsonValue as v ->
                 try
                     Some(v.GetValue<string>())
-                with _ ->
+                with :? InvalidOperationException ->
                     None
             | _ -> None
         else
@@ -315,10 +243,13 @@ module private Cli =
                 None)
 
     let private tryGetContextObject (payload: JsonObject) =
-        tryGetObjectProperty payload "context"
-        |> Option.orElseWith (fun () -> tryGetObjectProperty payload "contextWindow")
-        |> Option.orElseWith (fun () -> tryGetObjectProperty payload "contextStatus")
-        |> Option.orElseWith (fun () -> tryGetObjectProperty payload "context_status")
+        if isNull payload then
+            None
+        else
+            tryGetObjectProperty payload "context"
+            |> Option.orElseWith (fun () -> tryGetObjectProperty payload "contextWindow")
+            |> Option.orElseWith (fun () -> tryGetObjectProperty payload "contextStatus")
+            |> Option.orElseWith (fun () -> tryGetObjectProperty payload "context_status")
 
     let private tryComputeHeadroom (context: JsonObject) =
         let remaining =
@@ -348,6 +279,8 @@ module private Cli =
             let pairsText = String.Join(", ", pairs)
             Console.Out.WriteLine($"  [draft] {label} {pairsText}")
 
+    let private lowContextHeadroomThreshold = 0.10
+
     let private renderHeadroomWarning (context: JsonObject) =
         match tryComputeHeadroom context with
         | None -> ()
@@ -355,7 +288,7 @@ module private Cli =
             let percent = ratio * 100.0
             Console.Out.WriteLine($"  [draft] context headroom {remKey}={rem} {limitKey}={lim} ({percent:F1}%)")
 
-            if ratio < 0.10 then
+            if ratio < lowContextHeadroomThreshold then
                 Console.Out.WriteLine($"  [warning] low context headroom ({percent:F1}%)")
 
     let private tryGetMetaObject (element: JsonElement) =
@@ -430,7 +363,7 @@ module private Cli =
                     None
                 else
                     Some highlights
-        with _ ->
+        with :? JsonException ->
             None
 
     let private renderDraftDetails (msg: Message) =
@@ -545,7 +478,7 @@ module private Cli =
         | Ok(codec', msg) ->
             let messages = state.messages @ [ msg ]
 
-            Console.Out.WriteLine($"[{messages.Length - 1}] {Direction.render direction} {methodTag msg}")
+            Console.Out.WriteLine($"[{messages.Length - 1}] {Direction.render direction} {MessageTag.render msg}")
 
             if cfg.printRaw then
                 Console.Out.WriteLine(rawJson)
@@ -628,6 +561,7 @@ Common options:
 
                     value.Equals("on", StringComparison.OrdinalIgnoreCase)
                     || value.Equals("true", StringComparison.OrdinalIgnoreCase)
+                    || value.Equals("yes", StringComparison.OrdinalIgnoreCase)
                     || value = "1"
                 else
                     false)

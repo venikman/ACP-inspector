@@ -24,16 +24,16 @@ We follow **Option 2: Stable + Parse Draft** — accept and display Draft messag
 
 ## Current Stable ACP Support
 
-| Feature | Status | Notes |
-| --- | --- | --- |
-| Initialize handshake | ✅ Implemented | `clientInfo` in params, `agentInfo` in result |
-| Session lifecycle | ✅ Implemented | `session/new`, `session/load`, `session/cancel` |
-| Session prompts | ✅ Implemented | Streaming `session/update`, `session/prompt` result |
-| Session modes | ✅ Implemented | `session/set_mode`, mode state tracking |
-| File system tools | ✅ Implemented | `fs/read_text_file`, `fs/write_text_file` |
-| Terminal tools | ✅ Implemented | `terminal/create`, `terminal/output`, etc. |
-| Permission requests | ✅ Implemented | `session/request_permission` |
-| Protocol state machine | ✅ Implemented | Full `Phase` tracking in `Acp.Protocol.fs` |
+| Feature                | Status         | Notes                                               |
+| ---------------------- | -------------- | --------------------------------------------------- |
+| Initialize handshake   | ✅ Implemented | `clientInfo` in params, `agentInfo` in result       |
+| Session lifecycle      | ✅ Implemented | `session/new`, `session/load`, `session/cancel`     |
+| Session prompts        | ✅ Implemented | Streaming `session/update`, `session/prompt` result |
+| Session modes          | ✅ Implemented | `session/set_mode`, mode state tracking             |
+| File system tools      | ✅ Implemented | `fs/read_text_file`, `fs/write_text_file`           |
+| Terminal tools         | ✅ Implemented | `terminal/create`, `terminal/output`, etc.          |
+| Permission requests    | ✅ Implemented | `session/request_permission`                        |
+| Protocol state machine | ✅ Implemented | Full `Phase` tracking in `Acp.Protocol.fs`          |
 
 ### Recent Schema Notes (v0.10.x)
 
@@ -44,19 +44,19 @@ We follow **Option 2: Stable + Parse Draft** — accept and display Draft messag
 
 These are Draft-stage RFDs from <https://agentclientprotocol.com/rfds> as of 2026-01-06:
 
-| RFD | Status | Priority | Inspector Support |
-| --- | --- | --- | --- |
-| Session List | Draft | P2 | ❌ Not started |
-| Session Config Options | Draft | P2 | ❌ Not started |
-| Forking of existing sessions | Draft | P2 | ❌ Not started |
-| Request Cancellation Mechanism | Draft | P1 | ❌ Not started |
-| Resuming of existing sessions | Draft | P2 | ❌ Not started |
-| Meta Field Propagation Conventions | Draft | P1 | ❌ Not started |
-| Session Info Update | Draft | P1 | ❌ Not started |
-| Agent Telemetry Export | Draft | P2 | ❌ Not started |
-| Proxy Chains: Composable Agent Architectures | Draft | P2 | ❌ Not started |
-| Session Usage and Context Status | Draft | P1 | ❌ Not started |
-| ACP Agent Registry | Draft | P2 | ❌ Not started |
+| RFD                                          | Status | Priority | Inspector Support        |
+| -------------------------------------------- | ------ | -------- | ------------------------ |
+| Session List                                 | Draft  | P2       | ❌ Not started           |
+| Session Config Options                       | Draft  | P2       | ❌ Not started           |
+| Forking of existing sessions                 | Draft  | P2       | ❌ Not started           |
+| Request Cancellation Mechanism               | Draft  | P1       | ❌ Not started           |
+| Resuming of existing sessions                | Draft  | P2       | ❌ Not started           |
+| Meta Field Propagation Conventions           | Draft  | P1       | ⚠️ Partially implemented |
+| Session Info Update                          | Draft  | P1       | ✅ Implemented           |
+| Agent Telemetry Export                       | Draft  | P2       | ❌ Not started           |
+| Proxy Chains: Composable Agent Architectures | Draft  | P2       | ❌ Not started           |
+| Session Usage and Context Status             | Draft  | P1       | ✅ Implemented           |
+| ACP Agent Registry                           | Draft  | P2       | ❌ Not started           |
 
 ### Priority Legend
 
@@ -142,11 +142,11 @@ These are Draft-stage RFDs from <https://agentclientprotocol.com/rfds> as of 202
 
 ## Risks & Mitigations
 
-| Risk | Mitigation |
-| --- | --- |
-| Draft RFDs can change | Treat as non-exhaustive; ship behind "unstable" toggle |
+| Risk                                      | Mitigation                                                        |
+| ----------------------------------------- | ----------------------------------------------------------------- |
+| Draft RFDs can change                     | Treat as non-exhaustive; ship behind "unstable" toggle            |
 | Registry ingestion is supply-chain vector | Pinning (hash/tag), signature verification, explicit user consent |
-| Schema drift in usage fields | Accept extra fields, don't hard-fail on missing expected fields |
+| Schema drift in usage fields              | Accept extra fields, don't hard-fail on missing expected fields   |
 
 ## CI/Automation
 
