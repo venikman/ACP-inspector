@@ -120,25 +120,50 @@ module EvidenceGraph =
 
         /// Detect cycles using depth-first search
         let private detectCycle (graph: EvidenceGraph) : string option =
-            let rec visit (nodeId: string) (visiting: Set<string>) (visited: Set<string>) : string option =
+            // Depth-first search with explicit tracking of "visiting" (gray) and "visited" (black) nodes.
+            // Threads the visited set across disconnected components to avoid redundant work.
+            let rec visit
+                (nodeId: string)
+                (visiting: Set<string>)
+                (visited: Set<string>)
+                : string option * Set<string> =
                 if visiting |> Set.contains nodeId then
-                    Some nodeId // Cycle detected
+                    Some nodeId, visited // Cycle detected
                 elif visited |> Set.contains nodeId then
-                    None // Already processed
+                    None, visited // Already fully processed
                 else
                     let visiting' = visiting |> Set.add nodeId
-                    let targets = successors nodeId graph
 
-                    targets
-                    |> List.tryPick (fun target -> visit target visiting' visited)
-                    |> Option.orElseWith (fun () ->
-                        // Mark as visited after processing all successors
-                        None)
+                    let rec visitTargets
+                        (remainingTargets: string list)
+                        (visited: Set<string>)
+                        : string option * Set<string> =
+                        match remainingTargets with
+                        | [] ->
+                            // All successors processed with no cycle; mark this node as fully visited.
+                            None, (visited |> Set.add nodeId)
+                        | target :: rest ->
+                            let cycleOpt, visited' = visit target visiting' visited
 
-            graph.nodes
-            |> Map.toList
-            |> List.map fst
-            |> List.tryPick (fun nodeId -> visit nodeId Set.empty Set.empty)
+                            match cycleOpt with
+                            | Some _ -> cycleOpt, visited'
+                            | None -> visitTargets rest visited'
+
+                    visitTargets (successors nodeId graph) visited
+
+            let nodeIds = graph.nodes |> Map.toList |> List.map fst
+
+            let rec visitRoots (nodes: string list) (visited: Set<string>) : string option =
+                match nodes with
+                | [] -> None
+                | nodeId :: rest ->
+                    let cycleOpt, visited' = visit nodeId Set.empty visited
+
+                    match cycleOpt with
+                    | Some _ -> cycleOpt
+                    | None -> visitRoots rest visited'
+
+            visitRoots nodeIds Set.empty
 
         /// Validate that the graph is a DAG (acyclic)
         let isAcyclic (graph: EvidenceGraph) : bool = detectCycle graph |> Option.isNone
