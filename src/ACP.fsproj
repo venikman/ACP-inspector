@@ -29,7 +29,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Acp.Domain.fs" />
+    <Compile Include="Acp.Assurance.fs" />
+    <Compile Include="Acp.Capability.fs" />
+    <Compile Include="Acp.Semantic.fs" />
+    <Compile Include="Acp.Evolution.fs" />
     <Compile Include="Acp.Observability.fs" />
+    <Compile Include="Acp.Codec.Types.fs" />
+    <Compile Include="Acp.Codec.Json.fs" />
+    <Compile Include="Acp.Codec.AcpJson.fs" />
     <Compile Include="Acp.Codec.fs" />
     <Compile Include="Acp.Pins.fs" />
     <Compile Include="Acp.FSharpTokenizer.fs" />

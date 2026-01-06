@@ -5,6 +5,10 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Acp.AssuranceTests.fs" />
+    <Compile Include="Acp.CapabilityTests.fs" />
+    <Compile Include="Acp.SemanticTests.fs" />
+    <Compile Include="Acp.EvolutionTests.fs" />
     <Compile Include="Acp.Validation.Tests.fs" />
     <Compile Include="Acp.RuntimeAdapter.Tests.fs" />
     <Compile Include="Acp.Eval.Tests.fs" />
