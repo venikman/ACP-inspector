@@ -121,6 +121,92 @@ module ``Reliability`` =
 
         Assert.False(Reliability.isFresh r)
 
+    [<Fact>]
+    let ``status returns Fresh when within window`` () =
+        let now = DateTimeOffset.UtcNow
+
+        let r =
+            { level = AssuranceLevel.L2
+              pathId = Some(PathId.create "recent")
+              decay = Some(TimeSpan.FromHours(2.0))
+              timestamp = Some(now.AddMinutes(-30.0)) }
+
+        Assert.Equal(EvidenceStatus.Fresh, Reliability.status now r)
+
+    [<Fact>]
+    let ``status returns Stale when outside window`` () =
+        let now = DateTimeOffset.UtcNow
+
+        let r =
+            { level = AssuranceLevel.L2
+              pathId = Some(PathId.create "old")
+              decay = Some(TimeSpan.FromMinutes(10.0))
+              timestamp = Some(now.AddHours(-1.0)) }
+
+        Assert.Equal(EvidenceStatus.Stale, Reliability.status now r)
+
+    [<Fact>]
+    let ``status returns Fresh when no decay specified`` () =
+        let now = DateTimeOffset.UtcNow
+
+        let r =
+            { level = AssuranceLevel.L1
+              pathId = Some(PathId.create "nodecay")
+              decay = None
+              timestamp = Some(now.AddYears(-10)) }
+
+        Assert.Equal(EvidenceStatus.Fresh, Reliability.status now r)
+
+    [<Fact>]
+    let ``status returns Stale when decay specified but no timestamp`` () =
+        let now = DateTimeOffset.UtcNow
+
+        let r =
+            { level = AssuranceLevel.L1
+              pathId = Some(PathId.create "notime")
+              decay = Some(TimeSpan.FromHours(1.0))
+              timestamp = None }
+
+        Assert.Equal(EvidenceStatus.Stale, Reliability.status now r)
+
+    [<Fact>]
+    let ``isStale returns true when evidence expired`` () =
+        let now = DateTimeOffset.UtcNow
+
+        let r =
+            { level = AssuranceLevel.L2
+              pathId = Some(PathId.create "expired")
+              decay = Some(TimeSpan.FromSeconds(1.0))
+              timestamp = Some(now.AddSeconds(-10.0)) }
+
+        Assert.True(Reliability.isStale now r)
+
+    [<Fact>]
+    let ``isStale returns false when evidence fresh`` () =
+        let now = DateTimeOffset.UtcNow
+
+        let r =
+            { level = AssuranceLevel.L2
+              pathId = Some(PathId.create "fresh")
+              decay = Some(TimeSpan.FromHours(1.0))
+              timestamp = Some(now.AddMinutes(-10.0)) }
+
+        Assert.False(Reliability.isStale now r)
+
+    [<Fact>]
+    let ``evidence at exact boundary is considered fresh`` () =
+        let now = DateTimeOffset.UtcNow
+        let decay = TimeSpan.FromHours(1.0)
+
+        let r =
+            { level = AssuranceLevel.L2
+              pathId = Some(PathId.create "boundary")
+              decay = Some decay
+              timestamp = Some(now.Add(-decay)) }
+
+        // At exact boundary, should be fresh (<=)
+        Assert.Equal(EvidenceStatus.Fresh, Reliability.status now r)
+
 module ``Assurance Envelope`` =
 
     [<Fact>]

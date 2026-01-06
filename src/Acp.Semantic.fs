@@ -172,6 +172,124 @@ module Semantic =
               lossNotes = bridge.lossNotes
               bidirectional = bridge.bidirectional }
 
+        /// Apply reliability penalty when crossing this bridge (C.2.2, F.9)
+        /// R_effective = R × CL_penalty
+        let applyReliabilityPenalty (bridge: KindBridge) (r: Assurance.Reliability) : float =
+            Assurance.Reliability.applyClPenalty bridge.congruenceLevel r
+
+    // =====================
+    // Context Boundary Enforcement (A.1.1, F.9)
+    // =====================
+
+    /// Registry of bridges between contexts
+    type BridgeRegistry =
+        { bridges: Map<ContextId * ContextId, KindBridge list> }
+
+    [<RequireQualifiedAccess>]
+    module BridgeRegistry =
+        /// Create an empty bridge registry
+        let empty = { bridges = Map.empty }
+
+        /// Register a bridge between two contexts
+        let addBridge (bridge: KindBridge) (registry: BridgeRegistry) : BridgeRegistry =
+            let (sourceCtx, _) = bridge.sourceKind
+            let (targetCtx, _) = bridge.targetKind
+            let key = (sourceCtx, targetCtx)
+
+            let existing = registry.bridges |> Map.tryFind key |> Option.defaultValue []
+
+            let updated = bridge :: existing
+
+            { registry with
+                bridges = registry.bridges |> Map.add key updated }
+
+        /// Find bridges between two contexts
+        let findBridges (sourceCtx: ContextId) (targetCtx: ContextId) (registry: BridgeRegistry) : KindBridge list =
+            registry.bridges |> Map.tryFind (sourceCtx, targetCtx) |> Option.defaultValue []
+
+        /// Check if a bridge exists for a specific kind pair
+        let hasBridgeForKinds
+            (sourceCtx: ContextId)
+            (sourceKind: KindId)
+            (targetCtx: ContextId)
+            (targetKind: KindId)
+            (registry: BridgeRegistry)
+            : bool =
+            let bridges = findBridges sourceCtx targetCtx registry
+
+            bridges
+            |> List.exists (fun b ->
+                let (sCtx, sKind) = b.sourceKind
+                let (tCtx, tKind) = b.targetKind
+                sCtx = sourceCtx && sKind = sourceKind && tCtx = targetCtx && tKind = targetKind)
+
+    /// Context boundary violation
+    [<RequireQualifiedAccess>]
+    type BoundaryViolation =
+        | UnbridgedReference of
+            sourceContext: ContextId *
+            sourceKind: KindId *
+            targetContext: ContextId *
+            targetKind: KindId
+        | MissingBridge of sourceContext: ContextId * targetContext: ContextId
+
+    [<RequireQualifiedAccess>]
+    module BoundaryViolation =
+        let describe =
+            function
+            | BoundaryViolation.UnbridgedReference(sourceCtx, sourceKind, targetCtx, targetKind) ->
+                sprintf
+                    "Unbridged reference from %s:%s to %s:%s (no bridge found)"
+                    (ContextId.value sourceCtx)
+                    (KindId.value sourceKind)
+                    (ContextId.value targetCtx)
+                    (KindId.value targetKind)
+            | BoundaryViolation.MissingBridge(sourceCtx, targetCtx) ->
+                sprintf "No bridge found from context %s to %s" (ContextId.value sourceCtx) (ContextId.value targetCtx)
+
+    /// Validate a cross-context reference
+    let validateContextBoundary
+        (sourceCtx: ContextId)
+        (sourceKind: KindId)
+        (targetCtx: ContextId)
+        (targetKind: KindId)
+        (registry: BridgeRegistry)
+        : Result<KindBridge, BoundaryViolation> =
+        // Same context - no bridge needed
+        if sourceCtx = targetCtx then
+            // Create a trivial CL4 bridge for same-context references
+            Ok(KindBridge.create sourceCtx sourceKind targetCtx targetKind MappingType.Equivalent CongruenceLevel.CL4)
+        else
+            // Cross-context - bridge required
+            let bridges = BridgeRegistry.findBridges sourceCtx targetCtx registry
+
+            if bridges.IsEmpty then
+                Error(BoundaryViolation.MissingBridge(sourceCtx, targetCtx))
+            else
+                // Find a bridge for this specific kind pair
+                let bridgeOpt =
+                    bridges
+                    |> List.tryFind (fun b ->
+                        let (_, sKind) = b.sourceKind
+                        let (_, tKind) = b.targetKind
+                        sKind = sourceKind && tKind = targetKind)
+
+                match bridgeOpt with
+                | Some bridge -> Ok bridge
+                | None -> Error(BoundaryViolation.UnbridgedReference(sourceCtx, sourceKind, targetCtx, targetKind))
+
+    /// Check if a cross-context reference is valid
+    let isValidCrossContextReference
+        (sourceCtx: ContextId)
+        (sourceKind: KindId)
+        (targetCtx: ContextId)
+        (targetKind: KindId)
+        (registry: BridgeRegistry)
+        : bool =
+        match validateContextBoundary sourceCtx sourceKind targetCtx targetKind registry with
+        | Ok _ -> true
+        | Error _ -> false
+
     // =====================
     // Agent Context (Bounded Context)
     // =====================
@@ -332,7 +450,7 @@ module Semantic =
             { registry with
                 contexts = registry.contexts |> Map.add ctx.contextId ctx }
 
-        let registerBridge bridge registry =
+        let registerBridge (bridge: AlignmentBridge) (registry: SemanticRegistry) : SemanticRegistry =
             { registry with
                 bridges = registry.bridges |> Map.add bridge.bridgeId bridge }
 

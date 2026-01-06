@@ -141,7 +141,8 @@ flowchart LR
 ## Documentation
 
 - Tooling (paths, build/run commands): [docs/tooling/acp-sentinel.md](docs/tooling/acp-sentinel.md)
-- FPF (external): <https://github.com/ailev/FPF>
+- FPF (external): <https://github.com/ailev/FPF> — **Note**: FPF is fetched daily to `/tmp/FPF-YYYYMMDD` for evaluation. No local copy is maintained in this repo.
+- FPF Alignment: [docs/reports/fpf-alignment-evaluation-20260106.md](docs/reports/fpf-alignment-evaluation-20260106.md)
 - SDK docs entrypoint: [docs/index.md](docs/index.md)
 - SDK comparison: [docs/SDK-COMPARISON.md](docs/SDK-COMPARISON.md)
 - Examples: [examples/](examples/)

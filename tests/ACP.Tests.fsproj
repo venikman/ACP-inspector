@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Acp.AssuranceTests.fs" />
+    <Compile Include="Acp.EvidenceGraphTests.fs" />
     <Compile Include="Acp.CapabilityTests.fs" />
     <Compile Include="Acp.SemanticTests.fs" />
     <Compile Include="Acp.EvolutionTests.fs" />

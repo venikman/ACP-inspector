@@ -26,6 +26,7 @@ Per FPF:
 | [DRR-002](DRR-002-cross-agent-semantic-alignment.md) | Cross-Agent Semantic Alignment | No reach (protocol-specific) | Missing KindBridge, CL ignored | Proposed |
 | [DRR-003](DRR-003-capability-claim-verification.md) | Capability Claim Verification | Inexplicable rules ("trust manifest") | No TA/VA/LA lanes | Proposed |
 | [DRR-004](DRR-004-protocol-evolution-stability.md) | Protocol Evolution Stability | Error-correction gap | No Γ_time, no DRR discipline | Proposed |
+| [DRR-005](DRR-005-agent-tool-coordination.md) | Agent Tool Coordination | Easy-to-vary ("model chose best") | No C.24 call-planning, no budget | Proposed |
 
 ## Dependency Graph
 

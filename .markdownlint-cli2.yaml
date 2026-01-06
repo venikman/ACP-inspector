@@ -14,6 +14,12 @@ config:
   # Don't require the first line to be a top-level heading (some generated/aux docs differ).
   MD041: false
 
+  # Allow duplicate headings in structured docs (scoped sections).
+  MD024: false
+
+  # Allow emphasis for visual separation (not always headers).
+  MD036: false
+
 ignores:
   - "**/node_modules/**"
   - "benchmarks/**"
