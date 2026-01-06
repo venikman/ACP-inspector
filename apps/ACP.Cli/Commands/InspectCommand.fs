@@ -100,7 +100,20 @@ let private methodTag (msg: Message) =
         | AgentToClientMessage.InitializeResult r -> $"initialize (result) pv={r.protocolVersion}"
         | AgentToClientMessage.SessionNewResult _ -> "session/new (result)"
         | AgentToClientMessage.SessionPromptResult _ -> "session/prompt (result)"
-        | AgentToClientMessage.SessionUpdate _ -> "session/update"
+        | AgentToClientMessage.SessionUpdate u ->
+            let updateTag =
+                match u.update with
+                | SessionUpdate.UserMessageChunk _ -> "user_message_chunk"
+                | SessionUpdate.AgentMessageChunk _ -> "agent_message_chunk"
+                | SessionUpdate.AgentThoughtChunk _ -> "agent_thought_chunk"
+                | SessionUpdate.ToolCall _ -> "tool_call"
+                | SessionUpdate.ToolCallUpdate _ -> "tool_call_update"
+                | SessionUpdate.Plan _ -> "plan"
+                | SessionUpdate.AvailableCommandsUpdate _ -> "available_commands_update"
+                | SessionUpdate.CurrentModeUpdate _ -> "current_mode_update"
+                | SessionUpdate.Ext(tag, _) -> $"ext:{tag}"
+
+            $"session/update ({updateTag})"
         | _ -> "other-agent-msg"
 
 let private printFinding (f: Validation.ValidationFinding) =

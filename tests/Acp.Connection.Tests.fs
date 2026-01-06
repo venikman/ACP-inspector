@@ -62,7 +62,8 @@ module ConnectionTests =
                             return
                                 Ok
                                     { sessionId = p.sessionId
-                                      stopReason = StopReason.EndTurn }
+                                      stopReason = StopReason.EndTurn
+                                      usage = None }
                         }
                   onCancel = fun _ -> task { () }
                   onSetMode =
@@ -206,7 +207,8 @@ module ConnectionTests =
                             return
                                 Ok
                                     { sessionId = p.sessionId
-                                      stopReason = StopReason.EndTurn }
+                                      stopReason = StopReason.EndTurn
+                                      usage = None }
                         }
                   onCancel = fun _ -> task { () }
                   onSetMode = fun _ -> task { return Error "not implemented" } }

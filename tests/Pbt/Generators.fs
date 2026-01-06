@@ -135,7 +135,11 @@ module Generators =
         genContentBlocks |> G.map (fun blocks -> { sessionId = sid; prompt = blocks })
 
     let private genSessionPromptResult (sid: SessionId) : Gen<SessionPromptResult> =
-        genStopReason |> G.map (fun sr -> { sessionId = sid; stopReason = sr })
+        genStopReason
+        |> G.map (fun sr ->
+            { sessionId = sid
+              stopReason = sr
+              usage = None })
 
     let private genSessionUpdate (sid: SessionId) : Gen<SessionUpdateNotification> =
         let genChunk = genContentBlock |> G.map (fun cb -> ({ content = cb }: ContentChunk))

@@ -6,6 +6,7 @@ ACP-sentinel is an F# implementation of the Agent Client Protocol (ACP) with a v
 
 ## Quick Links
 
+- [ACP RFD Tracker](ACP-RFD-TRACKER.md) - Draft RFD implementation status and spec tracking
 - [API Reference](#building-docs) - Generated API documentation (output: `docs/_site/reference/index.html`)
 
 ## Modules

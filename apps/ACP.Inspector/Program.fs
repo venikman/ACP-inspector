@@ -11,6 +11,7 @@ open System.Net.Http
 open System.Net.WebSockets
 open System.Text
 open System.Text.Json
+open System.Text.Json.Nodes
 open System.Threading
 open System.Threading.Tasks
 
@@ -136,7 +137,8 @@ module private Cli =
         { connectionId: SessionId
           stopOnFirstError: bool
           recordPath: string option
-          printRaw: bool }
+          printRaw: bool
+          unstable: bool }
 
     type InspectState =
         { codec: Codec.CodecState
@@ -198,7 +200,20 @@ module private Cli =
             | AgentToClientMessage.SessionPromptError _ -> "session/prompt (error)"
             | AgentToClientMessage.SessionSetModeError _ -> "session/set_mode (error)"
             | AgentToClientMessage.ExtError(methodName, _) -> methodName
-            | AgentToClientMessage.SessionUpdate _ -> "session/update"
+            | AgentToClientMessage.SessionUpdate u ->
+                let updateTag =
+                    match u.update with
+                    | SessionUpdate.UserMessageChunk _ -> "user_message_chunk"
+                    | SessionUpdate.AgentMessageChunk _ -> "agent_message_chunk"
+                    | SessionUpdate.AgentThoughtChunk _ -> "agent_thought_chunk"
+                    | SessionUpdate.ToolCall _ -> "tool_call"
+                    | SessionUpdate.ToolCallUpdate _ -> "tool_call_update"
+                    | SessionUpdate.Plan _ -> "plan"
+                    | SessionUpdate.AvailableCommandsUpdate _ -> "available_commands_update"
+                    | SessionUpdate.CurrentModeUpdate _ -> "current_mode_update"
+                    | SessionUpdate.Ext(tag, _) -> $"ext:{tag}"
+
+                $"session/update ({updateTag})"
             | AgentToClientMessage.ExtNotification(methodName, _) -> methodName
             | AgentToClientMessage.FsReadTextFileRequest _ -> "fs/read_text_file"
             | AgentToClientMessage.FsWriteTextFileRequest _ -> "fs/write_text_file"
@@ -233,6 +248,247 @@ module private Cli =
         | None ->
             let note = f.note |> Option.defaultValue ""
             Console.Error.WriteLine($"[{lane}/{sev}] ({subject}) {note}")
+
+    type MetaHighlights =
+        { traceparent: string option
+          tracestate: string option
+          baggage: string option }
+
+    let private tryGetNumberValue (node: JsonNode) =
+        match node with
+        | :? JsonValue as v ->
+            let mutable i = 0
+            let mutable l = 0L
+            let mutable d = 0.0
+            let mutable f = 0f
+
+            if v.TryGetValue(&i) then Some(float i)
+            elif v.TryGetValue(&l) then Some(float l)
+            elif v.TryGetValue(&d) then Some d
+            elif v.TryGetValue(&f) then Some(float f)
+            else None
+        | _ -> None
+
+    let private tryGetNumberProperty (o: JsonObject) (name: string) =
+        let mutable value: JsonNode | null = null
+
+        if o.TryGetPropertyValue(name, &value) then
+            match value with
+            | null -> None
+            | node -> tryGetNumberValue node
+        else
+            None
+
+    let private tryGetStringProperty (o: JsonObject) (name: string) =
+        let mutable value: JsonNode | null = null
+
+        if o.TryGetPropertyValue(name, &value) then
+            match value with
+            | null -> None
+            | :? JsonValue as v ->
+                try
+                    Some(v.GetValue<string>())
+                with _ ->
+                    None
+            | _ -> None
+        else
+            None
+
+    let private tryGetObjectProperty (o: JsonObject) (name: string) =
+        let mutable value: JsonNode | null = null
+
+        if o.TryGetPropertyValue(name, &value) then
+            match value with
+            | :? JsonObject as obj -> Some obj
+            | _ -> None
+        else
+            None
+
+    let private tryFindNumberBy (o: JsonObject) (predicate: string -> bool) =
+        o
+        |> Seq.tryPick (fun kvp ->
+            if predicate kvp.Key then
+                match kvp.Value with
+                | null -> None
+                | node -> tryGetNumberValue node |> Option.map (fun value -> kvp.Key, value)
+            else
+                None)
+
+    let private tryGetContextObject (payload: JsonObject) =
+        tryGetObjectProperty payload "context"
+        |> Option.orElseWith (fun () -> tryGetObjectProperty payload "contextWindow")
+        |> Option.orElseWith (fun () -> tryGetObjectProperty payload "contextStatus")
+        |> Option.orElseWith (fun () -> tryGetObjectProperty payload "context_status")
+
+    let private tryComputeHeadroom (context: JsonObject) =
+        let remaining =
+            tryFindNumberBy context (fun key -> key.Contains("remaining", StringComparison.OrdinalIgnoreCase))
+
+        let limit =
+            tryFindNumberBy context (fun key ->
+                key.Contains("limit", StringComparison.OrdinalIgnoreCase)
+                || key.Contains("max", StringComparison.OrdinalIgnoreCase)
+                || key.Contains("total", StringComparison.OrdinalIgnoreCase)
+                || key.Contains("capacity", StringComparison.OrdinalIgnoreCase))
+
+        match remaining, limit with
+        | Some(remKey, rem), Some(limitKey, lim) when lim > 0.0 -> Some(remKey, rem, limitKey, lim, rem / lim)
+        | _ -> None
+
+    let private renderUsageSummary (label: string) (usage: JsonObject) =
+        let pairs =
+            usage
+            |> Seq.choose (fun kvp ->
+                match kvp.Value with
+                | null -> None
+                | node -> tryGetNumberValue node |> Option.map (fun value -> $"{kvp.Key}={value}"))
+            |> Seq.toList
+
+        if not pairs.IsEmpty then
+            let pairsText = String.Join(", ", pairs)
+            Console.Out.WriteLine($"  [draft] {label} {pairsText}")
+
+    let private renderHeadroomWarning (context: JsonObject) =
+        match tryComputeHeadroom context with
+        | None -> ()
+        | Some(remKey, rem, limitKey, lim, ratio) ->
+            let percent = ratio * 100.0
+            Console.Out.WriteLine($"  [draft] context headroom {remKey}={rem} {limitKey}={lim} ({percent:F1}%)")
+
+            if ratio < 0.10 then
+                Console.Out.WriteLine($"  [warning] low context headroom ({percent:F1}%)")
+
+    let private tryGetMetaObject (element: JsonElement) =
+        if element.ValueKind <> JsonValueKind.Object then
+            None
+        else
+            let mutable metaEl = Unchecked.defaultof<JsonElement>
+
+            if
+                element.TryGetProperty("_meta", &metaEl)
+                && metaEl.ValueKind = JsonValueKind.Object
+            then
+                Some metaEl
+            else
+                None
+
+    let private tryGetStringElement (element: JsonElement) (name: string) =
+        let mutable value = Unchecked.defaultof<JsonElement>
+
+        if element.TryGetProperty(name, &value) && value.ValueKind = JsonValueKind.String then
+            value.GetString() |> Option.ofObj
+        else
+            None
+
+    let private tryExtractMetaHighlights (rawJson: string) : MetaHighlights option =
+        try
+            use doc = JsonDocument.Parse(rawJson)
+            let root = doc.RootElement
+
+            let metaOpt =
+                tryGetMetaObject root
+                |> Option.orElseWith (fun () ->
+                    let mutable paramsEl = Unchecked.defaultof<JsonElement>
+
+                    if root.TryGetProperty("params", &paramsEl) then
+                        tryGetMetaObject paramsEl
+                    else
+                        None)
+                |> Option.orElseWith (fun () ->
+                    let mutable resultEl = Unchecked.defaultof<JsonElement>
+
+                    if root.TryGetProperty("result", &resultEl) then
+                        tryGetMetaObject resultEl
+                    else
+                        None)
+                |> Option.orElseWith (fun () ->
+                    let mutable paramsEl = Unchecked.defaultof<JsonElement>
+
+                    if root.TryGetProperty("params", &paramsEl) then
+                        let mutable updateEl = Unchecked.defaultof<JsonElement>
+
+                        if paramsEl.TryGetProperty("update", &updateEl) then
+                            tryGetMetaObject updateEl
+                        else
+                            None
+                    else
+                        None)
+
+            match metaOpt with
+            | None -> None
+            | Some meta ->
+                let highlights =
+                    { traceparent = tryGetStringElement meta "traceparent"
+                      tracestate = tryGetStringElement meta "tracestate"
+                      baggage = tryGetStringElement meta "baggage" }
+
+                if
+                    highlights.traceparent.IsNone
+                    && highlights.tracestate.IsNone
+                    && highlights.baggage.IsNone
+                then
+                    None
+                else
+                    Some highlights
+        with _ ->
+            None
+
+    let private renderDraftDetails (msg: Message) =
+        match msg with
+        | Message.FromAgent(AgentToClientMessage.SessionUpdate u) ->
+            match u.update with
+            | SessionUpdate.Ext(tag, payload) ->
+                match tag with
+                | "session_info_update" ->
+                    let title = tryGetStringProperty payload "title"
+
+                    let metaKeys =
+                        tryGetObjectProperty payload "_meta"
+                        |> Option.map (fun o -> o |> Seq.map (fun kvp -> kvp.Key) |> Seq.toList)
+
+                    let parts =
+                        [ title |> Option.map (fun t -> $"title=\"{t}\"")
+                          metaKeys
+                          |> Option.bind (fun keys ->
+                              if keys.Length > 0 then
+                                  let keysText = String.Join(", ", keys)
+                                  Some $"metaKeys=[{keysText}]"
+                              else
+                                  None) ]
+                        |> List.choose id
+
+                    let details = if parts.IsEmpty then "" else " " + String.Join(" ", parts)
+
+                    Console.Out.WriteLine($"  [draft] session_info_update{details}")
+                | "usage_update" ->
+                    let usageObject =
+                        tryGetObjectProperty payload "delta"
+                        |> Option.orElseWith (fun () -> tryGetObjectProperty payload "usage")
+                        |> Option.orElseWith (fun () -> tryGetObjectProperty payload "usageDelta")
+
+                    usageObject |> Option.iter (renderUsageSummary "usage_update")
+
+                    let contextOpt =
+                        tryGetContextObject payload
+                        |> Option.orElseWith (fun () -> usageObject |> Option.bind tryGetContextObject)
+
+                    contextOpt |> Option.iter renderHeadroomWarning
+                | _ -> ()
+            | _ -> ()
+        | Message.FromAgent(AgentToClientMessage.SessionPromptResult r) ->
+            match r.usage with
+            | None -> ()
+            | Some usage ->
+                renderUsageSummary "prompt_result_usage" usage
+                tryGetContextObject usage |> Option.iter renderHeadroomWarning
+        | Message.FromClient(ClientToAgentMessage.ExtRequest(methodName, _))
+        | Message.FromClient(ClientToAgentMessage.ExtNotification(methodName, _))
+        | Message.FromAgent(AgentToClientMessage.ExtRequest(methodName, _))
+        | Message.FromAgent(AgentToClientMessage.ExtNotification(methodName, _)) when
+            methodName.StartsWith("proxy/", StringComparison.OrdinalIgnoreCase)
+            ->
+            Console.Out.WriteLine($"  [draft] proxy-chain method={methodName}")
+        | _ -> ()
 
     let private ensureRecordWriter (pathOpt: string option) =
         match pathOpt with
@@ -294,6 +550,21 @@ module private Cli =
             if cfg.printRaw then
                 Console.Out.WriteLine(rawJson)
 
+            if cfg.unstable then
+                renderDraftDetails msg
+
+                match tryExtractMetaHighlights rawJson with
+                | None -> ()
+                | Some meta ->
+                    meta.traceparent
+                    |> Option.iter (fun v -> Console.Out.WriteLine($"  _meta.traceparent={v}"))
+
+                    meta.tracestate
+                    |> Option.iter (fun v -> Console.Out.WriteLine($"  _meta.tracestate={v}"))
+
+                    meta.baggage
+                    |> Option.iter (fun v -> Console.Out.WriteLine($"  _meta.baggage={v}"))
+
             let spec =
                 Validation.runWithValidation cfg.connectionId Protocol.spec messages cfg.stopOnFirstError None None
 
@@ -327,6 +598,7 @@ Commands:
 Common options:
   --stop-on-first-error
   --print-raw
+  --acp-unstable              Enable Draft RFD parsing/rendering
   --otel / --otel-console       Enable OpenTelemetry (includes .NET runtime metrics)
   --otlp-endpoint <url>
   --service-name <name>
@@ -343,6 +615,23 @@ Common options:
     let private hasFlag (name: string) (args: string[]) =
         args |> Array.exists (fun a -> a = name)
 
+    let private hasFlagEnabled (name: string) (args: string[]) =
+        let flag = hasFlag name args
+
+        if flag then
+            true
+        else
+            args
+            |> Array.exists (fun a ->
+                if a.StartsWith(name + "=", StringComparison.OrdinalIgnoreCase) then
+                    let value = a.Substring(name.Length + 1).Trim()
+
+                    value.Equals("on", StringComparison.OrdinalIgnoreCase)
+                    || value.Equals("true", StringComparison.OrdinalIgnoreCase)
+                    || value = "1"
+                else
+                    false)
+
     let private connectionIdFromArgs (args: string[]) =
         match tryGetArg "--connection-id" args with
         | Some v when not (String.IsNullOrWhiteSpace v) -> SessionId v
@@ -352,7 +641,8 @@ Common options:
         { connectionId = connectionIdFromArgs args
           stopOnFirstError = hasFlag "--stop-on-first-error" args
           recordPath = tryGetArg "--record" args
-          printRaw = hasFlag "--print-raw" args }
+          printRaw = hasFlag "--print-raw" args
+          unstable = hasFlagEnabled "--acp-unstable" args }
 
     let private noopDisposable: IDisposable =
         { new IDisposable with

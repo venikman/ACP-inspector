@@ -1057,11 +1057,21 @@ module internal CodecAcpJson =
         o["sessionId"] <- encodeSessionId p.sessionId
         o
 
-    let private decodeSessionPromptResponse (node: JsonNode) : Result<StopReason, string> =
+    let private tryGetObjectClone (o: JsonObject) (name: string) : JsonObject option =
+        match tryGet name o with
+        | Some(:? JsonObject as obj) ->
+            match obj.DeepClone() with
+            | :? JsonObject as clone -> Some clone
+            | _ -> None
+        | _ -> None
+
+    let private decodeSessionPromptResponse (node: JsonNode) : Result<StopReason * JsonObject option, string> =
         result {
             let! o = asObject node
             let! srNode = get "stopReason" o
-            return! decodeStopReason srNode
+            let! stopReason = decodeStopReason srNode
+            let usage = tryGetObjectClone o "usage"
+            return stopReason, usage
         }
 
     // ---- Plan ----
@@ -1707,7 +1717,13 @@ module internal CodecAcpJson =
             | "current_mode_update" ->
                 let! u = decodeCurrentModeUpdate node
                 return SessionUpdate.CurrentModeUpdate u
-            | other -> return! Error(sprintf "unknown SessionUpdate discriminator '%s'" other)
+            | other ->
+                let payload =
+                    match o.DeepClone() with
+                    | :? JsonObject as clone -> clone
+                    | _ -> JsonObject()
+
+                return SessionUpdate.Ext(other, payload)
         }
 
     let private encodeSessionUpdate (u: SessionUpdate) : JsonObject =
@@ -1743,6 +1759,14 @@ module internal CodecAcpJson =
         | SessionUpdate.CurrentModeUpdate u ->
             let o = encodeCurrentModeUpdate u
             o["sessionUpdate"] <- JsonValue.Create("current_mode_update")
+            o
+        | SessionUpdate.Ext(tag, payload) ->
+            let o =
+                match payload.DeepClone() with
+                | :? JsonObject as clone -> clone
+                | _ -> JsonObject()
+
+            o["sessionUpdate"] <- JsonValue.Create(tag)
             o
 
     let private decodeSessionUpdateNotification (node: JsonNode) : Result<SessionUpdateNotification, string> =
@@ -2262,10 +2286,11 @@ module internal CodecAcpJson =
             | None -> Error "missing result"
             | Some r ->
                 decodeSessionPromptResponse r
-                |> Result.map (fun sr ->
+                |> Result.map (fun (sr, usage) ->
                     AgentToClientMessage.SessionPromptResult
                         { sessionId = req.sessionId
-                          stopReason = sr })
+                          stopReason = sr
+                          usage = usage })
 
         | PendingClientRequest.SessionSetMode req ->
             Ok(
@@ -2586,6 +2611,17 @@ module internal CodecAcpJson =
                 o["id"] <- encodeRequestId id
                 let res = JsonObject()
                 res["stopReason"] <- encodeStopReason r.stopReason
+
+                match r.usage with
+                | None -> ()
+                | Some usage ->
+                    let payload =
+                        match usage.DeepClone() with
+                        | :? JsonObject as clone -> clone
+                        | _ -> JsonObject()
+
+                    res["usage"] <- payload
+
                 o["result"] <- res
                 Ok o
 
