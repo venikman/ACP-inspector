@@ -188,8 +188,7 @@ module ``Weakest-Link Computation`` =
             EvidenceGraph.empty
             |> EvidenceGraph.addNode (EvidenceNode.Claim(ClaimId.create "c1", "isolated claim"))
 
-        let result =
-            EvidenceGraph.computeWeakestLink (PathId.create "p1") (ClaimId.create "c1") graph
+        let result = EvidenceGraph.computeWeakestLink (ClaimId.create "c1") graph
 
         Assert.True(result.IsNone)
 
@@ -201,8 +200,7 @@ module ``Weakest-Link Computation`` =
             |> EvidenceGraph.addNode (EvidenceNode.GroundingHolon(GroundingRef.create "file:///g"))
             |> EvidenceGraph.addEdge (EvidenceEdge.create "c1" "file:///g" AssuranceLevel.L2)
 
-        let result =
-            EvidenceGraph.computeWeakestLink (PathId.create "p1") (ClaimId.create "c1") graph
+        let result = EvidenceGraph.computeWeakestLink (ClaimId.create "c1") graph
 
         Assert.Equal(Some AssuranceLevel.L2, result)
 
@@ -218,8 +216,7 @@ module ``Weakest-Link Computation`` =
             |> EvidenceGraph.addEdge (EvidenceEdge.create "c1" "e1" AssuranceLevel.L2)
             |> EvidenceGraph.addEdge (EvidenceEdge.create "e1" "file:///g" AssuranceLevel.L1)
 
-        let result =
-            EvidenceGraph.computeWeakestLink (PathId.create "p1") (ClaimId.create "c1") graph
+        let result = EvidenceGraph.computeWeakestLink (ClaimId.create "c1") graph
 
         Assert.Equal(Some AssuranceLevel.L1, result)
 
@@ -240,8 +237,7 @@ module ``Weakest-Link Computation`` =
             |> EvidenceGraph.addEdge (EvidenceEdge.create "e1" "file:///g" AssuranceLevel.L2)
             |> EvidenceGraph.addEdge (EvidenceEdge.create "e2" "file:///g" AssuranceLevel.L2)
 
-        let result =
-            EvidenceGraph.computeWeakestLink (PathId.create "p1") (ClaimId.create "c1") graph
+        let result = EvidenceGraph.computeWeakestLink (ClaimId.create "c1") graph
 
         Assert.Equal(Some AssuranceLevel.L1, result)
 

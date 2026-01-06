@@ -123,7 +123,7 @@ INV-ASR-03: Evidence Freshness
 
 1. Define `EvidenceGraph` type with adjacency list
 2. Implement `addEdge :: Claim -> Evidence -> EvidenceGraph -> EvidenceGraph`
-3. Implement `computeWeakestLink :: PathId -> EvidenceGraph -> AssuranceLevel`
+3. Implement `computeWeakestLink :: ClaimId -> EvidenceGraph -> AssuranceLevel option`
 4. Add DAG validation (acyclic check)
 5. Implement graph traversal for path resolution
 6. Add serialization/deserialization (JSON)

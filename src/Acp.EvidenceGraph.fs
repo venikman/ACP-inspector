@@ -222,9 +222,9 @@ module EvidenceGraph =
                             |> List.map (fun (path, level) -> (sourceId :: path, AssuranceLevel.min edge.level level)))
                 | None -> [] // Node not found
 
-        /// Compute weakest-link assurance level for a path from claim to grounding
+        /// Compute weakest-link assurance level for a claim to grounding
         /// Returns None if no path exists
-        let computeWeakestLink (pathId: PathId) (claimId: ClaimId) (graph: EvidenceGraph) : AssuranceLevel option =
+        let computeWeakestLink (claimId: ClaimId) (graph: EvidenceGraph) : AssuranceLevel option =
             let claimIdStr = ClaimId.value claimId
             let paths = findPaths claimIdStr graph Set.empty
 
