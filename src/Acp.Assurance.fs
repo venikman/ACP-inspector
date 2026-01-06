@@ -216,10 +216,7 @@ module Assurance =
             | Some _, None -> EvidenceStatus.Stale // Has decay but no timestamp = stale
 
         /// Check if evidence is stale at a specific time (INV-ASR-03)
-        let isStale (now: DateTimeOffset) (r: Reliability) : bool =
-            match status now r with
-            | EvidenceStatus.Stale -> true
-            | EvidenceStatus.Fresh -> false
+        let isStale (now: DateTimeOffset) (r: Reliability) : bool = (status now r) = EvidenceStatus.Stale
 
         /// Check if evidence is still fresh at current time
         let isFresh (r: Reliability) : bool = not (isStale DateTimeOffset.UtcNow r)
