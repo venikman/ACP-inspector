@@ -231,10 +231,13 @@ module Semantic =
                 ctx.kindSignatures
                 |> Map.toList
                 |> List.map (fun (KindId k, s) -> sprintf "%s:%s" k s.kindName)
+                |> List.sort // Ensure deterministic order
                 |> String.concat ","
 
-            let hash = kinds.GetHashCode()
-            sprintf "%s:%08x" (ContextId.value ctx.contextId) hash
+            let bytes = System.Text.Encoding.UTF8.GetBytes(kinds)
+            let hashBytes = System.Security.Cryptography.SHA256.HashData(bytes)
+            let hash = System.Convert.ToHexString(hashBytes).ToLowerInvariant().Substring(0, 16)
+            sprintf "%s:%s" (ContextId.value ctx.contextId) hash
 
     // =====================
     // Alignment Bridge (F.9)

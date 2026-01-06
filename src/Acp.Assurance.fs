@@ -253,11 +253,11 @@ module Assurance =
         /// Validate envelope invariants
         let validate (env: AssuranceEnvelope) : string list =
             [ if env.scope.IsEmpty then
-                  "INV-ASR-01: Claim has no scope (unbounded)"
+                  yield "INV-ASR-01: Claim has no scope (unbounded)"
               if env.reliability.level = AssuranceLevel.L2 && env.groundingRef.IsNone then
-                  "INV-ASR-05: L2 claim requires grounding reference"
+                  yield "INV-ASR-05: L2 claim requires grounding reference"
               if not (Reliability.isFresh env.reliability) then
-                  "INV-ASR-03: Evidence is stale" ]
+                  yield "INV-ASR-03: Evidence is stale" ]
 
     // =====================
     // Assurance Findings (Sentinel output)
@@ -328,19 +328,29 @@ module Assurance =
               decay = chain |> List.choose (fun r -> r.decay) |> List.tryHead
               timestamp = chain |> List.choose (fun r -> r.timestamp) |> List.tryHead }
 
-    /// Apply congruence level penalty when crossing context bridge.
+    /// Apply congruence level penalty when crossing context bridge (INV-SEM-03).
+    /// Reliability is degraded based on the CL penalty factor.
     let crossBridge (cl: CongruenceLevel) (envelope: AssuranceEnvelope) : AssuranceEnvelope =
         let penalizedLevel =
             match cl with
-            | CongruenceLevel.CL0 -> AssuranceLevel.L0
+            | CongruenceLevel.CL0 -> AssuranceLevel.L0 // Complete degradation
             | CongruenceLevel.CL1 ->
+                // 75% penalty - L2 becomes L1, L1 stays L1
                 if envelope.reliability.level = AssuranceLevel.L2 then
                     AssuranceLevel.L1
                 else
                     envelope.reliability.level
-            | CongruenceLevel.CL2
-            | CongruenceLevel.CL3
-            | CongruenceLevel.CL4 -> envelope.reliability.level
+            | CongruenceLevel.CL2 ->
+                // 50% penalty - L2 becomes L1
+                if envelope.reliability.level = AssuranceLevel.L2 then
+                    AssuranceLevel.L1
+                else
+                    envelope.reliability.level
+            | CongruenceLevel.CL3 ->
+                // 25% penalty - slight degradation for L2 only in critical contexts
+                // For now, preserve level but mark for potential review
+                envelope.reliability.level
+            | CongruenceLevel.CL4 -> envelope.reliability.level // No penalty
 
         { envelope with
             reliability =

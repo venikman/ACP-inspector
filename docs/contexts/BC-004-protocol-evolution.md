@@ -17,6 +17,7 @@ owner: "ACP-Sentinel Project"
 ## Purpose
 
 This bounded context defines the semantic frame for reasoning about **protocol evolution**. It provides vocabulary and rules for:
+
 - Tracking protocol editions with immutable identifiers
 - Classifying changes as breaking or non-breaking
 - Recording rationale for changes (DRR discipline)
@@ -28,7 +29,7 @@ This bounded context defines the semantic frame for reasoning about **protocol e
 ### Core Terms
 
 | Term | Local Definition | FPF Mapping | Notes |
-|------|------------------|-------------|-------|
+| ---- | ---------------- | ----------- | ----- |
 | **Edition** | An immutable snapshot of the protocol specification | (local term) | Beyond simple version |
 | **EditionId** | Content-addressable identifier for an edition | (local term) | UUID or hash |
 | **ChangeKind** | Classification of change impact: Patch/Minor/Major | SemVer-aligned | Determines compatibility |
@@ -42,7 +43,7 @@ This bounded context defines the semantic frame for reasoning about **protocol e
 ### Derived Terms
 
 | Term | Definition | Derivation |
-|------|------------|------------|
+| ---- | ---------- | ---------- |
 | **EditionLineage** | Directed graph of edition → parentEdition | Tree of editions |
 | **BreakingPath** | Sequence of editions where at least one is breaking | Path with Major change |
 | **ConformanceGap** | Difference between claimed and observed conformance | Evidence of drift |
@@ -52,7 +53,7 @@ This bounded context defines the semantic frame for reasoning about **protocol e
 
 ### Edition
 
-```
+```text
 Kind: Edition
 Intension: Immutable snapshot of protocol specification at a point in time
 Slots:
@@ -69,12 +70,12 @@ Slots:
   
 Invariant: editionId is globally unique and immutable
 Invariant: parentEdition = None ⟹ changeKind = Major (genesis)
-Invariant: drrRefs.nonEmpty (no change without rationale)
+Invariant: parentEdition ≠ None ⟹ drrRefs.nonEmpty (no change without rationale)
 ```
 
 ### ChangeKind
 
-```
+```text
 Kind: ChangeKind
 Intension: Classification of change impact on compatibility
 Extension: { Patch, Minor, Major }
@@ -87,7 +88,7 @@ Major := Breaking change, not backward compatible
 
 ### BreakingChange
 
-```
+```text
 Kind: BreakingChange
 Intension: Enumeration of changes that break backward compatibility
 Extension: {
@@ -108,7 +109,7 @@ Each has slots:
 
 ### NonBreakingChange
 
-```
+```text
 Kind: NonBreakingChange
 Intension: Enumeration of backward-compatible changes
 Extension: {
@@ -123,7 +124,7 @@ SubkindOf: EnumeratedKind
 
 ### CompatibilityMatrix
 
-```
+```text
 Kind: CompatibilityMatrix
 Intension: Declared compatibility relationships between editions
 Slots:
@@ -138,7 +139,7 @@ Invariant: breakingFrom ∩ backwardCompatibleWith = ∅
 
 ### ConformanceReport
 
-```
+```text
 Kind: ConformanceReport
 Intension: Record of implementation conformance to an edition
 Slots:
@@ -154,7 +155,7 @@ Invariant: observedConformance ≤ claimedConformance OR deviations.nonEmpty
 
 ### DRR-Reference
 
-```
+```text
 Kind: DRR-Reference
 Intension: Link to a Design-Rationale Record
 Slots:
@@ -168,7 +169,8 @@ Invariant: uri resolves to valid DRR document
 ## Invariants
 
 ### INV-EVO-01: No Rationale-Free Changes
-```
+
+```text
 ∀ edition E where E.parentEdition ≠ None:
   E.drrRefs.nonEmpty
   
@@ -177,7 +179,8 @@ Violation: EvolutionFinding.MissingRationale
 ```
 
 ### INV-EVO-02: ChangeKind Accuracy
-```
+
+```text
 ∀ edition E:
   E.changeKind = Major ⟺ 
     ∃ bc ∈ BreakingChange: bc applies between E.parentEdition and E
@@ -187,7 +190,8 @@ Violation: EvolutionFinding.ChangeKindMismatch
 ```
 
 ### INV-EVO-03: Compatibility Matrix Transitivity
-```
+
+```text
 ∀ editions A, B, C:
   A.backwardCompatibleWith(B) ∧ B.backwardCompatibleWith(C)
   ⟹ A.backwardCompatibleWith(C)
@@ -197,7 +201,8 @@ Violation: EvolutionFinding.IntransitiveCompatibility
 ```
 
 ### INV-EVO-04: Schema Hash Integrity
-```
+
+```text
 ∀ edition E:
   SHA256(E.schema) = E.schemaHash
   
@@ -206,7 +211,8 @@ Violation: EvolutionFinding.SchemaHashMismatch
 ```
 
 ### INV-EVO-05: Deprecation Precedes Sunset
-```
+
+```text
 ∀ edition E:
   E.sunsetAt ≠ None ⟹ E.deprecatedAt ≠ None ∧ E.deprecatedAt < E.sunsetAt
   
@@ -215,7 +221,8 @@ Violation: EvolutionFinding.SunsetWithoutDeprecation
 ```
 
 ### INV-EVO-06: Conformance Evidence for Tested+
-```
+
+```text
 ∀ report R:
   R.observedConformance ≥ Tested ⟹ R.testResults ≠ None
   
@@ -291,7 +298,7 @@ mappings:
 
 ### The Canonical Evolution Loop (FPF B.4)
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                    EVOLUTION LOOP                           │
 ├─────────────────────────────────────────────────────────────┤
@@ -522,5 +529,5 @@ module EvolutionValidation =
 - FPF E.9: Design-Rationale Record (DRR) Method
 - FPF B.1.4: Contextual & Temporal Aggregation (Γ_time)
 - FPF F.13: Lexical Continuity & Deprecation
-- Semantic Versioning 2.0.0: https://semver.org/
+- Semantic Versioning 2.0.0: <https://semver.org/>
 - DRR-004: Protocol Evolution Stability

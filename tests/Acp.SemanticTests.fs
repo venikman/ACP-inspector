@@ -621,7 +621,7 @@ module ``Semantic Drift`` =
             |> AgentContext.addKind (
                 KindSignature.create (KindId.create "b") "B" (ContextId.create "test") (IntensionSpec.informal "B")
             )
-        // With empty old context, adding 2 kinds = 200% drift
+        // With empty old context, adding 2 kinds yields a drift score of 2.0 (200% when interpreted as a percentage)
         match detectDrift 0.1 old new' with
         | Some(SemanticFinding.SemanticDrift _) -> ()
         | other -> Assert.Fail(sprintf "Expected SemanticDrift finding, got %A" other)

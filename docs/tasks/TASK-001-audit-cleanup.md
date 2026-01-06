@@ -1,15 +1,18 @@
 # TASK-001: Codebase Audit & Cleanup
 
-**Status**: ✅ Complete  
+**Status**: ✅ Complete (see [Audit Report](../reports/audit-001-cleanup.md) for findings)  
 **Priority**: Medium  
 **Assignee**: Background Agent  
 **Started**: 2026-01-06T02:26:00Z  
 **Completed**: 2026-01-06T02:48:00Z  
 **Context**: Pre-implementation cleanup before DRR/BC work begins
 
+> **Note**: Checklist items below document the audit scope. Completed findings are in the audit report.
+
 ## Objective
 
 Perform a comprehensive audit of the ACP-inspector codebase to identify and clean up:
+
 - Dead code and unused files
 - Inconsistent patterns
 - Documentation gaps
@@ -21,18 +24,21 @@ Perform a comprehensive audit of the ACP-inspector codebase to identify and clea
 ### 1. Code Audit
 
 #### 1.1 Unused Code Detection
+
 - [ ] Identify unused F# modules/functions in `src/`
 - [ ] Find orphaned test files in `tests/`
 - [ ] Detect dead imports/opens
 - [ ] Check for commented-out code blocks (> 10 lines)
 
 #### 1.2 Consistency Check
+
 - [ ] Verify all public functions have XML doc comments
 - [ ] Check naming conventions match `STYLEGUIDE.md`
 - [ ] Ensure Result/Option usage is consistent
 - [ ] Validate discriminated union patterns are idiomatic
 
 #### 1.3 Duplication Analysis
+
 - [ ] Find copy-pasted code blocks
 - [ ] Identify functions that could be consolidated
 - [ ] Check for repeated patterns that should be abstracted
@@ -40,11 +46,13 @@ Perform a comprehensive audit of the ACP-inspector codebase to identify and clea
 ### 2. Documentation Audit
 
 #### 2.1 Code Documentation
+
 - [ ] List functions missing doc comments
 - [ ] Find outdated comments (reference old APIs)
 - [ ] Check module-level documentation completeness
 
 #### 2.2 Project Documentation
+
 - [ ] Verify README accuracy against current code
 - [ ] Check all doc links resolve
 - [ ] Ensure examples in docs compile/run
@@ -53,12 +61,14 @@ Perform a comprehensive audit of the ACP-inspector codebase to identify and clea
 ### 3. Test Audit
 
 #### 3.1 Coverage Analysis
+
 - [ ] Run coverage report: `dotnet test --collect:"XPlat Code Coverage"`
 - [ ] Identify modules with < 50% coverage
 - [ ] List critical paths without tests
 - [ ] Find tests that always pass (trivial assertions)
 
 #### 3.2 Test Quality
+
 - [ ] Check for flaky tests
 - [ ] Verify test isolation (no shared state)
 - [ ] Ensure test names describe behavior
@@ -67,16 +77,19 @@ Perform a comprehensive audit of the ACP-inspector codebase to identify and clea
 ### 4. Cleanup Actions
 
 #### 4.1 Safe Deletions (confirm before removing)
+
 - [ ] Remove confirmed dead code
 - [ ] Delete orphaned files
 - [ ] Clean up `.gitignore` if needed
 
 #### 4.2 Refactoring Candidates
+
 - [ ] List functions > 50 lines for potential split
 - [ ] Identify deeply nested code (> 4 levels)
 - [ ] Note modules with > 500 lines
 
 #### 4.3 Formatting
+
 - [ ] Run `dotnet fantomas src tests apps --check`
 - [ ] Fix any formatting violations
 - [ ] Verify `.editorconfig` is respected
@@ -139,6 +152,7 @@ git log --oneline -20
 ## Notes
 
 This task prepares the codebase for implementing the DRR/BC specifications:
+
 - DRR-001: Agent Output Trustworthiness
 - DRR-002: Cross-Agent Semantic Alignment  
 - DRR-003: Capability Claim Verification

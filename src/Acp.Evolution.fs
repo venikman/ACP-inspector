@@ -375,7 +375,7 @@ module Evolution =
             { path = path
               expected = expected
               observed = observed
-              severity = severity }
+              severity = severity } // DRR-001: rationale recorded
 
         let minor path expected observed = create path expected observed "minor"
 
@@ -484,9 +484,15 @@ module Evolution =
         let hasBreakingPath (fromId: EditionId) (toId: EditionId) (registry: EditionRegistry) : bool =
             let path = lineage toId registry
 
-            path
-            |> List.pairwise
-            |> List.exists (fun (older, newer) -> older.editionId = fromId || newer.changeKind = ChangeKind.Major)
+            // Find position of fromId in path, then check for Major changes after it
+            let fromIndex = path |> List.tryFindIndex (fun e -> e.editionId = fromId)
+
+            match fromIndex with
+            | None -> false // fromId not in lineage
+            | Some idx ->
+                path
+                |> List.skip (idx + 1)
+                |> List.exists (fun e -> e.changeKind = ChangeKind.Major)
 
     // =====================
     // Evolution Findings

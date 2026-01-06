@@ -312,13 +312,22 @@ module Capability =
         (envelope: PerformanceEnvelope)
         (payloadSize: int64 option)
         (latency: TimeSpan option)
+        (currentRate: float option)
         : EnvelopeViolation list =
         [ match envelope.maxPayloadBytes, payloadSize with
-          | Some max, Some actual when actual > max -> PayloadTooLarge(actual, max)
+          | Some max, Some actual when actual > max -> yield PayloadTooLarge(actual, max)
           | _ -> ()
 
           match envelope.maxLatency, latency with
-          | Some max, Some actual when actual > max -> LatencyExceeded(actual, max)
+          | Some max, Some actual when actual > max -> yield LatencyExceeded(actual, max)
+          | _ -> ()
+
+          match envelope.rateLimit, currentRate with
+          | Some limit, Some rate ->
+              let maxRate = Rate.callsPerMinute limit
+
+              if rate > maxRate then
+                  yield RateLimitExceeded(rate, maxRate)
           | _ -> () ]
 
     // =====================

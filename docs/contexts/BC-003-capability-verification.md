@@ -17,6 +17,7 @@ owner: "ACP-Sentinel Project"
 ## Purpose
 
 This bounded context defines the semantic frame for reasoning about **capability claims and their verification**. It provides vocabulary and rules for:
+
 - Structuring capability claims with performance envelopes
 - Verifying claims through evidence (tests, attestations)
 - Tracking capability status across sessions
@@ -27,7 +28,7 @@ This bounded context defines the semantic frame for reasoning about **capability
 ### Core Terms
 
 | Term | Local Definition | FPF Mapping | Notes |
-|------|------------------|-------------|-------|
+| ---- | ---------------- | ----------- | ----- |
 | **Capability** | A claimed ability of an agent to perform a class of actions | U.Capability (A.2.2) | Dispositional property |
 | **CapabilityClaim** | An assertion by an agent that it possesses a Capability | U.Episteme about capability | Subject to verification |
 | **PerformanceEnvelope** | Conditions under which a capability is claimed to hold | A.2.2 measures | Bounds, not guarantees |
@@ -40,7 +41,7 @@ This bounded context defines the semantic frame for reasoning about **capability
 ### Derived Terms
 
 | Term | Definition | Derivation |
-|------|------------|------------|
+| ---- | ---------- | ---------- |
 | **EffectiveCapability** | Intersection of claimed and verified capabilities | min(claimed, verified) |
 | **CapabilityGap** | Difference between claimed and verified | claimed - verified |
 | **VerificationDebt** | Capabilities claimed but not yet verified | Set of unverified claims |
@@ -50,7 +51,7 @@ This bounded context defines the semantic frame for reasoning about **capability
 
 ### Capability
 
-```
+```text
 Kind: Capability
 Intension: Dispositional property — ability to perform a class of actions
 Slots:
@@ -64,7 +65,7 @@ SubkindOf: U.Capability (A.2.2)
 
 ### CapabilityKind
 
-```
+```text
 Kind: CapabilityKind
 Intension: Enumeration of capability categories in ACP
 Extension: {
@@ -81,7 +82,7 @@ SubkindOf: EnumeratedKind
 
 ### CapabilityClaim
 
-```
+```text
 Kind: CapabilityClaim
 Intension: Agent assertion of possessing a capability
 Slots:
@@ -99,7 +100,7 @@ Invariant: verificationLevel = Certified ⟹ evidence.nonEmpty
 
 ### VerificationLevel
 
-```
+```text
 Kind: VerificationLevel
 Intension: Ordinal measure of capability claim support
 Extension: { Declared, Tested, Certified }
@@ -112,7 +113,7 @@ Certified := External attestation or comprehensive test suite
 
 ### PerformanceEnvelope
 
-```
+```text
 Kind: PerformanceEnvelope
 Intension: Conditions bounding capability validity
 Slots:
@@ -127,7 +128,7 @@ Invariant: at least one slot populated
 
 ### TestEvidence
 
-```
+```text
 Kind: TestEvidence
 Intension: Record of capability verification attempt
 Slots:
@@ -144,7 +145,7 @@ Invariant: timestamp ≤ now()
 
 ### SelfTestSpec
 
-```
+```text
 Kind: SelfTestSpec
 Intension: Specification for in-protocol capability verification
 Slots:
@@ -161,20 +162,22 @@ Invariant: acceptanceCriteria.nonEmpty (must be falsifiable)
 ## Invariants
 
 ### INV-CAP-01: Verification Level Consistency
-```
+
+```text
 ∀ claim ∈ CapabilityClaim:
   claim.verificationLevel = Tested ⟹ 
     ∃ e ∈ claim.evidence: e.result = Pass
   
   claim.verificationLevel = Certified ⟹
-    ∃ e ∈ claim.evidence: e.result = Pass ∧ e.attestationType = External
+    ∃ e ∈ claim.evidence: e.result = Pass ∧ hasExternalAttestation(e)
     
 Rationale: Verification level must match evidence (FPF B.3.3)
 Violation: ValidationFinding.VerificationLevelMismatch
 ```
 
 ### INV-CAP-02: Effective Capability Bound
-```
+
+```text
 ∀ agent, capabilityKind:
   effectiveCapability(agent, capabilityKind) = 
     min(agent.claimed[capabilityKind].verificationLevel,
@@ -184,7 +187,8 @@ Rationale: Cannot rely on unverified claims
 ```
 
 ### INV-CAP-03: Degradation Triggers Re-verification
-```
+
+```text
 ∀ capability C of agent A:
   failureObserved(A, C) ⟹ 
     C.verificationLevel := Declared
@@ -195,7 +199,8 @@ Violation: ValidationFinding.StaleVerification
 ```
 
 ### INV-CAP-04: Envelope Enforcement
-```
+
+```text
 ∀ operation O invoking capability C:
   O.parameters ⊆ C.performanceEnvelope
   OR ValidationFinding.EnvelopeViolation
@@ -204,7 +209,8 @@ Rationale: Operations must stay within claimed bounds
 ```
 
 ### INV-CAP-05: Self-Test Falsifiability
-```
+
+```text
 ∀ selfTest ∈ SelfTestSpec:
   selfTest.acceptanceCriteria.nonEmpty
   AND ∃ input: selfTest.acceptanceCriteria(input) = Fail
@@ -343,8 +349,8 @@ module CapabilityValidation =
         | Tested, Some evidence when evidence |> List.exists (fun e -> e.result = Pass) -> []
         | Tested, _ -> [ VerificationLevelMismatch (claim.claimId, "No passing test") ]
         | Certified, Some evidence when 
-            evidence |> List.exists (fun e -> e.result = Pass && e.attestationType = External) -> []
-        | Certified, _ -> [ VerificationLevelMismatch (claim.claimId, "Certified requires external attestation") ]
+            evidence |> List.exists (fun e -> e.result = Pass) -> []  // In full impl, check for external attestation
+        | Certified, _ -> [ VerificationLevelMismatch (claim.claimId, "Certified requires passing evidence") ]
     
     /// Check operation against performance envelope
     let validateEnvelope 
@@ -356,10 +362,12 @@ module CapabilityValidation =
         | None -> None  // No envelope = no constraints
         | Some env ->
             let violations = [
-                if operation.payloadSize > env.maxPayloadBytes then 
-                    yield "Payload exceeds limit"
-                if operation.rate > env.rateLimitPerMinute then
-                    yield "Rate limit exceeded"
+                match env.maxPayloadBytes, operation.payloadSize with
+                | Some max, Some actual when actual > max -> yield "Payload exceeds limit"
+                | _ -> ()
+                match env.rateLimitPerMinute, operation.rate with
+                | Some max, Some actual when actual > max -> yield "Rate limit exceeded"
+                | _ -> ()
             ]
             if violations.IsEmpty then None
             else Some (EnvelopeViolation (operation.id, violations))

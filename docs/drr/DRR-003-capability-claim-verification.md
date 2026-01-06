@@ -54,7 +54,8 @@ Introduce **Structured Capability Claims** with **Verification Lanes**:
 
 ```
 CapabilityClaim := {
-  capabilityKind: CapabilityKind      // What type of capability
+  claimId: UUID                        // Unique identifier
+  capabilityKind: CapabilityKind       // What type of capability
   ability: AbilitySpec                 // What can be done
   performanceEnvelope?: {              // Under what conditions
     maxLatency?: Duration
@@ -62,14 +63,10 @@ CapabilityClaim := {
     rateLimit?: Rate
     constraints?: Constraint[]
   }
-  assurance: {
-    level: L0 | L1 | L2                // Claimed assurance level
-    evidence?: {
-      testResults?: URI                // Link to verification tests
-      certifications?: URI[]           // External attestations
-      selfTest?: SelfTestSpec          // In-protocol verification
-    }
-  }
+  verificationLevel: Declared | Tested | Certified  // Maps to L0/L1/L2
+  evidence?: TestEvidence[]            // Verification test results
+  claimedAt: Timestamp
+  expiresAt?: Timestamp
 }
 ```
 

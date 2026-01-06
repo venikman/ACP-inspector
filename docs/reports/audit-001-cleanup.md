@@ -7,7 +7,7 @@
 ## Executive Summary
 
 | Category | Status | Count |
-|----------|--------|-------|
+| -------- | ------ | ----- |
 | Build Health | ✅ PASS | 0 warnings |
 | Test Suite | ✅ PASS | 261 tests |
 | Formatting | ⚠️ WARN | 6 files need formatting |

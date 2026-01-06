@@ -17,6 +17,7 @@ owner: "ACP-Sentinel Project"
 ## Purpose
 
 This bounded context defines the semantic frame for reasoning about **trust and assurance** in agent communications. It provides vocabulary and rules for:
+
 - Classifying the reliability of agent outputs
 - Structuring evidence that supports claims
 - Computing trust across protocol boundaries
@@ -26,7 +27,7 @@ This bounded context defines the semantic frame for reasoning about **trust and 
 ### Core Terms
 
 | Term | Local Definition | FPF Mapping | Notes |
-|------|------------------|-------------|-------|
+| ---- | ---------------- | ----------- | ----- |
 | **Claim** | An assertion embedded in an agent message that purports to describe reality | U.Episteme (describedEntity populated) | Claims are not "true/false" but "supported/unsupported" |
 | **Evidence** | A grounded artifact that supports or refutes a Claim | EvidenceRole (A.2.4) | Evidence must have provenance |
 | **AssuranceLevel** | Ordinal measure of claim support: L0/L1/L2 | B.3.3 levels | L0=Unsubstantiated, L1=Circumstantial, L2=Evidenced |
@@ -40,7 +41,7 @@ This bounded context defines the semantic frame for reasoning about **trust and 
 ### Derived Terms
 
 | Term | Definition | Derivation |
-|------|------------|------------|
+| ---- | ---------- | ---------- |
 | **AssuranceEnvelope** | Protocol container for F-G-R metadata | Composite of Formality + ClaimScope + Reliability |
 | **TrustScore** | Computed tuple ⟨F, G, R⟩ for a message | Aggregation of per-claim assurance |
 | **EvidenceAnchor** | URI pointing to grounding artifact | Reference into EvidenceGraph |
@@ -50,7 +51,7 @@ This bounded context defines the semantic frame for reasoning about **trust and 
 
 ### AssuranceLevel
 
-```
+```text
 Kind: AssuranceLevel
 Intension: Ordinal classification of epistemic support
 Extension: { L0, L1, L2 }
@@ -63,7 +64,7 @@ L2 := "Evidenced" — complete evidence path to grounding
 
 ### Formality
 
-```
+```text
 Kind: Formality
 Intension: Degree of structural rigor in claim expression
 Extension: { F0, F1, F2, F3, F4, F5, F6, F7, F8, F9 }
@@ -77,7 +78,7 @@ F9 := Machine-verified (proofs, model-checked)
 
 ### ClaimScope
 
-```
+```text
 Kind: ClaimScope
 Intension: Set of context slices where claim holds
 Extension: PowerSet(ContextSlice)
@@ -89,7 +90,7 @@ Invariant: scope is declared, not inferred
 
 ### EvidencePath
 
-```
+```text
 Kind: EvidencePath
 Intension: Directed acyclic graph from claim to grounding
 Slots:
@@ -106,7 +107,8 @@ Invariant: weakestLink = min(edge.level for edge in edges)
 ## Invariants
 
 ### INV-ASR-01: No Universal Claims
-```
+
+```text
 ∀ claim ∈ Message:
   claim.scope ≠ UNIVERSAL
   
@@ -115,7 +117,8 @@ Violation: ValidationFinding.UnboundedScope
 ```
 
 ### INV-ASR-02: Weakest-Link Propagation
-```
+
+```text
 ∀ path ∈ EvidenceGraph:
   path.reliability = min(edge.reliability for edge in path.edges)
   
@@ -124,7 +127,8 @@ Violation: ValidationFinding.ReliabilityInflation
 ```
 
 ### INV-ASR-03: Evidence Freshness
-```
+
+```text
 ∀ evidence ∈ EvidenceGraph:
   now() - evidence.timestamp ≤ evidence.freshnessWindow
   OR evidence.status = Stale
@@ -134,7 +138,8 @@ Violation: ValidationFinding.StaleEvidence
 ```
 
 ### INV-ASR-04: Formality Consistency
-```
+
+```text
 ∀ claim ∈ Message:
   claim.declaredFormality ≤ actualFormality(claim.content)
   
@@ -143,7 +148,8 @@ Violation: ValidationFinding.FormalityOverclaim
 ```
 
 ### INV-ASR-05: Grounding Requirement for L2
-```
+
+```text
 ∀ claim ∈ Message:
   claim.assuranceLevel = L2 ⟹ ∃ path: claim → GroundingHolon
   
@@ -221,11 +227,11 @@ module AssuranceValidation =
         match msg.assurance with
         | None -> [ UnboundedScope msg.id ]
         | Some env ->
-            [ if env.scope.IsEmpty then UnboundedScope msg.id
+            [ if env.scope.IsEmpty then yield UnboundedScope msg.id
               if env.formality > actualFormality msg.content then 
-                  FormalityOverclaim (msg.id, env.formality)
+                  yield FormalityOverclaim (msg.id, env.formality)
               if env.reliability.level = L2 && env.reliability.pathId.IsNone then
-                  UngroundedL2Claim msg.id ]
+                  yield UngroundedL2Claim msg.id ]
     
     /// Check evidence freshness
     let validateFreshness (evidence: Evidence) : ValidationFinding option =

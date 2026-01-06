@@ -239,7 +239,7 @@ module ``Envelope Checking`` =
         let envelope =
             PerformanceEnvelope.empty |> PerformanceEnvelope.withPayloadLimit 1024L
 
-        let violations = checkEnvelope envelope (Some 512L) None
+        let violations = checkEnvelope envelope (Some 512L) None None
         Assert.Empty(violations)
 
     [<Fact>]
@@ -247,7 +247,7 @@ module ``Envelope Checking`` =
         let envelope =
             PerformanceEnvelope.empty |> PerformanceEnvelope.withPayloadLimit 1024L
 
-        let violations = checkEnvelope envelope (Some 2048L) None
+        let violations = checkEnvelope envelope (Some 2048L) None None
         Assert.Single(violations) |> ignore
 
         match violations.[0] with
@@ -262,7 +262,7 @@ module ``Envelope Checking`` =
             PerformanceEnvelope.empty
             |> PerformanceEnvelope.withLatency (TimeSpan.FromSeconds(1.0))
 
-        let violations = checkEnvelope envelope None (Some(TimeSpan.FromSeconds(5.0)))
+        let violations = checkEnvelope envelope None (Some(TimeSpan.FromSeconds(5.0))) None
         Assert.Single(violations) |> ignore
 
 module ``Capability Set`` =
