@@ -235,10 +235,6 @@ module Assurance =
             let penalty = CongruenceLevel.penalty cl
             base' * penalty
 
-        /// Compute effective reliability after crossing a bridge
-        /// Returns value in [0.0, 1.0] where 1.0 = perfect reliability
-        let effectiveReliability (cl: CongruenceLevel) (r: Reliability) : float = applyClPenalty cl r
-
     // =====================
     // Assurance Envelope (F-G-R composite)
     // =====================
