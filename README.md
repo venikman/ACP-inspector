@@ -80,25 +80,10 @@ dotnet run --project apps/ACP.Cli -- benchmark --help
 dotnet build src/ACP.fsproj
 ```
 
-```mermaid
-flowchart LR
-    A[dotnet build] --> B[Restore packages]
-    B --> C[Compile F# source]
-    C --> D[Output: bin/Debug/net10.0/ACP.dll]
-```
-
 ### Run All Tests
 
 ```bash
 dotnet test tests/ACP.Tests.fsproj -c Release
-```
-
-```mermaid
-flowchart LR
-    A[dotnet test] --> B[Build test project]
-    B --> C[Discover tests]
-    C --> D[Execute 140 tests]
-    D --> E[Report results]
 ```
 
 ### Run Specific Test Category
@@ -111,15 +96,6 @@ dotnet test tests/ACP.Tests.fsproj --filter "FullyQualifiedName~TraceReplay"
 dotnet test tests/ACP.Tests.fsproj --filter "FullyQualifiedName~Transport|FullyQualifiedName~Connection|FullyQualifiedName~SessionState|FullyQualifiedName~ToolCalls|FullyQualifiedName~Permissions"
 ```
 
-```mermaid
-flowchart LR
-    A[dotnet test --filter] --> B{Filter Type}
-    B -->|TraceReplay| C[Run trace replay tests]
-    B -->|Component| D[Run SDK module tests]
-    C --> E[Report filtered results]
-    D --> E
-```
-
 ### Format Code with Fantomas
 
 ```bash
@@ -128,16 +104,6 @@ dotnet tool restore && dotnet fantomas src tests apps
 
 # Check formatting only
 dotnet tool restore && dotnet fantomas src tests apps --check
-```
-
-```mermaid
-flowchart LR
-    A[dotnet tool restore] --> B[Ensure Fantomas available]
-    B --> C{Mode}
-    C -->|Format| D[Apply formatting changes]
-    C -->|Check| E[Verify formatting compliance]
-    D --> F[Files updated]
-    E --> G[Report violations]
 ```
 
 ## Documentation
