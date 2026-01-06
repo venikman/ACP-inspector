@@ -219,9 +219,9 @@ module Semantic =
 
             bridges
             |> List.exists (fun b ->
-                let (sCtx, sKind) = b.sourceKind
-                let (tCtx, tKind) = b.targetKind
-                sCtx = sourceCtx && sKind = sourceKind && tCtx = targetCtx && tKind = targetKind)
+                let (_, sKind) = b.sourceKind
+                let (_, tKind) = b.targetKind
+                sKind = sourceKind && tKind = targetKind)
 
     /// Context boundary violation
     [<RequireQualifiedAccess>]
