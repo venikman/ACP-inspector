@@ -191,17 +191,23 @@ module Semantic =
         let empty = { bridges = Map.empty }
 
         /// Register a bridge between two contexts
+        /// If the bridge is bidirectional, also registers the reversed bridge entry.
         let addBridge (bridge: KindBridge) (registry: BridgeRegistry) : BridgeRegistry =
+            let addUnder (key: ContextId * ContextId) (b: KindBridge) (registry: BridgeRegistry) : BridgeRegistry =
+                let existing = registry.bridges |> Map.tryFind key |> Option.defaultValue []
+
+                { registry with
+                    bridges = registry.bridges |> Map.add key (b :: existing) }
+
             let (sourceCtx, _) = bridge.sourceKind
             let (targetCtx, _) = bridge.targetKind
-            let key = (sourceCtx, targetCtx)
 
-            let existing = registry.bridges |> Map.tryFind key |> Option.defaultValue []
+            let registry' = addUnder (sourceCtx, targetCtx) bridge registry
 
-            let updated = bridge :: existing
-
-            { registry with
-                bridges = registry.bridges |> Map.add key updated }
+            if bridge.bidirectional && sourceCtx <> targetCtx then
+                registry' |> addUnder (targetCtx, sourceCtx) (KindBridge.reverse bridge)
+            else
+                registry'
 
         /// Find bridges between two contexts
         let findBridges (sourceCtx: ContextId) (targetCtx: ContextId) (registry: BridgeRegistry) : KindBridge list =

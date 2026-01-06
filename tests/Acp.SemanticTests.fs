@@ -440,6 +440,37 @@ module ``Context Boundary Validation`` =
         | Error violation -> Assert.Fail(sprintf "Unexpected error: %s" (BoundaryViolation.describe violation))
 
     [<Fact>]
+    let ``validateContextBoundary honors bidirectional bridges in reverse`` () =
+        // Equivalent bridges are bidirectional by default.
+        let bridge =
+            KindBridge.create
+                (ContextId.create "ctx-a")
+                (KindId.create "k1")
+                (ContextId.create "ctx-b")
+                (KindId.create "k2")
+                MappingType.Equivalent
+                CongruenceLevel.CL4
+
+        let registry = BridgeRegistry.empty |> BridgeRegistry.addBridge bridge
+
+        match
+            validateContextBoundary
+                (ContextId.create "ctx-b")
+                (KindId.create "k2")
+                (ContextId.create "ctx-a")
+                (KindId.create "k1")
+                registry
+        with
+        | Ok foundBridge ->
+            let (sCtx, sKind) = foundBridge.sourceKind
+            let (tCtx, tKind) = foundBridge.targetKind
+            Assert.Equal("ctx-b", ContextId.value sCtx)
+            Assert.Equal("k2", KindId.value sKind)
+            Assert.Equal("ctx-a", ContextId.value tCtx)
+            Assert.Equal("k1", KindId.value tKind)
+        | Error violation -> Assert.Fail(sprintf "Unexpected error: %s" (BoundaryViolation.describe violation))
+
+    [<Fact>]
     let ``validateContextBoundary fails for wrong kind pair`` () =
         let bridge =
             KindBridge.create
