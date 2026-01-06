@@ -61,8 +61,8 @@ These are Draft-stage RFDs from <https://agentclientprotocol.com/rfds> as of 202
 ### Priority Legend
 
 - **P0**: Rebase/catch-up on stable ACP schema
-- **P1**: High priority Draft features (inspector-relevant, safe to ship)
-- **P2**: Lower priority Draft features (behavior-changing, require unstable gate)
+- **P1**: High-priority Draft features (inspector-relevant, safe to ship)
+- **P2**: Lower-priority Draft features (behavior-changing, require unstable gate)
 
 ## Planned Implementation Phases
 
