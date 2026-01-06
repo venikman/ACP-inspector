@@ -174,6 +174,12 @@ module Assurance =
         let value (GroundingRef s) = s
         let create s = GroundingRef s
 
+    /// Evidence freshness status (INV-ASR-03)
+    [<RequireQualifiedAccess>]
+    type EvidenceStatus =
+        | Fresh // Evidence within freshness window
+        | Stale // Evidence expired
+
     /// Reliability component of F-G-R triad.
     type Reliability =
         { level: AssuranceLevel
@@ -201,17 +207,33 @@ module Assurance =
               decay = Some decay
               timestamp = Some DateTimeOffset.UtcNow }
 
-        /// Check if evidence is still fresh
-        let isFresh (r: Reliability) =
+        /// Compute evidence status at a specific time
+        let status (now: DateTimeOffset) (r: Reliability) : EvidenceStatus =
             match r.decay, r.timestamp with
-            | Some decay, Some ts -> DateTimeOffset.UtcNow - ts <= decay
-            | None, _ -> true // No decay = always fresh
-            | Some _, None -> false // Has decay but no timestamp = stale
+            | Some decay, Some ts when now - ts <= decay -> EvidenceStatus.Fresh
+            | None, _ -> EvidenceStatus.Fresh // No decay = always fresh
+            | Some _, Some _ -> EvidenceStatus.Stale // Expired
+            | Some _, None -> EvidenceStatus.Stale // Has decay but no timestamp = stale
 
-        /// Apply CL penalty to reliability
-        let applyPenalty (cl: CongruenceLevel) (r: Reliability) : float =
+        /// Check if evidence is stale at a specific time (INV-ASR-03)
+        let isStale (now: DateTimeOffset) (r: Reliability) : bool = (status now r) = EvidenceStatus.Stale
+
+        /// Check if evidence is still fresh at a specific time
+        let isFresh (now: DateTimeOffset) (r: Reliability) : bool = not (isStale now r)
+
+        /// Check if evidence is still fresh at current time
+        let isFreshNow (r: Reliability) : bool = isFresh DateTimeOffset.UtcNow r
+
+        /// Apply CL penalty to reliability when crossing context boundaries (C.2.2, F.9)
+        /// R_effective = R × CL_penalty
+        /// Note: This computes an effective reliability score, not a new AssuranceLevel.
+        /// The level remains unchanged; penalties affect trust calculations.
+        let applyClPenalty (cl: CongruenceLevel) (r: Reliability) : float =
+            // Base reliability: L0=0.0, L1=0.5, L2=1.0
             let base' = float (AssuranceLevel.toInt r.level) / 2.0
-            base' * CongruenceLevel.penalty cl
+            // Apply CL penalty: CL4=1.0, CL3=0.9, CL2=0.7, CL1=0.4, CL0=0.0
+            let penalty = CongruenceLevel.penalty cl
+            base' * penalty
 
     // =====================
     // Assurance Envelope (F-G-R composite)
@@ -256,7 +278,7 @@ module Assurance =
                   yield "INV-ASR-01: Claim has no scope (unbounded)"
               if env.reliability.level = AssuranceLevel.L2 && env.groundingRef.IsNone then
                   yield "INV-ASR-05: L2 claim requires grounding reference"
-              if not (Reliability.isFresh env.reliability) then
+              if not (Reliability.isFresh DateTimeOffset.UtcNow env.reliability) then
                   yield "INV-ASR-03: Evidence is stale" ]
 
     // =====================

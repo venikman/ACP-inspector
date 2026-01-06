@@ -204,6 +204,360 @@ module ``Kind Bridge`` =
         let reversed = KindBridge.reverse bridge
         Assert.Equal(MappingType.Superkind, reversed.mappingType)
 
+    [<Fact>]
+    let ``applyReliabilityPenalty preserves reliability through CL4`` () =
+        let bridge = sampleBridge () // CL4 = no penalty
+        let r = Reliability.evidenced (PathId.create "test") (TimeSpan.FromHours(1.0))
+        let effective = KindBridge.applyReliabilityPenalty bridge r
+        // L2 = 1.0, CL4 = 1.0 penalty → 1.0 * 1.0 = 1.0
+        Assert.Equal(1.0, effective)
+
+    [<Fact>]
+    let ``applyReliabilityPenalty degrades reliability through CL3`` () =
+        let bridge =
+            KindBridge.create
+                (ContextId.create "a")
+                (KindId.create "x")
+                (ContextId.create "b")
+                (KindId.create "y")
+                MappingType.Equivalent
+                CongruenceLevel.CL3
+
+        let r = Reliability.evidenced (PathId.create "test") (TimeSpan.FromHours(1.0))
+        let effective = KindBridge.applyReliabilityPenalty bridge r
+        // L2 = 1.0, CL3 = 0.9 penalty → 1.0 * 0.9 = 0.9
+        Assert.Equal(0.9, effective, 3)
+
+    [<Fact>]
+    let ``applyReliabilityPenalty degrades reliability through CL2`` () =
+        let bridge =
+            KindBridge.create
+                (ContextId.create "a")
+                (KindId.create "x")
+                (ContextId.create "b")
+                (KindId.create "y")
+                MappingType.Overlapping
+                CongruenceLevel.CL2
+
+        let r = Reliability.evidenced (PathId.create "test") (TimeSpan.FromHours(1.0))
+        let effective = KindBridge.applyReliabilityPenalty bridge r
+        // L2 = 1.0, CL2 = 0.7 penalty → 1.0 * 0.7 = 0.7
+        Assert.Equal(0.7, effective, 3)
+
+    [<Fact>]
+    let ``applyReliabilityPenalty zeros out reliability through CL0`` () =
+        let bridge =
+            KindBridge.create
+                (ContextId.create "a")
+                (KindId.create "x")
+                (ContextId.create "b")
+                (KindId.create "y")
+                MappingType.Disjoint
+                CongruenceLevel.CL0
+
+        let r = Reliability.evidenced (PathId.create "test") (TimeSpan.FromHours(1.0))
+        let effective = KindBridge.applyReliabilityPenalty bridge r
+        // L2 = 1.0, CL0 = 0.0 penalty → 1.0 * 0.0 = 0.0
+        Assert.Equal(0.0, effective)
+
+    [<Fact>]
+    let ``applyReliabilityPenalty handles L1 reliability`` () =
+        let bridge =
+            KindBridge.create
+                (ContextId.create "a")
+                (KindId.create "x")
+                (ContextId.create "b")
+                (KindId.create "y")
+                MappingType.Overlapping
+                CongruenceLevel.CL2
+
+        let r = Reliability.circumstantial (PathId.create "test")
+        let effective = KindBridge.applyReliabilityPenalty bridge r
+        // L1 = 0.5, CL2 = 0.7 penalty → 0.5 * 0.7 = 0.35
+        Assert.Equal(0.35, effective, 3)
+
+    [<Fact>]
+    let ``applyReliabilityPenalty handles L0 reliability`` () =
+        let bridge = sampleBridge ()
+        let r = Reliability.unsubstantiated
+        let effective = KindBridge.applyReliabilityPenalty bridge r
+        // L0 = 0.0, CL4 = 1.0 penalty → 0.0 * 1.0 = 0.0
+        Assert.Equal(0.0, effective)
+
+module ``Bridge Registry`` =
+
+    [<Fact>]
+    let ``empty registry has no bridges`` () =
+        let registry = BridgeRegistry.empty
+
+        let bridges =
+            BridgeRegistry.findBridges (ContextId.create "a") (ContextId.create "b") registry
+
+        Assert.Empty(bridges)
+
+    [<Fact>]
+    let ``addBridge registers bridge`` () =
+        let bridge =
+            KindBridge.create
+                (ContextId.create "ctx-a")
+                (KindId.create "kind-a")
+                (ContextId.create "ctx-b")
+                (KindId.create "kind-b")
+                MappingType.Equivalent
+                CongruenceLevel.CL4
+
+        let registry = BridgeRegistry.empty |> BridgeRegistry.addBridge bridge
+
+        let bridges =
+            BridgeRegistry.findBridges (ContextId.create "ctx-a") (ContextId.create "ctx-b") registry
+
+        Assert.Single(bridges) |> ignore
+
+    [<Fact>]
+    let ``findBridges returns all bridges for context pair`` () =
+        let bridge1 =
+            KindBridge.create
+                (ContextId.create "a")
+                (KindId.create "k1")
+                (ContextId.create "b")
+                (KindId.create "k2")
+                MappingType.Equivalent
+                CongruenceLevel.CL4
+
+        let bridge2 =
+            KindBridge.create
+                (ContextId.create "a")
+                (KindId.create "k3")
+                (ContextId.create "b")
+                (KindId.create "k4")
+                MappingType.Overlapping
+                CongruenceLevel.CL3
+
+        let registry =
+            BridgeRegistry.empty
+            |> BridgeRegistry.addBridge bridge1
+            |> BridgeRegistry.addBridge bridge2
+
+        let bridges =
+            BridgeRegistry.findBridges (ContextId.create "a") (ContextId.create "b") registry
+
+        Assert.Equal(2, bridges.Length)
+
+    [<Fact>]
+    let ``hasBridgeForKinds returns true when bridge exists`` () =
+        let bridge =
+            KindBridge.create
+                (ContextId.create "a")
+                (KindId.create "k1")
+                (ContextId.create "b")
+                (KindId.create "k2")
+                MappingType.Equivalent
+                CongruenceLevel.CL4
+
+        let registry = BridgeRegistry.empty |> BridgeRegistry.addBridge bridge
+
+        Assert.True(
+            BridgeRegistry.hasBridgeForKinds
+                (ContextId.create "a")
+                (KindId.create "k1")
+                (ContextId.create "b")
+                (KindId.create "k2")
+                registry
+        )
+
+    [<Fact>]
+    let ``hasBridgeForKinds returns false when bridge missing`` () =
+        let registry = BridgeRegistry.empty
+
+        Assert.False(
+            BridgeRegistry.hasBridgeForKinds
+                (ContextId.create "a")
+                (KindId.create "k1")
+                (ContextId.create "b")
+                (KindId.create "k2")
+                registry
+        )
+
+module ``Context Boundary Validation`` =
+
+    [<Fact>]
+    let ``validateContextBoundary succeeds for same context`` () =
+        let registry = BridgeRegistry.empty
+
+        match
+            validateContextBoundary
+                (ContextId.create "ctx-a")
+                (KindId.create "k1")
+                (ContextId.create "ctx-a")
+                (KindId.create "k2")
+                registry
+        with
+        | Ok bridge ->
+            // Should create trivial CL4 bridge
+            Assert.Equal(CongruenceLevel.CL4, bridge.congruenceLevel)
+        | Error violation -> Assert.Fail(sprintf "Unexpected error: %s" (BoundaryViolation.describe violation))
+
+    [<Fact>]
+    let ``validateContextBoundary fails when no bridge exists`` () =
+        let registry = BridgeRegistry.empty
+
+        match
+            validateContextBoundary
+                (ContextId.create "ctx-a")
+                (KindId.create "k1")
+                (ContextId.create "ctx-b")
+                (KindId.create "k2")
+                registry
+        with
+        | Ok _ -> Assert.Fail("Expected boundary violation")
+        | Error(BoundaryViolation.MissingBridge(source, target)) ->
+            Assert.Equal("ctx-a", ContextId.value source)
+            Assert.Equal("ctx-b", ContextId.value target)
+        | Error _ -> Assert.Fail("Wrong error type")
+
+    [<Fact>]
+    let ``validateContextBoundary succeeds when bridge exists`` () =
+        let bridge =
+            KindBridge.create
+                (ContextId.create "ctx-a")
+                (KindId.create "k1")
+                (ContextId.create "ctx-b")
+                (KindId.create "k2")
+                MappingType.Equivalent
+                CongruenceLevel.CL3
+
+        let registry = BridgeRegistry.empty |> BridgeRegistry.addBridge bridge
+
+        match
+            validateContextBoundary
+                (ContextId.create "ctx-a")
+                (KindId.create "k1")
+                (ContextId.create "ctx-b")
+                (KindId.create "k2")
+                registry
+        with
+        | Ok foundBridge -> Assert.Equal(CongruenceLevel.CL3, foundBridge.congruenceLevel)
+        | Error violation -> Assert.Fail(sprintf "Unexpected error: %s" (BoundaryViolation.describe violation))
+
+    [<Fact>]
+    let ``validateContextBoundary honors bidirectional bridges in reverse`` () =
+        // Equivalent bridges are bidirectional by default.
+        let bridge =
+            KindBridge.create
+                (ContextId.create "ctx-a")
+                (KindId.create "k1")
+                (ContextId.create "ctx-b")
+                (KindId.create "k2")
+                MappingType.Equivalent
+                CongruenceLevel.CL4
+
+        let registry = BridgeRegistry.empty |> BridgeRegistry.addBridge bridge
+
+        match
+            validateContextBoundary
+                (ContextId.create "ctx-b")
+                (KindId.create "k2")
+                (ContextId.create "ctx-a")
+                (KindId.create "k1")
+                registry
+        with
+        | Ok foundBridge ->
+            let (sCtx, sKind) = foundBridge.sourceKind
+            let (tCtx, tKind) = foundBridge.targetKind
+            Assert.Equal("ctx-b", ContextId.value sCtx)
+            Assert.Equal("k2", KindId.value sKind)
+            Assert.Equal("ctx-a", ContextId.value tCtx)
+            Assert.Equal("k1", KindId.value tKind)
+        | Error violation -> Assert.Fail(sprintf "Unexpected error: %s" (BoundaryViolation.describe violation))
+
+    [<Fact>]
+    let ``validateContextBoundary fails for wrong kind pair`` () =
+        let bridge =
+            KindBridge.create
+                (ContextId.create "ctx-a")
+                (KindId.create "k1")
+                (ContextId.create "ctx-b")
+                (KindId.create "k2")
+                MappingType.Equivalent
+                CongruenceLevel.CL3
+
+        let registry = BridgeRegistry.empty |> BridgeRegistry.addBridge bridge
+
+        // Try to reference different kind pair
+        match
+            validateContextBoundary
+                (ContextId.create "ctx-a")
+                (KindId.create "k3") // Different kind!
+                (ContextId.create "ctx-b")
+                (KindId.create "k4") // Different kind!
+                registry
+        with
+        | Ok _ -> Assert.Fail("Expected unbridged reference error")
+        | Error(BoundaryViolation.UnbridgedReference(_, sourceKind, _, targetKind)) ->
+            Assert.Equal("k3", KindId.value sourceKind)
+            Assert.Equal("k4", KindId.value targetKind)
+        | Error _ -> Assert.Fail("Wrong error type")
+
+    [<Fact>]
+    let ``isValidCrossContextReference returns true when valid`` () =
+        let bridge =
+            KindBridge.create
+                (ContextId.create "a")
+                (KindId.create "k1")
+                (ContextId.create "b")
+                (KindId.create "k2")
+                MappingType.Equivalent
+                CongruenceLevel.CL4
+
+        let registry = BridgeRegistry.empty |> BridgeRegistry.addBridge bridge
+
+        Assert.True(
+            isValidCrossContextReference
+                (ContextId.create "a")
+                (KindId.create "k1")
+                (ContextId.create "b")
+                (KindId.create "k2")
+                registry
+        )
+
+    [<Fact>]
+    let ``isValidCrossContextReference returns false when invalid`` () =
+        let registry = BridgeRegistry.empty
+
+        Assert.False(
+            isValidCrossContextReference
+                (ContextId.create "a")
+                (KindId.create "k1")
+                (ContextId.create "b")
+                (KindId.create "k2")
+                registry
+        )
+
+    [<Fact>]
+    let ``BoundaryViolation.describe formats UnbridgedReference`` () =
+        let violation =
+            BoundaryViolation.UnbridgedReference(
+                ContextId.create "ctx-a",
+                KindId.create "kind-1",
+                ContextId.create "ctx-b",
+                KindId.create "kind-2"
+            )
+
+        let desc = BoundaryViolation.describe violation
+        Assert.Contains("ctx-a:kind-1", desc)
+        Assert.Contains("ctx-b:kind-2", desc)
+        Assert.Contains("Unbridged reference", desc)
+
+    [<Fact>]
+    let ``BoundaryViolation.describe formats MissingBridge`` () =
+        let violation =
+            BoundaryViolation.MissingBridge(ContextId.create "ctx-a", ContextId.create "ctx-b")
+
+        let desc = BoundaryViolation.describe violation
+        Assert.Contains("ctx-a", desc)
+        Assert.Contains("ctx-b", desc)
+        Assert.Contains("No bridge found", desc)
+
 module ``Agent Context`` =
 
     [<Fact>]

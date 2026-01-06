@@ -30,6 +30,7 @@
   <ItemGroup>
     <Compile Include="Acp.Domain.fs" />
     <Compile Include="Acp.Assurance.fs" />
+    <Compile Include="Acp.EvidenceGraph.fs" />
     <Compile Include="Acp.Capability.fs" />
     <Compile Include="Acp.Semantic.fs" />
     <Compile Include="Acp.Evolution.fs" />
