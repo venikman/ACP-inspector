@@ -74,7 +74,7 @@ ResourceBudget := {
 }
 
 ExploitExplorePolicy := {
-  strategy: Greedy | EpsilonGreedy | UCB | Thompson
+  strategy: Greedy | EpsilonGreedy | UCB | ThompsonSampling
   explorationRate?: float               // For epsilon-greedy
   temperature?: float                   // For softmax-based
   preferGeneralMethods: boolean         // BLP flag
