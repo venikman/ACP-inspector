@@ -38,7 +38,7 @@ module EvidenceGraph =
     type EvidenceNode =
         | Claim of ClaimId * content: string
         | Evidence of EvidenceId * artifact: GroundingRef
-        | GroundingHolon of holon: GroundingRef
+        | GroundingHolon of holon: GroundingRef * level: AssuranceLevel
 
     [<RequireQualifiedAccess>]
     module EvidenceNode =
@@ -46,7 +46,7 @@ module EvidenceGraph =
             function
             | EvidenceNode.Claim(ClaimId id, _) -> id
             | EvidenceNode.Evidence(EvidenceId id, _) -> id
-            | EvidenceNode.GroundingHolon(GroundingRef uri) -> uri
+            | EvidenceNode.GroundingHolon(GroundingRef uri, _) -> uri
 
     /// Edge in the evidence graph with assurance level
     type EvidenceEdge =
@@ -204,9 +204,9 @@ module EvidenceGraph =
                 [] // Avoid revisiting nodes
             else
                 match tryGetNode sourceId graph with
-                | Some(EvidenceNode.GroundingHolon _) ->
+                | Some(EvidenceNode.GroundingHolon(_, level)) ->
                     // Reached grounding - this is a complete path
-                    [ ([ sourceId ], AssuranceLevel.L2) ] // Grounding provides L2
+                    [ ([ sourceId ], level) ]
                 | Some node ->
                     let visited' = visited |> Set.add sourceId
                     let edges = outgoingEdges sourceId graph
@@ -262,10 +262,11 @@ module EvidenceGraph =
                 o["id"] <- JsonValue.Create(id)
                 o["artifact"] <- JsonValue.Create(artifact)
                 o
-            | EvidenceNode.GroundingHolon(GroundingRef holon) ->
+            | EvidenceNode.GroundingHolon(GroundingRef holon, level) ->
                 let o = JsonObject()
                 o["type"] <- JsonValue.Create("grounding")
                 o["id"] <- JsonValue.Create(holon)
+                o["level"] <- JsonValue.Create(sprintf "L%d" (AssuranceLevel.toInt level))
                 o
 
         /// Convert edge to JSON-compatible representation
@@ -314,8 +315,9 @@ module EvidenceGraph =
             this
 
         /// Add a grounding holon node
-        member this.AddGrounding(holon: GroundingRef) =
-            graph <- EvidenceGraph.addNode (EvidenceNode.GroundingHolon(holon)) graph
+        member this.AddGrounding(holon: GroundingRef, ?level: AssuranceLevel) =
+            let level' = defaultArg level AssuranceLevel.L2
+            graph <- EvidenceGraph.addNode (EvidenceNode.GroundingHolon(holon, level')) graph
             this
 
         /// Add an edge between nodes

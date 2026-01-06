@@ -33,7 +33,9 @@ module ``Evidence Node`` =
 
     [<Fact>]
     let ``node id returns correct string for GroundingHolon`` () =
-        let node = EvidenceNode.GroundingHolon(GroundingRef.create "file:///data.json")
+        let node =
+            EvidenceNode.GroundingHolon(GroundingRef.create "file:///data.json", AssuranceLevel.L2)
+
         Assert.Equal("file:///data.json", EvidenceNode.id node)
 
 module ``Evidence Edge`` =
@@ -127,7 +129,7 @@ module ``DAG Validation`` =
             EvidenceGraph.empty
             |> EvidenceGraph.addNode (EvidenceNode.Claim(ClaimId.create "c1", "claim"))
             |> EvidenceGraph.addNode (EvidenceNode.Evidence(EvidenceId.create "e1", GroundingRef.create "file:///a"))
-            |> EvidenceGraph.addNode (EvidenceNode.GroundingHolon(GroundingRef.create "file:///g"))
+            |> EvidenceGraph.addNode (EvidenceNode.GroundingHolon(GroundingRef.create "file:///g", AssuranceLevel.L2))
             |> EvidenceGraph.addEdge (EvidenceEdge.create "c1" "e1" AssuranceLevel.L2)
             |> EvidenceGraph.addEdge (EvidenceEdge.create "e1" "file:///g" AssuranceLevel.L2)
 
@@ -149,7 +151,7 @@ module ``DAG Validation`` =
         let graph =
             EvidenceGraph.empty
             |> EvidenceGraph.addNode (EvidenceNode.Claim(ClaimId.create "c1", "claim"))
-            |> EvidenceGraph.addNode (EvidenceNode.GroundingHolon(GroundingRef.create "file:///g"))
+            |> EvidenceGraph.addNode (EvidenceNode.GroundingHolon(GroundingRef.create "file:///g", AssuranceLevel.L2))
             |> EvidenceGraph.addEdge (EvidenceEdge.create "c1" "file:///g" AssuranceLevel.L2)
 
         match EvidenceGraph.validate graph with
@@ -197,7 +199,7 @@ module ``Weakest-Link Computation`` =
         let graph =
             EvidenceGraph.empty
             |> EvidenceGraph.addNode (EvidenceNode.Claim(ClaimId.create "c1", "claim"))
-            |> EvidenceGraph.addNode (EvidenceNode.GroundingHolon(GroundingRef.create "file:///g"))
+            |> EvidenceGraph.addNode (EvidenceNode.GroundingHolon(GroundingRef.create "file:///g", AssuranceLevel.L2))
             |> EvidenceGraph.addEdge (EvidenceEdge.create "c1" "file:///g" AssuranceLevel.L2)
 
         let result = EvidenceGraph.computeWeakestLink (ClaimId.create "c1") graph
@@ -212,7 +214,7 @@ module ``Weakest-Link Computation`` =
             EvidenceGraph.empty
             |> EvidenceGraph.addNode (EvidenceNode.Claim(ClaimId.create "c1", "claim"))
             |> EvidenceGraph.addNode (EvidenceNode.Evidence(EvidenceId.create "e1", GroundingRef.create "file:///a"))
-            |> EvidenceGraph.addNode (EvidenceNode.GroundingHolon(GroundingRef.create "file:///g"))
+            |> EvidenceGraph.addNode (EvidenceNode.GroundingHolon(GroundingRef.create "file:///g", AssuranceLevel.L2))
             |> EvidenceGraph.addEdge (EvidenceEdge.create "c1" "e1" AssuranceLevel.L2)
             |> EvidenceGraph.addEdge (EvidenceEdge.create "e1" "file:///g" AssuranceLevel.L1)
 
@@ -231,7 +233,7 @@ module ``Weakest-Link Computation`` =
             |> EvidenceGraph.addNode (EvidenceNode.Claim(ClaimId.create "c1", "claim"))
             |> EvidenceGraph.addNode (EvidenceNode.Evidence(EvidenceId.create "e1", GroundingRef.create "file:///a"))
             |> EvidenceGraph.addNode (EvidenceNode.Evidence(EvidenceId.create "e2", GroundingRef.create "file:///b"))
-            |> EvidenceGraph.addNode (EvidenceNode.GroundingHolon(GroundingRef.create "file:///g"))
+            |> EvidenceGraph.addNode (EvidenceNode.GroundingHolon(GroundingRef.create "file:///g", AssuranceLevel.L2))
             |> EvidenceGraph.addEdge (EvidenceEdge.create "c1" "e1" AssuranceLevel.L0)
             |> EvidenceGraph.addEdge (EvidenceEdge.create "c1" "e2" AssuranceLevel.L1)
             |> EvidenceGraph.addEdge (EvidenceEdge.create "e1" "file:///g" AssuranceLevel.L2)
@@ -248,7 +250,7 @@ module ``Weakest-Link Computation`` =
             |> EvidenceGraph.addNode (EvidenceNode.Claim(ClaimId.create "c1", "claim"))
             |> EvidenceGraph.addNode (EvidenceNode.Evidence(EvidenceId.create "e1", GroundingRef.create "file:///a"))
             |> EvidenceGraph.addNode (EvidenceNode.Evidence(EvidenceId.create "e2", GroundingRef.create "file:///b"))
-            |> EvidenceGraph.addNode (EvidenceNode.GroundingHolon(GroundingRef.create "file:///g"))
+            |> EvidenceGraph.addNode (EvidenceNode.GroundingHolon(GroundingRef.create "file:///g", AssuranceLevel.L2))
             |> EvidenceGraph.addEdge (EvidenceEdge.create "c1" "e1" AssuranceLevel.L2)
             |> EvidenceGraph.addEdge (EvidenceEdge.create "c1" "e2" AssuranceLevel.L1)
             |> EvidenceGraph.addEdge (EvidenceEdge.create "e1" "file:///g" AssuranceLevel.L2)
@@ -262,7 +264,7 @@ module ``Weakest-Link Computation`` =
         let graph =
             EvidenceGraph.empty
             |> EvidenceGraph.addNode (EvidenceNode.Claim(ClaimId.create "c1", "claim"))
-            |> EvidenceGraph.addNode (EvidenceNode.GroundingHolon(GroundingRef.create "file:///g"))
+            |> EvidenceGraph.addNode (EvidenceNode.GroundingHolon(GroundingRef.create "file:///g", AssuranceLevel.L2))
             |> EvidenceGraph.addEdge (EvidenceEdge.create "c1" "file:///g" AssuranceLevel.L2)
 
         Assert.True(EvidenceGraph.hasGrounding (ClaimId.create "c1") graph)
@@ -348,7 +350,7 @@ module ``JSON Serialization`` =
         let graph =
             EvidenceGraph.empty
             |> EvidenceGraph.addNode (EvidenceNode.Claim(ClaimId.create "c1", "test"))
-            |> EvidenceGraph.addNode (EvidenceNode.GroundingHolon(GroundingRef.create "file:///g"))
+            |> EvidenceGraph.addNode (EvidenceNode.GroundingHolon(GroundingRef.create "file:///g", AssuranceLevel.L2))
 
         let json = EvidenceGraph.toJson graph
         Assert.Contains("\"type\":\"claim\"", json)
@@ -359,7 +361,7 @@ module ``JSON Serialization`` =
         let graph =
             EvidenceGraph.empty
             |> EvidenceGraph.addNode (EvidenceNode.Claim(ClaimId.create "c1", "test"))
-            |> EvidenceGraph.addNode (EvidenceNode.GroundingHolon(GroundingRef.create "file:///g"))
+            |> EvidenceGraph.addNode (EvidenceNode.GroundingHolon(GroundingRef.create "file:///g", AssuranceLevel.L2))
             |> EvidenceGraph.addEdge (EvidenceEdge.create "c1" "file:///g" AssuranceLevel.L2)
 
         let json = EvidenceGraph.toJson graph
