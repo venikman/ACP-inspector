@@ -11,11 +11,14 @@ Items identified during TASK-001 audit requiring human decision or significant r
 ## Medium Priority
 
 ### TD-002: Epistemology.Harness Stub Tests
+
 **Files**:
+
 - `tests/Epistemology.Harness/EvalTests.fs`
 - `tests/Epistemology.Harness/ValidationTaxonomyTests.fs`
 
 **Options**:
+
 1. Implement actual tests
 2. Remove stubs and archive project
 3. Leave as placeholder for future work
@@ -25,15 +28,18 @@ Items identified during TASK-001 audit requiring human decision or significant r
 ---
 
 ### TD-003: Documentation Coverage
+
 **Current**: ~29% (290 doc comments / 996 functions)  
 **Target**: >50%
 
 **Focus Areas**:
+
 - Public API functions
 - Complex domain types
 - Validation rules
 
 **Suggested Approach**:
+
 - Add doc comments during code reviews
 - Prioritize `Acp.Domain.fs` and `Acp.Validation.fs`
 
@@ -42,6 +48,7 @@ Items identified during TASK-001 audit requiring human decision or significant r
 ## Low Priority
 
 ### TD-004: Code Coverage Tooling
+
 **Status**: No coverage reports generated  
 **Action**: Add to CI pipeline
 
@@ -54,10 +61,11 @@ Items identified during TASK-001 audit requiring human decision or significant r
 ---
 
 ### TD-005: Large File Monitoring
+
 Files approaching refactoring threshold (>500 lines):
 
 | File | Lines | Trend |
-|------|-------|-------|
+| ------ | ----- | ----- |
 | `src/Acp.Connection.fs` | 884 | Stable |
 | `src/Acp.Domain.fs` | 757 | Growing |
 | `src/Acp.Validation.fs` | 704 | Growing |
@@ -80,4 +88,4 @@ Files approaching refactoring threshold (>500 lines):
 
 ---
 
-*Last Updated: 2026-01-06*
+Last Updated: 2026-01-06

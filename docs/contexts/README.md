@@ -7,6 +7,7 @@ This directory contains BoundedContext specifications following FPF A.1.1 patter
 Per FPF A.1.1: *"Meaning is local. A term is defined strictly within a U.BoundedContext. Cross-context communication happens only via explicit Bridges with declared translation loss."*
 
 Each BoundedContext defines:
+
 - **Context Identity**: URI, name, scope, owner
 - **Vocabulary**: Local glossary of terms with FPF mappings
 - **Kind Signatures**: Formal type definitions (intension + extension)
@@ -16,7 +17,7 @@ Each BoundedContext defines:
 ## Context Index
 
 | ID | Context | Scope | Related DRR |
-|----|---------|-------|-------------|
+| ---- | ------- | ----- | ----------- |
 | [BC-001](BC-001-assurance.md) | Assurance | Trust reasoning over agent messages | DRR-001 |
 | [BC-002](BC-002-semantic-alignment.md) | Semantic Alignment | Cross-agent meaning coordination | DRR-002 |
 | [BC-003](BC-003-capability-verification.md) | Capability Verification | Agent capability claims & testing | DRR-003 |
@@ -26,7 +27,7 @@ Each BoundedContext defines:
 
 Congruence Levels between contexts (CL0=incompatible, CL4=equivalent):
 
-```
+```text
               │ Assurance │ Semantic │ Capability │ Evolution │ Protocol
 ──────────────┼───────────┼──────────┼────────────┼───────────┼──────────
 Assurance     │    -      │   CL4    │    CL4     │    CL4    │   CL3
@@ -40,7 +41,7 @@ Protocol      │   CL3     │   CL2    │    CL2     │    CL2    │    -
 
 ## Context Hierarchy
 
-```
+```text
                     ┌─────────────────────┐
                     │   ACP Protocol      │
                     │   (external, CL2)   │
@@ -69,7 +70,7 @@ Protocol      │   CL3     │   CL2    │    CL2     │    CL2    │    -
 These terms have consistent meaning across all ACP-Sentinel contexts:
 
 | Term | Universal Meaning | Origin |
-|------|-------------------|--------|
+| ------ | ----------------- | ------ |
 | **AssuranceLevel** | L0/L1/L2 ordinal | BC-001 → all |
 | **Evidence** | Grounded artifact supporting claims | BC-001 → all |
 | **Invariant** | Rule that must hold | FPF A.1.1 |
@@ -78,7 +79,7 @@ These terms have consistent meaning across all ACP-Sentinel contexts:
 
 ## Per-Context URIs
 
-```
+```text
 urn:acp-sentinel:context:assurance:v1
 urn:acp-sentinel:context:semantic:v1
 urn:acp-sentinel:context:capability:v1
@@ -89,7 +90,7 @@ urn:acp:protocol:v1  (external)
 ## FPF Pattern Coverage
 
 | FPF Pattern | Used In |
-|-------------|---------|
+| ----------- | ------- |
 | A.1.1 U.BoundedContext | All (structure) |
 | A.2.2 U.Capability | BC-003 |
 | A.2.3 U.ServiceClause | BC-003 |

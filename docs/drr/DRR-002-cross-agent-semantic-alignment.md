@@ -10,6 +10,7 @@
 As agent ecosystems grow, agents increasingly communicate with each other—directly or via orchestration layers. Each agent operates within its own semantic context: its training data, fine-tuning, system prompts, and tool definitions create a *de facto* bounded context.
 
 The current state:
+
 - No formal mechanism to declare an agent's semantic context
 - Term meanings assumed to be universal (but they aren't)
 - "Tool call" means different things to different agents
@@ -20,6 +21,7 @@ The current state:
 **Deutsch Framing**: The assumption "we both mean the same thing by X" is *infinitely easy to vary*. When Agent A says "file" and Agent B interprets "file," nothing in the protocol constrains whether they share meaning. This explanation has no *reach*—it cannot predict when miscommunication will occur.
 
 **FPF Diagnosis**: Missing U.BoundedContext (A.1.1) declarations and Bridges (F.9):
+
 - Each agent is an implicit BoundedContext with undefined boundaries
 - No explicit mapping between agent-local terms and shared vocabulary
 - Congruence Level (CL) is never computed—we don't know translation loss
@@ -48,7 +50,7 @@ Introduce **Semantic Context Declaration** and **Alignment Bridges**:
 
 ### 1. Context Declaration (in Initialize handshake)
 
-```
+```text
 SemanticContext := {
   contextId: URI                    // Unique context identifier
   vocabularyRef?: URI               // Link to term definitions
@@ -59,7 +61,7 @@ SemanticContext := {
 
 ### 2. Bridge Declaration (on cross-agent calls)
 
-```
+```text
 AlignmentBridge := {
   sourceContext: URI
   targetContext: URI
@@ -78,12 +80,14 @@ AlignmentBridge := {
 ## Consequences
 
 **Positive**:
+
 - Makes semantic assumptions explicit and criticizable
 - Enables principled cross-agent trust reasoning
 - Supports heterogeneous agent ecosystems
 - Creates foundation for semantic interoperability standards
 
 **Negative**:
+
 - Significant protocol addition
 - Agents must introspect and declare their semantics (hard for LLMs)
 - Risk of over-formalization for simple use cases

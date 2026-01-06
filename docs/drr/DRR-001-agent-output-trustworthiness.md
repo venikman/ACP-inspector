@@ -10,6 +10,7 @@
 Agent Client Protocol (ACP) enables communication between clients and AI agents. Currently, agent outputs (messages, tool call results, reasoning traces) are transmitted as opaque payloads. Consumers must decide whether to trust these outputs without formal assurance infrastructure.
 
 The current state:
+
 - Agent outputs carry no provenance metadata
 - No formal distinction between high-confidence and speculative claims
 - Hallucinations and factual errors are indistinguishable from valid outputs at protocol level
@@ -20,12 +21,14 @@ The current state:
 **Deutsch Framing**: Current explanations for "why trust this agent output" are *easy to vary*. "The model is good" or "it passed my spot check" can account for any observation without constraining what outputs are trustworthy. These explanations have no *reach*—they don't predict which future outputs will be reliable.
 
 **FPF Diagnosis**: Agent outputs are *epistemes* (U.Episteme, C.2.1) without proper slot population:
+
 - **DescribedEntitySlot**: Undefined—what real-world object does this claim describe?
 - **GroundingHolonSlot**: Empty—no physical system anchors the claim
 - **ClaimGraphSlot**: Missing—no evidence structure
 - **ViewpointSlot**: Implicit—no declared perspective or scope
 
 The F-G-R triad (B.3) is maximally deficient:
+
 - **F (Formality)**: F≈0 (natural language, no formal structure)
 - **G (ClaimScope)**: Unbounded (claims apply... somewhere?)
 - **R (Reliability)**: Unknown (no evidence path, no PathId)
@@ -49,7 +52,7 @@ The F-G-R triad (B.3) is maximally deficient:
 
 Introduce optional **Assurance Envelope** in ACP messages:
 
-```
+```text
 AssuranceEnvelope := {
   formality: F0..F9           // How rigorous is the claim?
   scope: ContextSlice[]       // Where does it apply?
@@ -63,6 +66,7 @@ AssuranceEnvelope := {
 ```
 
 Sentinel layer validates:
+
 - Envelope completeness per declared AssuranceLevel
 - Consistency between claimed F and actual formality markers
 - Scope containment (claims don't exceed declared G)
@@ -70,12 +74,14 @@ Sentinel layer validates:
 ## Consequences
 
 **Positive**:
+
 - Enables formal trust reasoning at protocol level
 - Supports layered assurance (L0 → L2 progression)
 - Creates foundation for cross-agent evidence sharing
 - Aligns with FPF's B.3 calculus
 
 **Negative**:
+
 - Protocol complexity increase
 - Agents must implement assurance emission
 - Risk of "assurance theater" (claiming high F/R without substance)

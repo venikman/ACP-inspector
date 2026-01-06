@@ -5,7 +5,7 @@ Agent-executable tasks for ACP-inspector maintenance and development.
 ## Task Queue
 
 | ID | Title | Status | Priority | Assignee |
-|----|-------|--------|----------|----------|
+| ---- | ----- | ------ | -------- | -------- |
 | [TASK-001](TASK-001-audit-cleanup.md) | Codebase Audit & Cleanup | Pending | Medium | Background Agent |
 
 ## Status Legend
@@ -28,7 +28,7 @@ Agent-executable tasks for ACP-inspector maintenance and development.
 
 Use this template:
 
-```markdown
+````markdown
 # TASK-XXX: Title
 
 **Status**: Pending  
@@ -52,8 +52,10 @@ What needs to be done (1-2 sentences)
 ```
 
 ## Constraints
+
 - What NOT to do
 
 ## Success Criteria
+
 - [ ] How to know it's done
-```
+````

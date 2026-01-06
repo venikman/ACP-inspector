@@ -17,6 +17,7 @@ owner: "ACP-Sentinel Project"
 ## Purpose
 
 This bounded context defines the semantic frame for reasoning about **meaning alignment** between agents. It provides vocabulary and rules for:
+
 - Declaring an agent's semantic commitments
 - Building bridges between agent contexts
 - Computing translation loss (Congruence Level)
@@ -27,7 +28,7 @@ This bounded context defines the semantic frame for reasoning about **meaning al
 ### Core Terms
 
 | Term | Local Definition | FPF Mapping | Notes |
-|------|------------------|-------------|-------|
+| ---- | ---------------- | ----------- | ----- |
 | **AgentContext** | The implicit semantic frame created by an agent's training, prompts, and tools | U.BoundedContext instance | Every agent has one, even if undeclared |
 | **SemanticDeclaration** | Explicit statement of an agent's vocabulary and meaning commitments | A.1.1 glossary | Protocol artifact |
 | **KindSignature** | Formal definition of a type's intension (meaning) and extension (members) | C.3.2 | Core of semantic alignment |
@@ -41,7 +42,7 @@ This bounded context defines the semantic frame for reasoning about **meaning al
 ### Derived Terms
 
 | Term | Definition | Derivation |
-|------|------------|------------|
+| ---- | ---------- | ---------- |
 | **EffectiveReliability** | R × CL_penalty for cross-context claims | Assurance R degraded by bridge |
 | **SemanticFingerprint** | Hash of vocabulary + invariants for quick comparison | Composite of KindSignatures |
 | **AlignmentMatrix** | N×N matrix of CL values for N agents | Pairwise bridge CLs |
@@ -51,7 +52,7 @@ This bounded context defines the semantic frame for reasoning about **meaning al
 
 ### AgentContext
 
-```
+```text
 Kind: AgentContext
 Intension: Semantic frame within which an agent's terms have meaning
 Slots:
@@ -68,7 +69,7 @@ Invariant: kindSignatures covers all terms used in agent outputs
 
 ### KindSignature
 
-```
+```text
 Kind: KindSignature
 Intension: Formal definition of a term's meaning within a context
 Slots:
@@ -84,7 +85,7 @@ Invariant: intension ≠ ∅ (every kind has meaning)
 
 ### KindBridge
 
-```
+```text
 Kind: KindBridge
 Intension: Mapping between kinds in different contexts
 Slots:
@@ -101,7 +102,7 @@ Invariant: Disjoint ⟹ CL0
 
 ### CongruenceLevel
 
-```
+```text
 Kind: CongruenceLevel
 Intension: Ordinal measure of semantic translation fidelity
 Extension: { CL0, CL1, CL2, CL3, CL4 }
@@ -116,7 +117,7 @@ CL4 := "Equivalent" — no meaning loss (rare)
 
 ### AlignmentBridge
 
-```
+```text
 Kind: AlignmentBridge
 Intension: Complete mapping between two agent contexts
 Slots:
@@ -134,7 +135,8 @@ Invariant: aggregateCL = min(kb.congruenceLevel for kb in kindBridges)
 ## Invariants
 
 ### INV-SEM-01: Context Declaration Required
-```
+
+```text
 ∀ agent ∈ Session:
   agent.semanticDeclaration ≠ ∅
   OR agent.assumedContext = DefaultAgentContext
@@ -144,7 +146,8 @@ Violation: ValidationFinding.UndeclaredContext (warning, not error)
 ```
 
 ### INV-SEM-02: Bridge Required for Cross-Context Claims
-```
+
+```text
 ∀ message from agent_A referencing term_T:
   term_T ∈ agent_B.context ∧ agent_A ≠ agent_B
   ⟹ ∃ bridge: agent_A.context ↔ agent_B.context
@@ -154,7 +157,8 @@ Violation: ValidationFinding.UnbridgedCrossReference
 ```
 
 ### INV-SEM-03: CL Penalty Applied
-```
+
+```text
 ∀ claim crossing bridge B:
   claim.effectiveReliability = claim.reliability × CLPenalty(B.aggregateCL)
   
@@ -168,7 +172,8 @@ Rationale: Translation degrades trust (FPF C.2.2)
 ```
 
 ### INV-SEM-04: No Transitive CL Inflation
-```
+
+```text
 ∀ path A → B → C:
   CL(A,C) ≤ min(CL(A,B), CL(B,C))
   
@@ -177,7 +182,8 @@ Violation: ValidationFinding.CLInflation
 ```
 
 ### INV-SEM-05: Drift Detection
-```
+
+```text
 ∀ agent_A at time t1, t2 where t2 > t1:
   diff(agent_A.kindSignatures[t1], agent_A.kindSignatures[t2]) > threshold
   ⟹ SemanticDriftAlert

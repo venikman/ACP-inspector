@@ -10,6 +10,7 @@
 ACP is a living protocol. The spec evolves (currently 0.10.x), implementations must track changes, and agents/clients negotiate protocol versions. However, evolution introduces risk: breaking changes, semantic drift, and version fragmentation.
 
 The current state:
+
 - Protocol version is a single integer negotiated at initialization
 - No formal model of what constitutes a breaking change
 - Semantic drift can occur without version bump
@@ -19,6 +20,7 @@ The current state:
 ## Problem Statement
 
 **Deutsch Framing**: The current error-correction mechanism for protocol evolution is *broken*. Errors (breaking changes, semantic drift) can accumulate without detection because there's no systematic way to:
+
 1. Detect that a change is breaking
 2. Trace why a change was made
 3. Verify implementations match evolved spec
@@ -27,6 +29,7 @@ The current state:
 This is a *gap in error correction*—the evolutionary process lacks the feedback loops that good science requires.
 
 **FPF Diagnosis**: Missing temporal architecture (A.4, B.4):
+
 - No **design-time / run-time split**: spec changes and implementation changes conflated
 - No **Canonical Evolution Loop**: changes aren't Run-Observe-Refine-Deploy disciplined
 - No **DRR discipline**: rationale for changes isn't recorded or queryable
@@ -55,7 +58,7 @@ Introduce **Structured Protocol Evolution** with **Edition Tracking**:
 
 ### 1. Edition Model (beyond simple version)
 
-```
+```text
 ProtocolEdition := {
   version: SemVer                     // 0.10.3
   editionId: UUID                     // Immutable edition identifier
@@ -73,7 +76,7 @@ ProtocolEdition := {
 
 ### 2. Change Classification Rules
 
-```
+```text
 BreakingChange := 
   | RequiredFieldAdded
   | FieldRemoved
@@ -90,7 +93,7 @@ NonBreakingChange :=
 
 ### 3. Implementation Conformance Protocol
 
-```
+```text
 // Agent/Client can declare what edition they implement
 Initialize.editionClaim: {
   editionId: UUID
@@ -108,6 +111,7 @@ Sentinel.validateConformance(
 ### 4. DRR Integration
 
 Every protocol change requires a DRR with:
+
 - Context: Why is change needed?
 - Problem: What's broken or missing?
 - Decision: What's the minimal change?
@@ -117,6 +121,7 @@ Every protocol change requires a DRR with:
 ## Consequences
 
 **Positive**:
+
 - Protocol evolution becomes auditable and traceable
 - Breaking changes are classified, not discovered
 - Implementations can self-verify conformance
@@ -124,6 +129,7 @@ Every protocol change requires a DRR with:
 - Supports multiple coexisting editions
 
 **Negative**:
+
 - Overhead for spec maintainers (DRR discipline)
 - Edition model adds complexity to handshake
 - Conformance testing requires test infrastructure
@@ -134,6 +140,7 @@ Every protocol change requires a DRR with:
 **Deutsch**: Knowledge grows through *conjecture and criticism*. Protocol evolution should follow this pattern: propose changes (conjecture), test them (criticism), adopt what survives. The DRR discipline ensures criticism is structured; the edition model ensures conjectures are traceable.
 
 **FPF**: This implements the Canonical Evolution Loop (B.4):
+
 1. **Run**: Current edition is deployed
 2. **Observe**: Collect findings (bugs, missing features, drift)
 3. **Refine**: Propose changes via DRR, classify breaking/non-breaking
@@ -168,4 +175,4 @@ The Γ_time laws (B.1.4) ensure temporal aggregation is lawful—you can't avera
 - FPF Spec: A.4 Temporal Duality & Open-Ended Evolution
 - FPF Spec: B.4 Canonical Evolution Loop
 - FPF Spec: E.9 Design-Rationale Record (DRR) Method
-- Semantic Versioning: https://semver.org/
+- Semantic Versioning: <https://semver.org/>

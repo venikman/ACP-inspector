@@ -10,6 +10,7 @@
 ACP agents declare capabilities during initialization (e.g., `loadSession`, `mcpCapabilities.http`, `promptCapabilities.audio`). Clients use these declarations to decide what operations to attempt. However, declarations are *claims*, not *proofs*.
 
 The current state:
+
 - Capability declarations are boolean flags or simple enums
 - No evidence that agent actually possesses declared capabilities
 - No mechanism to test capabilities before relying on them
@@ -20,11 +21,13 @@ The current state:
 **Deutsch Framing**: "Agent X has capability Y" is currently an *inexplicable rule*. The agent says so, and we believe it. This explanation is *parochial*—it works only because we trust the agent vendor. It has no *reach* to adversarial or unreliable agents.
 
 **FPF Diagnosis**: Capability claims lack the three assurance lanes (B.3.3):
+
 - **TA (Type Assurance)**: Is the capability claim well-formed?
 - **VA (Verification Assurance)**: Does the agent's implementation match the claim?
 - **LA (Logical Assurance)**: Is the capability logically consistent with other claims?
 
 The U.Capability (A.2.2) pattern requires:
+
 - Ability specification (what can be done)
 - Performance envelope (under what conditions)
 - Measures (how to verify)
@@ -52,7 +55,7 @@ Introduce **Structured Capability Claims** with **Verification Lanes**:
 
 ### 1. Capability Claim Structure
 
-```
+```text
 CapabilityClaim := {
   claimId: UUID                        // Unique identifier
   capabilityKind: CapabilityKind       // What type of capability
@@ -72,7 +75,7 @@ CapabilityClaim := {
 
 ### 2. Verification Protocol Extension
 
-```
+```text
 // Client can request capability verification
 ClientToAgent: VerifyCapability {
   capabilityKind: CapabilityKind
@@ -97,12 +100,14 @@ AgentToClient: VerifyCapabilityResult {
 ## Consequences
 
 **Positive**:
+
 - Transforms capability claims into testable hypotheses
 - Enables risk-proportional verification strategies
 - Supports capability degradation and recovery
 - Creates audit trail for capability-related failures
 
 **Negative**:
+
 - Protocol complexity increase
 - Verification adds latency to session establishment
 - Agents must implement self-test endpoints
@@ -113,6 +118,7 @@ AgentToClient: VerifyCapabilityResult {
 **Deutsch**: A good explanation makes *risky predictions*. By requiring capabilities to be verifiable, we transform "I can do X" from an uncheckable assertion into a falsifiable claim. The capability either passes verification or it doesn't—no room for easy variation.
 
 **FPF**: This implements U.Capability (A.2.2) properly:
+
 - Ability (what) + Performance envelope (how well) + Measures (evidence)
 - Claims progress through TA → VA → LA lanes (B.3.3)
 - ServiceClause (A.2.3) binds capability to acceptance criteria
