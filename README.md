@@ -1,5 +1,7 @@
 # ACP-sentinel
 
+![ACP-sentinel overview](docs/assets/acp-sentinel-overview.jpg)
+
 ACP-sentinel is an F# implementation of the Agent Client Protocol (ACP) plus a validation / sentinel layer.
 
 It aims to give you:

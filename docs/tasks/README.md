@@ -6,7 +6,8 @@ Agent-executable tasks for ACP-inspector maintenance and development.
 
 | ID | Title | Status | Priority | Assignee |
 | ---- | ----- | ------ | -------- | -------- |
-| [TASK-001](TASK-001-audit-cleanup.md) | Codebase Audit & Cleanup | Pending | Medium | Background Agent |
+| [TASK-002](TASK-002-fpf-alignment-improvements.md) | FPF Alignment Improvements | In Progress | High | Team |
+| [TASK-003](TASK-003-fpf-advanced-features.md) | FPF Advanced Features (Phase 3) | Not Started | Low | Team |
 
 ## Status Legend
 
