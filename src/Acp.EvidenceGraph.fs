@@ -1,6 +1,8 @@
 namespace Acp
 
 open System
+open System.Text.Json
+open System.Text.Json.Nodes
 
 /// BC-001: Evidence Graph (G.6, A.10)
 /// Directed acyclic graph from claims to grounding evidence.
@@ -246,35 +248,52 @@ module EvidenceGraph =
         // =====================
 
         /// Convert node to JSON-compatible representation
-        let private nodeToJson (node: EvidenceNode) : string =
+        let private nodeToJsonNode (node: EvidenceNode) : JsonObject =
             match node with
             | EvidenceNode.Claim(ClaimId id, content) ->
-                sprintf "{\"type\":\"claim\",\"id\":\"%s\",\"content\":\"%s\"}" id content
+                let o = JsonObject()
+                o["type"] <- JsonValue.Create("claim")
+                o["id"] <- JsonValue.Create(id)
+                o["content"] <- JsonValue.Create(content)
+                o
             | EvidenceNode.Evidence(EvidenceId id, GroundingRef artifact) ->
-                sprintf "{\"type\":\"evidence\",\"id\":\"%s\",\"artifact\":\"%s\"}" id artifact
-            | EvidenceNode.GroundingHolon(GroundingRef holon) -> sprintf "{\"type\":\"grounding\",\"id\":\"%s\"}" holon
+                let o = JsonObject()
+                o["type"] <- JsonValue.Create("evidence")
+                o["id"] <- JsonValue.Create(id)
+                o["artifact"] <- JsonValue.Create(artifact)
+                o
+            | EvidenceNode.GroundingHolon(GroundingRef holon) ->
+                let o = JsonObject()
+                o["type"] <- JsonValue.Create("grounding")
+                o["id"] <- JsonValue.Create(holon)
+                o
 
         /// Convert edge to JSON-compatible representation
-        let private edgeToJson (edge: EvidenceEdge) : string =
-            let labelPart =
-                match edge.label with
-                | Some l -> sprintf ",\"label\":\"%s\"" l
-                | None -> ""
+        let private edgeToJsonNode (edge: EvidenceEdge) : JsonObject =
+            let o = JsonObject()
+            o["source"] <- JsonValue.Create(edge.source)
+            o["target"] <- JsonValue.Create(edge.target)
+            o["level"] <- JsonValue.Create(sprintf "L%d" (AssuranceLevel.toInt edge.level))
 
-            sprintf
-                "{\"source\":\"%s\",\"target\":\"%s\",\"level\":\"L%d\"%s}"
-                edge.source
-                edge.target
-                (AssuranceLevel.toInt edge.level)
-                labelPart
+            match edge.label with
+            | Some l -> o["label"] <- JsonValue.Create(l)
+            | None -> ()
 
-        /// Serialize graph to JSON (simplified, for debugging)
+            o
+
+        /// Serialize graph to JSON (for debugging)
         let toJson (graph: EvidenceGraph) : string =
-            let nodesJson = nodes graph |> List.map nodeToJson |> String.concat ","
+            let nodesJson = JsonArray()
+            nodes graph |> List.iter (fun n -> nodesJson.Add(nodeToJsonNode n :> JsonNode))
 
-            let edgesJson = edges graph |> List.map edgeToJson |> String.concat ","
+            let edgesJson = JsonArray()
+            edges graph |> List.iter (fun e -> edgesJson.Add(edgeToJsonNode e :> JsonNode))
 
-            sprintf "{\"nodes\":[%s],\"edges\":[%s]}" nodesJson edgesJson
+            let root = JsonObject()
+            root["nodes"] <- nodesJson
+            root["edges"] <- edgesJson
+
+            root.ToJsonString(JsonSerializerOptions(WriteIndented = false))
 
     // =====================
     // Builder API
