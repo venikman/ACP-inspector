@@ -218,8 +218,11 @@ module Assurance =
         /// Check if evidence is stale at a specific time (INV-ASR-03)
         let isStale (now: DateTimeOffset) (r: Reliability) : bool = (status now r) = EvidenceStatus.Stale
 
+        /// Check if evidence is still fresh at a specific time
+        let isFresh (now: DateTimeOffset) (r: Reliability) : bool = not (isStale now r)
+
         /// Check if evidence is still fresh at current time
-        let isFresh (r: Reliability) : bool = not (isStale DateTimeOffset.UtcNow r)
+        let isFreshNow (r: Reliability) : bool = isFresh DateTimeOffset.UtcNow r
 
         /// Apply CL penalty to reliability when crossing context boundaries (C.2.2, F.9)
         /// R_effective = R × CL_penalty
@@ -279,7 +282,7 @@ module Assurance =
                   yield "INV-ASR-01: Claim has no scope (unbounded)"
               if env.reliability.level = AssuranceLevel.L2 && env.groundingRef.IsNone then
                   yield "INV-ASR-05: L2 claim requires grounding reference"
-              if not (Reliability.isFresh env.reliability) then
+              if not (Reliability.isFresh DateTimeOffset.UtcNow env.reliability) then
                   yield "INV-ASR-03: Evidence is stale" ]
 
     // =====================

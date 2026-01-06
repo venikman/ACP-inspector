@@ -108,18 +108,21 @@ module ``Reliability`` =
 
     [<Fact>]
     let ``isFresh returns true when no decay`` () =
+        let now = DateTimeOffset.Parse("2026-01-01T00:00:00Z")
         let r = Reliability.unsubstantiated
-        Assert.True(Reliability.isFresh r)
+        Assert.True(Reliability.isFresh now r)
 
     [<Fact>]
     let ``isFresh returns false when stale`` () =
+        let now = DateTimeOffset.Parse("2026-01-01T00:00:00Z")
+
         let r =
             { level = AssuranceLevel.L1
               pathId = Some(PathId.create "old")
               decay = Some(TimeSpan.FromMinutes(1.0))
-              timestamp = Some(DateTimeOffset.UtcNow.AddHours(-1.0)) }
+              timestamp = Some(now.AddHours(-1.0)) }
 
-        Assert.False(Reliability.isFresh r)
+        Assert.False(Reliability.isFresh now r)
 
     [<Fact>]
     let ``status returns Fresh when within window`` () =
