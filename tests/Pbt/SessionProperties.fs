@@ -68,7 +68,8 @@ module SessionProperties =
                     @ [ Message.FromAgent(
                             AgentToClientMessage.SessionPromptResult
                                 { sessionId = sid
-                                  stopReason = StopReason.EndTurn }
+                                  stopReason = StopReason.EndTurn
+                                  usage = None }
                         ) ]
 
                 let r = runWithValidation sid spec msgs false None None
@@ -107,7 +108,10 @@ module SessionProperties =
                             Message.FromClient(ClientToAgentMessage.SessionPrompt { sessionId = sid; prompt = [] })
                             Message.FromClient(ClientToAgentMessage.SessionCancel { sessionId = sid })
                             Message.FromAgent(
-                                AgentToClientMessage.SessionPromptResult { sessionId = sid; stopReason = sr }
+                                AgentToClientMessage.SessionPromptResult
+                                    { sessionId = sid
+                                      stopReason = sr
+                                      usage = None }
                             ) ]
 
                     let r = runWithValidation sid spec msgs false None None

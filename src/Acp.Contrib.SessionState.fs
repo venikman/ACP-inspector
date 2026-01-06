@@ -1,6 +1,7 @@
 namespace Acp.Contrib
 
 open System
+open System.Text.Json.Nodes
 open Acp.Domain
 open Acp.Domain.PrimitivesAndParties
 open Acp.Domain.Prompting
@@ -30,6 +31,9 @@ module SessionState =
     /// Immutable snapshot of the current session state.
     type SessionSnapshot =
         { sessionId: SessionId
+          title: string option
+          meta: JsonObject option
+          usageUpdates: JsonObject list
           toolCalls: Map<string, ToolCallView>
           planEntries: PlanEntry list
           currentModeId: SessionModeId option
@@ -60,6 +64,9 @@ module SessionState =
         let mutable userMessages: ContentChunk list = []
         let mutable agentMessages: ContentChunk list = []
         let mutable agentThoughts: ContentChunk list = []
+        let mutable sessionTitle: string option = None
+        let mutable sessionMeta: JsonObject option = None
+        let mutable usageUpdates: JsonObject list = []
 
         let mutable subscribers: (SessionSnapshot -> SessionUpdateNotification -> unit) list =
             []
@@ -82,6 +89,9 @@ module SessionState =
                     userMessages <- []
                     agentMessages <- []
                     agentThoughts <- []
+                    sessionTitle <- None
+                    sessionMeta <- None
+                    usageUpdates <- []
                     sessionId <- Some notificationSessionId
                 else
                     raise (
@@ -130,6 +140,63 @@ module SessionState =
 
                 toolCalls <- toolCalls |> Map.add update.toolCallId state
 
+        let tryGetString (o: JsonObject) (name: string) =
+            let mutable value: JsonNode | null = null
+
+            if o.TryGetPropertyValue(name, &value) then
+                match value with
+                | null -> None
+                | :? JsonValue as v ->
+                    try
+                        Some(v.GetValue<string>())
+                    with _ ->
+                        None
+                | _ -> None
+            else
+                None
+
+        let tryGetObject (o: JsonObject) (name: string) =
+            let mutable value: JsonNode | null = null
+
+            if o.TryGetPropertyValue(name, &value) then
+                match value with
+                | :? JsonObject as obj -> Some obj
+                | _ -> None
+            else
+                None
+
+        let cloneObject (o: JsonObject) =
+            match o.DeepClone() with
+            | :? JsonObject as cloned -> cloned
+            | _ -> JsonObject()
+
+        // Returns a new JsonObject with cloned values.
+        let mergeMeta (current: JsonObject option) (update: JsonObject) =
+            let merged =
+                match current with
+                | None -> JsonObject()
+                | Some existing -> cloneObject existing
+
+            for kvp in update do
+                let value =
+                    match kvp.Value with
+                    | null -> null
+                    | node -> node.DeepClone()
+
+                merged[kvp.Key] <- value
+
+            Some merged
+
+        let applySessionInfoUpdate (payload: JsonObject) =
+            tryGetString payload "title" |> Option.iter (fun t -> sessionTitle <- Some t)
+
+            match tryGetObject payload "_meta" with
+            | None -> ()
+            | Some meta -> sessionMeta <- mergeMeta sessionMeta meta
+
+        let applyUsageUpdate (payload: JsonObject) =
+            usageUpdates <- cloneObject payload :: usageUpdates
+
         let applyUpdate (update: SessionUpdate) =
             match update with
             | SessionUpdate.UserMessageChunk chunk -> userMessages <- userMessages @ [ chunk ]
@@ -140,6 +207,11 @@ module SessionState =
             | SessionUpdate.Plan plan -> planEntries <- plan.entries
             | SessionUpdate.AvailableCommandsUpdate update -> availableCommands <- update.availableCommands
             | SessionUpdate.CurrentModeUpdate update -> currentModeId <- Some update.currentModeId
+            | SessionUpdate.Ext(tag, payload) ->
+                match tag with
+                | "session_info_update" -> applySessionInfoUpdate payload
+                | "usage_update" -> applyUsageUpdate payload
+                | _ -> ()
 
         let createSnapshot () : SessionSnapshot =
             match sessionId with
@@ -161,6 +233,9 @@ module SessionState =
                     |> Map.ofList
 
                 { sessionId = sid
+                  title = sessionTitle
+                  meta = sessionMeta |> Option.map cloneObject
+                  usageUpdates = usageUpdates |> List.rev |> List.map cloneObject
                   toolCalls = toolCallViews
                   planEntries = List.map id planEntries
                   currentModeId = currentModeId

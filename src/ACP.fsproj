@@ -29,6 +29,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Acp.Domain.fs" />
+    <Compile Include="Acp.MessageTag.fs" />
     <Compile Include="Acp.Assurance.fs" />
     <Compile Include="Acp.EvidenceGraph.fs" />
     <Compile Include="Acp.Capability.fs" />

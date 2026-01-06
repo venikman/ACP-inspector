@@ -426,7 +426,8 @@ module Domain =
         /// Wire result does not include a session id; we reattach it from the request.
         type SessionPromptResult =
             { sessionId: SessionId
-              stopReason: StopReason }
+              stopReason: StopReason
+              usage: JsonObject option }
 
         /// Domain-level error outcome (non-wire, for sentinel and higher-level tooling).
         [<RequireQualifiedAccess>]
@@ -576,6 +577,8 @@ module Domain =
             | Plan of Plan
             | AvailableCommandsUpdate of AvailableCommandsUpdate
             | CurrentModeUpdate of CurrentModeUpdate
+            /// Unknown update payload preserved for forward compatibility.
+            | Ext of tag: string * payload: JsonObject
 
         type SessionUpdateNotification =
             { sessionId: SessionId

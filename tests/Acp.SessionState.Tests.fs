@@ -8,6 +8,7 @@ open Acp.Domain.PrimitivesAndParties
 open Acp.Domain.Prompting
 open Acp.Domain.SessionModes
 open Acp.Contrib
+open System.Text.Json.Nodes
 
 module SessionStateTests =
 
@@ -99,6 +100,64 @@ module SessionStateTests =
         Assert.Equal("Read file", tc.title)
         Assert.Equal(ToolKind.Read, tc.kind)
         Assert.Equal(ToolCallStatus.InProgress, tc.status)
+
+    [<Fact>]
+    let ``Apply merges session_info_update title and meta`` () =
+        let acc = SessionState.SessionAccumulator()
+
+        let payload1 = JsonObject()
+        payload1["sessionUpdate"] <- JsonValue.Create("session_info_update")
+        payload1["title"] <- JsonValue.Create("First Title")
+        let meta1 = JsonObject()
+        meta1["traceparent"] <- JsonValue.Create("00-abc-123-01")
+        payload1["_meta"] <- meta1
+
+        let notify1 =
+            { sessionId = SessionId "s1"
+              update = SessionUpdate.Ext("session_info_update", payload1) }
+
+        let snapshot1 = acc.Apply(notify1)
+        Assert.Equal(Some "First Title", snapshot1.title)
+        Assert.True(snapshot1.meta.IsSome)
+
+        let payload2 = JsonObject()
+        payload2["sessionUpdate"] <- JsonValue.Create("session_info_update")
+        payload2["title"] <- JsonValue.Create("Second Title")
+        let meta2 = JsonObject()
+        meta2["baggage"] <- JsonValue.Create("k=v")
+        payload2["_meta"] <- meta2
+
+        let notify2 =
+            { sessionId = SessionId "s1"
+              update = SessionUpdate.Ext("session_info_update", payload2) }
+
+        let snapshot2 = acc.Apply(notify2)
+        Assert.Equal(Some "Second Title", snapshot2.title)
+
+        match snapshot2.meta with
+        | None -> failwith "expected _meta to be set"
+        | Some meta ->
+            let traceparent = (meta["traceparent"] :?> JsonValue).GetValue<string>()
+            let baggage = (meta["baggage"] :?> JsonValue).GetValue<string>()
+            Assert.Equal("00-abc-123-01", traceparent)
+            Assert.Equal("k=v", baggage)
+
+    [<Fact>]
+    let ``Apply tracks usage_update payloads`` () =
+        let acc = SessionState.SessionAccumulator()
+
+        let payload = JsonObject()
+        payload["sessionUpdate"] <- JsonValue.Create("usage_update")
+        let usage = JsonObject()
+        usage["inputTokens"] <- JsonValue.Create(10)
+        payload["usage"] <- usage
+
+        let notify =
+            { sessionId = SessionId "s1"
+              update = SessionUpdate.Ext("usage_update", payload) }
+
+        let snapshot = acc.Apply(notify)
+        Assert.Single(snapshot.usageUpdates) |> ignore
 
     [<Fact>]
     let ``Apply updates tool call status`` () =

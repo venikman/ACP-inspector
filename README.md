@@ -113,6 +113,7 @@ dotnet tool restore && dotnet fantomas src tests apps --check
 - FPF Alignment: [docs/reports/fpf-alignment-evaluation-20260106.md](docs/reports/fpf-alignment-evaluation-20260106.md)
 - SDK docs entrypoint: [docs/index.md](docs/index.md)
 - SDK comparison: [docs/SDK-COMPARISON.md](docs/SDK-COMPARISON.md)
+- ACP RFD tracker: [docs/ACP-RFD-TRACKER.md](docs/ACP-RFD-TRACKER.md)
 - Examples: [examples/](examples/)
 
 ## Who benefits (and how)

@@ -8,6 +8,11 @@ Agent-executable tasks for ACP-inspector maintenance and development.
 | ---- | ----- | ------ | -------- | -------- |
 | [TASK-002](TASK-002-fpf-alignment-improvements.md) | FPF Alignment Improvements | In Progress | High | Team |
 | [TASK-003](TASK-003-fpf-advanced-features.md) | FPF Advanced Features (Phase 3) | Not Started | Low | Team |
+| [TASK-004](TASK-004-acp-meta-passthrough.md) | ACP _meta Passthrough & Domain Support | Pending | High | Team |
+| [TASK-005](TASK-005-proxy-chains-support.md) | Proxy Chains Draft Support | Pending | Medium | Team |
+| [TASK-006](TASK-006-telemetry-export-panel.md) | Telemetry Export Panel | Pending | Medium | Team |
+| [TASK-007](TASK-007-agent-registry.md) | ACP Agent Registry Support | Pending | Medium | Team |
+| [TASK-008](TASK-008-schema-pin-and-ci-watch.md) | ACP Schema Pin + CI Watchers | Pending | High | Team |
 
 ## Status Legend
 

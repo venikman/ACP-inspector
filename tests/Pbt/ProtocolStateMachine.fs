@@ -150,7 +150,12 @@ module ProtocolStateMachine =
             | m -> m)
             (fun (actual, model) ->
                 let msg =
-                    Message.FromAgent(AgentToClientMessage.SessionPromptResult { sessionId = sid; stopReason = sr })
+                    Message.FromAgent(
+                        AgentToClientMessage.SessionPromptResult
+                            { sessionId = sid
+                              stopReason = sr
+                              usage = None }
+                    )
 
                 let ok = apply actual msg
 

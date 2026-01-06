@@ -89,7 +89,8 @@ module ValidationTests =
           Message.FromAgent(
               AgentToClientMessage.SessionPromptResult
                   { sessionId = sid
-                    stopReason = StopReason.EndTurn }
+                    stopReason = StopReason.EndTurn
+                    usage = None }
           ) ]
 
     let mkCancelledTraceGood (sid: SessionId) : Message list =
@@ -106,7 +107,8 @@ module ValidationTests =
           Message.FromAgent(
               AgentToClientMessage.SessionPromptResult
                   { sessionId = sid
-                    stopReason = StopReason.Cancelled }
+                    stopReason = StopReason.Cancelled
+                    usage = None }
           ) ]
 
     let mkCancelledTraceBad (sid: SessionId) : Message list =
@@ -123,7 +125,8 @@ module ValidationTests =
           Message.FromAgent(
               AgentToClientMessage.SessionPromptResult
                   { sessionId = sid
-                    stopReason = StopReason.EndTurn }
+                    stopReason = StopReason.EndTurn
+                    usage = None }
           ) ]
 
     let mkSequentialPromptsTraceGood (sid: SessionId) : Message list =
@@ -139,7 +142,8 @@ module ValidationTests =
           Message.FromAgent(
               AgentToClientMessage.SessionPromptResult
                   { sessionId = sid
-                    stopReason = StopReason.EndTurn }
+                    stopReason = StopReason.EndTurn
+                    usage = None }
           )
           Message.FromClient(
               ClientToAgentMessage.SessionPrompt
@@ -149,7 +153,8 @@ module ValidationTests =
           Message.FromAgent(
               AgentToClientMessage.SessionPromptResult
                   { sessionId = sid
-                    stopReason = StopReason.EndTurn }
+                    stopReason = StopReason.EndTurn
+                    usage = None }
           ) ]
 
     let mkConcurrentPromptsTraceBad (sid: SessionId) : Message list =
@@ -170,7 +175,8 @@ module ValidationTests =
           Message.FromAgent(
               AgentToClientMessage.SessionPromptResult
                   { sessionId = sid
-                    stopReason = StopReason.EndTurn }
+                    stopReason = StopReason.EndTurn
+                    usage = None }
           ) ]
 
     let mkResultWithoutPromptTraceBad (sid: SessionId) : Message list =
@@ -181,7 +187,8 @@ module ValidationTests =
           Message.FromAgent(
               AgentToClientMessage.SessionPromptResult
                   { sessionId = sid
-                    stopReason = StopReason.EndTurn }
+                    stopReason = StopReason.EndTurn
+                    usage = None }
           ) ]
 
     [<Fact>]
@@ -234,7 +241,8 @@ module ValidationTests =
               Message.FromAgent(
                   AgentToClientMessage.SessionPromptResult
                       { sessionId = sid
-                        stopReason = StopReason.Cancelled }
+                        stopReason = StopReason.Cancelled
+                        usage = None }
               ) ]
 
         let result = runWithValidation sid spec trace true None None
