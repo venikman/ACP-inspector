@@ -330,27 +330,25 @@ module Assurance =
 
     /// Apply congruence level penalty when crossing context bridge (INV-SEM-03).
     /// Reliability is degraded based on the CL penalty factor.
+    /// Discrete level mapping (penalty factors: CL4=1.0, CL3=0.9, CL2=0.7, CL1=0.4, CL0=0.0)
     let crossBridge (cl: CongruenceLevel) (envelope: AssuranceEnvelope) : AssuranceEnvelope =
         let penalizedLevel =
             match cl with
-            | CongruenceLevel.CL0 -> AssuranceLevel.L0 // Complete degradation
+            | CongruenceLevel.CL0 -> AssuranceLevel.L0 // 0% retained - complete degradation
             | CongruenceLevel.CL1 ->
-                // 75% penalty - L2 becomes L1, L1 stays L1
-                if envelope.reliability.level = AssuranceLevel.L2 then
-                    AssuranceLevel.L1
-                else
-                    envelope.reliability.level
+                // 40% retained (60% loss) - L2 becomes L0, L1 becomes L0
+                AssuranceLevel.L0
             | CongruenceLevel.CL2 ->
-                // 50% penalty - L2 becomes L1
+                // 70% retained (30% loss) - L2 becomes L1, L1 stays L1
                 if envelope.reliability.level = AssuranceLevel.L2 then
                     AssuranceLevel.L1
                 else
                     envelope.reliability.level
             | CongruenceLevel.CL3 ->
-                // 25% penalty - slight degradation for L2 only in critical contexts
-                // For now, preserve level but mark for potential review
+                // 90% retained (10% loss) - L2 stays L2, L1 stays L1
+                // Minor penalty; preserve discrete level but continuous penalty applies
                 envelope.reliability.level
-            | CongruenceLevel.CL4 -> envelope.reliability.level // No penalty
+            | CongruenceLevel.CL4 -> envelope.reliability.level // 100% retained - no penalty
 
         { envelope with
             reliability =

@@ -248,7 +248,8 @@ module ``Bridge Crossing`` =
         Assert.Equal(AssuranceLevel.L0, crossed.reliability.level)
 
     [<Fact>]
-    let ``crossBridge CL1 degrades L2 to L1`` () =
+    let ``crossBridge CL1 degrades L2 to L0`` () =
+        // CL1 has 60% loss (0.4 penalty factor) - too lossy to preserve any assurance
         let env =
             { AssuranceEnvelope.unassured with
                 reliability =
@@ -256,7 +257,31 @@ module ``Bridge Crossing`` =
                         level = AssuranceLevel.L2 } }
 
         let crossed = crossBridge CongruenceLevel.CL1 env
+        Assert.Equal(AssuranceLevel.L0, crossed.reliability.level)
+
+    [<Fact>]
+    let ``crossBridge CL2 degrades L2 to L1`` () =
+        // CL2 has 30% loss (0.7 penalty factor) - L2 becomes L1
+        let env =
+            { AssuranceEnvelope.unassured with
+                reliability =
+                    { Reliability.unsubstantiated with
+                        level = AssuranceLevel.L2 } }
+
+        let crossed = crossBridge CongruenceLevel.CL2 env
         Assert.Equal(AssuranceLevel.L1, crossed.reliability.level)
+
+    [<Fact>]
+    let ``crossBridge CL3 preserves L2`` () =
+        // CL3 has 10% loss (0.9 penalty factor) - minor penalty, preserve discrete level
+        let env =
+            { AssuranceEnvelope.unassured with
+                reliability =
+                    { Reliability.unsubstantiated with
+                        level = AssuranceLevel.L2 } }
+
+        let crossed = crossBridge CongruenceLevel.CL3 env
+        Assert.Equal(AssuranceLevel.L2, crossed.reliability.level)
 
 module ``Assurance Finding`` =
 
