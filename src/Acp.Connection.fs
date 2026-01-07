@@ -31,12 +31,17 @@ module Connection =
     let private methodOfClientMessage =
         function
         | ClientToAgentMessage.Initialize _ -> "initialize"
+        | ClientToAgentMessage.ProxyInitialize _ -> "proxy/initialize"
         | ClientToAgentMessage.Authenticate _ -> "authenticate"
         | ClientToAgentMessage.SessionNew _ -> "session/new"
         | ClientToAgentMessage.SessionLoad _ -> "session/load"
         | ClientToAgentMessage.SessionPrompt _ -> "session/prompt"
         | ClientToAgentMessage.SessionSetMode _ -> "session/set_mode"
         | ClientToAgentMessage.SessionCancel _ -> "session/cancel"
+        | ClientToAgentMessage.ProxySuccessorRequest _
+        | ClientToAgentMessage.ProxySuccessorNotification _
+        | ClientToAgentMessage.ProxySuccessorResponse _
+        | ClientToAgentMessage.ProxySuccessorError _ -> "proxy/successor"
         | ClientToAgentMessage.ExtRequest(methodName, _)
         | ClientToAgentMessage.ExtNotification(methodName, _)
         | ClientToAgentMessage.ExtResponse(methodName, _)
@@ -62,6 +67,8 @@ module Connection =
         function
         | AgentToClientMessage.InitializeResult _ -> "initialize"
         | AgentToClientMessage.InitializeError _ -> "initialize"
+        | AgentToClientMessage.ProxyInitializeResult _ -> "proxy/initialize"
+        | AgentToClientMessage.ProxyInitializeError _ -> "proxy/initialize"
         | AgentToClientMessage.AuthenticateResult _ -> "authenticate"
         | AgentToClientMessage.AuthenticateError _ -> "authenticate"
         | AgentToClientMessage.SessionNewResult _ -> "session/new"
@@ -73,6 +80,10 @@ module Connection =
         | AgentToClientMessage.SessionSetModeResult _ -> "session/set_mode"
         | AgentToClientMessage.SessionSetModeError _ -> "session/set_mode"
         | AgentToClientMessage.SessionUpdate _ -> "session/update"
+        | AgentToClientMessage.ProxySuccessorRequest _
+        | AgentToClientMessage.ProxySuccessorNotification _
+        | AgentToClientMessage.ProxySuccessorResponse _
+        | AgentToClientMessage.ProxySuccessorError _ -> "proxy/successor"
         | AgentToClientMessage.FsReadTextFileRequest _ -> "fs/read_text_file"
         | AgentToClientMessage.FsWriteTextFileRequest _ -> "fs/write_text_file"
         | AgentToClientMessage.SessionRequestPermissionRequest _ -> "session/request_permission"
@@ -707,6 +718,19 @@ module Connection =
                                 sendResponse
                                     reqId
                                     (AgentToClientMessage.InitializeError
+                                        { code = -32603
+                                          message = msg
+                                          data = None })
+                    | ClientToAgentMessage.ProxyInitialize p, Some reqId ->
+                        let! result = handlers.onInitialize p
+
+                        match result with
+                        | Ok r -> do! sendResponse reqId (AgentToClientMessage.ProxyInitializeResult r)
+                        | Error msg ->
+                            do!
+                                sendResponse
+                                    reqId
+                                    (AgentToClientMessage.ProxyInitializeError
                                         { code = -32603
                                           message = msg
                                           data = None })

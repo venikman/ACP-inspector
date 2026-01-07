@@ -9,6 +9,7 @@ open System.Diagnostics
 open System.IO
 open System.Net.Http
 open System.Net.WebSockets
+open System.Security.Cryptography
 open System.Text
 open System.Text.Json
 open System.Text.Json.Nodes
@@ -26,6 +27,7 @@ open Acp.Domain
 open Acp.Domain.JsonRpc
 open Acp.Domain.PrimitivesAndParties
 open Acp.Domain.Prompting
+open Acp.Domain.SessionSetup
 open Acp.Domain.Messaging
 
 module private Cli =
@@ -145,14 +147,16 @@ module private Cli =
         { codec: Codec.CodecState
           rawCount: int
           messages: Message list
-          seenFindings: HashSet<string> }
+          seenFindings: HashSet<string>
+          telemetryHintPrinted: bool }
 
     module InspectState =
         let empty =
             { codec = Codec.CodecState.empty
               rawCount = 0
               messages = []
-              seenFindings = HashSet(StringComparer.Ordinal) }
+              seenFindings = HashSet(StringComparer.Ordinal)
+              telemetryHintPrinted = false }
 
     let private findingKey (f: Validation.ValidationFinding) =
         let failureCode = f.failure |> Option.map _.code |> Option.defaultValue ""
@@ -232,6 +236,31 @@ module private Cli =
             | _ -> None
         else
             None
+
+    let private tryGetArrayProperty (o: JsonObject) (name: string) =
+        let mutable value: JsonNode | null = null
+
+        if o.TryGetPropertyValue(name, &value) then
+            match value with
+            | :? JsonArray as arr -> Some arr
+            | _ -> None
+        else
+            None
+
+    let private tryGetStringArrayProperty (o: JsonObject) (name: string) =
+        match tryGetArrayProperty o name with
+        | None -> []
+        | Some arr ->
+            arr
+            |> Seq.choose (function
+                | null -> None
+                | :? JsonValue as v ->
+                    try
+                        Some(v.GetValue<string>())
+                    with :? InvalidOperationException ->
+                        None
+                | _ -> None)
+            |> Seq.toList
 
     let private tryFindNumberBy (o: JsonObject) (predicate: string -> bool) =
         o
@@ -367,8 +396,86 @@ module private Cli =
         with :? JsonException ->
             None
 
+    let private renderTelemetryGuidance () =
+        Console.Out.WriteLine("  [draft] telemetry export (otlp)")
+        Console.Out.WriteLine("  OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318")
+        Console.Out.WriteLine("  OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf")
+        Console.Out.WriteLine("  OTEL_SERVICE_NAME=agent-name")
+        Console.Out.WriteLine("  trace context keys: _meta.traceparent, _meta.tracestate, _meta.baggage")
+
+    let private renderMetaHighlights (meta: MetaHighlights) =
+        meta.traceparent
+        |> Option.iter (fun v -> Console.Out.WriteLine($"  _meta.traceparent={v}"))
+
+        meta.tracestate
+        |> Option.iter (fun v -> Console.Out.WriteLine($"  _meta.tracestate={v}"))
+
+        meta.baggage
+        |> Option.iter (fun v -> Console.Out.WriteLine($"  _meta.baggage={v}"))
+
+    let private renderProxySuccessorSummary (label: string) (p: Proxying.ProxySuccessorParams) =
+        let metaKeys =
+            p.meta
+            |> Option.map (fun m -> m |> Seq.map (fun kvp -> kvp.Key) |> Seq.toList)
+            |> Option.defaultValue []
+
+        let parts =
+            [ Some $"method={p.method}"
+              if p.parameters.IsSome then Some "params=present" else None
+              if metaKeys.Length > 0 then
+                  let keysText = String.Join(", ", metaKeys)
+                  Some $"metaKeys=[{keysText}]"
+              else
+                  None ]
+            |> List.choose id
+
+        let details = if parts.IsEmpty then "" else " " + String.Join(" ", parts)
+        Console.Out.WriteLine($"  [draft] proxy/successor {label}{details}")
+
+    let private renderProxySuccessorResponse (label: string) (methodName: string) (resultNodeOpt: JsonNode option) =
+        let resultHint =
+            if resultNodeOpt.IsSome then
+                "result=present"
+            else
+                "result=null"
+
+        Console.Out.WriteLine($"  [draft] proxy/successor {label} method={methodName} {resultHint}")
+
+    let private renderProxySuccessorError (methodName: string) (err: Error) =
+        Console.Out.WriteLine(
+            $"  [draft] proxy/successor error method={methodName} code={err.code} message=\"{err.message}\""
+        )
+
+    let private renderMcpAcpServers (servers: McpServer list) =
+        servers
+        |> List.choose (function
+            | McpServer.Acp v -> Some v
+            | _ -> None)
+        |> List.iter (fun v -> Console.Out.WriteLine($"  [draft] mcp transport=acp name={v.name} uuid={v.uuid}"))
+
     let private renderDraftDetails (msg: Message) =
         match msg with
+        | Message.FromClient(ClientToAgentMessage.SessionNew p) -> renderMcpAcpServers p.mcpServers
+        | Message.FromClient(ClientToAgentMessage.SessionLoad p) -> renderMcpAcpServers p.mcpServers
+        | Message.FromClient(ClientToAgentMessage.ProxyInitialize p) ->
+            Console.Out.WriteLine($"  [draft] proxy/initialize pv={p.protocolVersion}")
+        | Message.FromAgent(AgentToClientMessage.ProxyInitializeResult r) ->
+            Console.Out.WriteLine($"  [draft] proxy/initialize (result) pv={r.protocolVersion}")
+        | Message.FromAgent(AgentToClientMessage.ProxyInitializeError err) ->
+            Console.Out.WriteLine($"  [draft] proxy/initialize (error) code={err.code} message=\"{err.message}\"")
+        | Message.FromClient(ClientToAgentMessage.ProxySuccessorRequest p) -> renderProxySuccessorSummary "request" p
+        | Message.FromClient(ClientToAgentMessage.ProxySuccessorNotification p) ->
+            renderProxySuccessorSummary "notification" p
+        | Message.FromAgent(AgentToClientMessage.ProxySuccessorRequest p) -> renderProxySuccessorSummary "request" p
+        | Message.FromAgent(AgentToClientMessage.ProxySuccessorNotification p) ->
+            renderProxySuccessorSummary "notification" p
+        | Message.FromClient(ClientToAgentMessage.ProxySuccessorResponse(methodName, resultNodeOpt)) ->
+            renderProxySuccessorResponse "response" methodName resultNodeOpt
+        | Message.FromAgent(AgentToClientMessage.ProxySuccessorResponse(methodName, resultNodeOpt)) ->
+            renderProxySuccessorResponse "response" methodName resultNodeOpt
+        | Message.FromClient(ClientToAgentMessage.ProxySuccessorError(methodName, err))
+        | Message.FromAgent(AgentToClientMessage.ProxySuccessorError(methodName, err)) ->
+            renderProxySuccessorError methodName err
         | Message.FromAgent(AgentToClientMessage.SessionUpdate u) ->
             match u.update with
             | SessionUpdate.Ext(tag, payload) ->
@@ -484,20 +591,22 @@ module private Cli =
             if cfg.printRaw then
                 Console.Out.WriteLine(rawJson)
 
+            let metaOpt =
+                if cfg.unstable then
+                    tryExtractMetaHighlights rawJson
+                else
+                    None
+
+            let mutable telemetryHintPrinted = state.telemetryHintPrinted
+
             if cfg.unstable then
                 renderDraftDetails msg
 
-                match tryExtractMetaHighlights rawJson with
-                | None -> ()
-                | Some meta ->
-                    meta.traceparent
-                    |> Option.iter (fun v -> Console.Out.WriteLine($"  _meta.traceparent={v}"))
+                if not telemetryHintPrinted then
+                    renderTelemetryGuidance ()
+                    telemetryHintPrinted <- true
 
-                    meta.tracestate
-                    |> Option.iter (fun v -> Console.Out.WriteLine($"  _meta.tracestate={v}"))
-
-                    meta.baggage
-                    |> Option.iter (fun v -> Console.Out.WriteLine($"  _meta.baggage={v}"))
+                metaOpt |> Option.iter renderMetaHighlights
 
             let spec =
                 Validation.runWithValidation cfg.connectionId Protocol.spec messages cfg.stopOnFirstError None None
@@ -510,7 +619,8 @@ module private Cli =
 
             { state with
                 codec = codec'
-                messages = messages }
+                messages = messages
+                telemetryHintPrinted = telemetryHintPrinted }
 
     let usage () =
         Console.Error.WriteLine($"ACP Inspector (schema={Spec.Schema}, protocolVersion={ProtocolVersion.current})")
@@ -528,11 +638,15 @@ Commands:
   ws --url <ws://...> [--record <path>] [--connection-id <id>] [--stdin-send]
   sse --url <https://...> [--record <path>] [--connection-id <id>]
   proxy-stdio --client-cmd <cmd> --agent-cmd <cmd> [--record <path>] [--connection-id <id>]
+  registry --registry <path> [--query <text>] [--capability <c1,c2>] [--id <id>] [--limit <n>] [--registry-sha256 <hex>]
+  agent-manifest --id <id> [--out <path>] [--name <name>] [--version <ver>] [--schema-version <ver>]
+                 [--description <text>] [--homepage <url>] [--repository <url>] [--authors <a1,a2>]
+                 [--license <id>] [--capabilities <c1,c2>] [--auth-json <path>] [--distribution-json <path>] [--force]
 
 Common options:
   --stop-on-first-error
   --print-raw
-  --acp-unstable              Enable Draft RFD parsing/rendering
+  --acp-unstable              Enable Draft RFD parsing/rendering (required for registry commands)
   --otel / --otel-console       Enable OpenTelemetry (includes .NET runtime metrics)
   --otlp-endpoint <url>
   --service-name <name>
@@ -659,6 +773,370 @@ Common options:
                 member _.Dispose() =
                     tracerProvider.Dispose()
                     meterProvider.Dispose() }
+
+    // ---- Agent registry (draft) ----
+
+    type AgentManifest =
+        { id: string
+          name: string option
+          version: string option
+          schemaVersion: string option
+          description: string option
+          homepage: string option
+          repository: string option
+          authors: string list
+          license: string option
+          capabilities: string list
+          auth: JsonNode option
+          distributionTargets: string list }
+
+    let private parseCsv (value: string) =
+        value.Split(',', StringSplitOptions.RemoveEmptyEntries)
+        |> Array.map (fun s -> s.Trim())
+        |> Array.filter (fun s -> not (String.IsNullOrWhiteSpace s))
+        |> Array.toList
+
+    let private tryGetNodeProperty (o: JsonObject) (name: string) =
+        let mutable value: JsonNode | null = null
+
+        if o.TryGetPropertyValue(name, &value) then
+            match value with
+            | null -> None
+            | node -> Some node
+        else
+            None
+
+    let private parseAgentManifest (node: JsonNode) : Result<AgentManifest, string> =
+        match node with
+        | null -> Error "null entry"
+        | :? JsonObject as o ->
+            match tryGetStringProperty o "id" with
+            | None -> Error "missing id"
+            | Some id ->
+                let distributionTargets =
+                    tryGetObjectProperty o "distribution"
+                    |> Option.map (fun d -> d |> Seq.map (fun kvp -> kvp.Key) |> Seq.toList |> List.sort)
+                    |> Option.defaultValue []
+
+                Ok
+                    { id = id
+                      name = tryGetStringProperty o "name"
+                      version = tryGetStringProperty o "version"
+                      schemaVersion = tryGetStringProperty o "schema_version"
+                      description = tryGetStringProperty o "description"
+                      homepage = tryGetStringProperty o "homepage"
+                      repository = tryGetStringProperty o "repository"
+                      authors = tryGetStringArrayProperty o "authors"
+                      license = tryGetStringProperty o "license"
+                      capabilities = tryGetStringArrayProperty o "capabilities"
+                      auth = tryGetNodeProperty o "auth" |> Option.map (fun n -> n.DeepClone())
+                      distributionTargets = distributionTargets }
+        | _ -> Error "expected object"
+
+    let private loadRegistryFile (path: string) : Result<AgentManifest list * string list, string> =
+        try
+            let root = JsonNode.Parse(File.ReadAllText(path))
+
+            if isNull root then
+                Error "registry.json is empty"
+            else
+                let entriesOpt =
+                    match root with
+                    | :? JsonArray as arr -> Some(arr |> Seq.toList)
+                    | :? JsonObject as obj -> tryGetArrayProperty obj "agents" |> Option.map Seq.toList
+                    | _ -> None
+
+                match entriesOpt with
+                | None -> Error "registry.json must be an array or contain an 'agents' array"
+                | Some entries ->
+                    let manifests = ResizeArray<AgentManifest>()
+                    let warnings = ResizeArray<string>()
+
+                    for (idx, entry) in entries |> Seq.indexed do
+                        match parseAgentManifest entry with
+                        | Ok manifest -> manifests.Add manifest
+                        | Error err -> warnings.Add($"entry[{idx}]: {err}")
+
+                    Ok(List.ofSeq manifests, List.ofSeq warnings)
+        with ex ->
+            Error ex.Message
+
+    let private computeSha256 (bytes: byte[]) =
+        use sha = SHA256.Create()
+
+        sha.ComputeHash(bytes)
+        |> Array.map (fun b -> b.ToString("x2"))
+        |> String.concat ""
+
+    let private truncate (maxLen: int) (value: string) =
+        if value.Length <= maxLen then
+            value
+        else
+            value.Substring(0, maxLen - 3) + "..."
+
+    let private matchesQuery (queryOpt: string option) (manifest: AgentManifest) =
+        match queryOpt |> Option.map (fun v -> v.Trim()) with
+        | None -> true
+        | Some q when String.IsNullOrWhiteSpace q -> true
+        | Some q ->
+            let candidates =
+                [ Some manifest.id
+                  manifest.name
+                  manifest.version
+                  manifest.description
+                  manifest.homepage
+                  manifest.repository
+                  manifest.license ]
+                @ (manifest.authors |> List.map Some)
+                @ (manifest.capabilities |> List.map Some)
+
+            candidates
+            |> List.choose id
+            |> List.exists (fun v -> v.Contains(q, StringComparison.OrdinalIgnoreCase))
+
+    let private matchesCapabilities (caps: string list) (manifest: AgentManifest) =
+        caps
+        |> List.forall (fun cap ->
+            manifest.capabilities
+            |> List.exists (fun c -> c.Equals(cap, StringComparison.OrdinalIgnoreCase)))
+
+    let private renderRegistryEntry (manifest: AgentManifest) =
+        let displayName =
+            match manifest.name with
+            | None -> manifest.id
+            | Some name when name = manifest.id -> manifest.id
+            | Some name -> $"{manifest.id} ({name})"
+
+        let version = manifest.version |> Option.defaultValue "?"
+        Console.Out.WriteLine($"- {displayName} v{version}")
+
+        let details = ResizeArray<string>()
+
+        manifest.description
+        |> Option.map (truncate 120)
+        |> Option.iter (fun d -> details.Add($"desc={d}"))
+
+        if manifest.capabilities.Length > 0 then
+            let capsText = String.Join(", ", manifest.capabilities)
+            details.Add($"caps={capsText}")
+
+        if manifest.distributionTargets.Length > 0 then
+            let targetsText = String.Join(", ", manifest.distributionTargets)
+            details.Add($"targets={targetsText}")
+
+        if details.Count > 0 then
+            let detailsText = String.Join(" ", details)
+            Console.Out.WriteLine($"  {detailsText}")
+
+    let private tryReadJsonFile (path: string) : Result<JsonNode, string> =
+        if not (File.Exists path) then
+            Error $"File not found: {path}"
+        else
+            try
+                let node = JsonNode.Parse(File.ReadAllText(path))
+                if isNull node then Error $"Empty JSON: {path}" else Ok node
+            with ex ->
+                Error ex.Message
+
+    let private tryReadJsonArray (path: string) : Result<JsonArray, string> =
+        match tryReadJsonFile path with
+        | Ok(:? JsonArray as arr) -> Ok arr
+        | Ok _ -> Error "Expected JSON array"
+        | Error err -> Error err
+
+    let private tryReadJsonObject (path: string) : Result<JsonObject, string> =
+        match tryReadJsonFile path with
+        | Ok(:? JsonObject as obj) -> Ok obj
+        | Ok _ -> Error "Expected JSON object"
+        | Error err -> Error err
+
+    let private requireUnstable (args: string[]) =
+        if hasFlagEnabled "--acp-unstable" args then
+            Ok()
+        else
+            Console.Error.WriteLine("[error] This command requires --acp-unstable.")
+            Error(int ExitCode.Usage)
+
+    let registry (args: string[]) =
+        match requireUnstable args with
+        | Error code -> code
+        | Ok() ->
+            match tryGetArg "--registry" args with
+            | None ->
+                usage ()
+                int ExitCode.Usage
+            | Some path ->
+                if not (File.Exists path) then
+                    Console.Error.WriteLine($"[error] Registry file not found: {path}")
+                    int ExitCode.RuntimeError
+                else
+                    let bytes = File.ReadAllBytes path
+
+                    let hashCheckResult =
+                        match tryGetArg "--registry-sha256" args with
+                        | None -> Ok()
+                        | Some expected ->
+                            let actual = computeSha256 bytes
+
+                            if actual.Equals(expected, StringComparison.OrdinalIgnoreCase) then
+                                Ok()
+                            else
+                                Console.Error.WriteLine(
+                                    $"[error] Registry sha256 mismatch (expected {expected}, got {actual})"
+                                )
+
+                                Error(int ExitCode.RuntimeError)
+
+                    match hashCheckResult with
+                    | Error code -> code
+                    | Ok() ->
+                        match loadRegistryFile path with
+                        | Error msg ->
+                            Console.Error.WriteLine($"[error] Failed to parse registry: {msg}")
+                            int ExitCode.RuntimeError
+                        | Ok(manifests, warnings) ->
+                            for warning in warnings do
+                                Console.Error.WriteLine($"[warning] {warning}")
+
+                            let idFilter = tryGetArg "--id" args
+                            let queryFilter = tryGetArg "--query" args
+
+                            let requiredCaps =
+                                tryGetArg "--capability" args |> Option.map parseCsv |> Option.defaultValue []
+
+                            let filtered =
+                                manifests
+                                |> List.filter (fun m ->
+                                    let idOk =
+                                        match idFilter with
+                                        | None -> true
+                                        | Some id -> m.id.Equals(id, StringComparison.OrdinalIgnoreCase)
+
+                                    idOk && matchesQuery queryFilter m && matchesCapabilities requiredCaps m)
+
+                            let filtered =
+                                match tryGetArg "--limit" args with
+                                | None -> filtered
+                                | Some raw ->
+                                    match Int32.TryParse(raw) with
+                                    | true, limit when limit > 0 ->
+                                        if filtered.Length > limit then
+                                            filtered |> List.take limit
+                                        else
+                                            filtered
+                                    | _ -> filtered
+
+                            Console.Out.WriteLine($"registry: {path}")
+                            Console.Out.WriteLine($"agents: {manifests.Length} (matched={filtered.Length})")
+
+                            if filtered.IsEmpty then
+                                Console.Out.WriteLine("no matching agents")
+                            else
+                                for manifest in filtered do
+                                    renderRegistryEntry manifest
+
+                            int ExitCode.Ok
+
+    let agentManifest (args: string[]) =
+        match requireUnstable args with
+        | Error code -> code
+        | Ok() ->
+            match tryGetArg "--id" args with
+            | None ->
+                usage ()
+                int ExitCode.Usage
+            | Some id ->
+                let outPath =
+                    tryGetArg "--out" args
+                    |> Option.filter (fun p -> not (String.IsNullOrWhiteSpace p))
+                    |> Option.defaultValue (Path.Combine(id, "agent.json"))
+
+                let force = hasFlag "--force" args
+
+                if File.Exists outPath && not force then
+                    Console.Error.WriteLine($"[error] Output already exists: {outPath} (use --force to overwrite)")
+                    int ExitCode.RuntimeError
+                else
+                    let name = tryGetArg "--name" args |> Option.defaultValue id
+                    let version = tryGetArg "--version" args |> Option.defaultValue "0.1.0"
+
+                    let schemaVersion = tryGetArg "--schema-version" args |> Option.defaultValue "1"
+
+                    let description =
+                        tryGetArg "--description" args
+                        |> Option.defaultValue "TODO: describe the agent."
+
+                    let homepage =
+                        tryGetArg "--homepage" args |> Option.defaultValue "https://example.com"
+
+                    let repository =
+                        tryGetArg "--repository" args |> Option.defaultValue "https://example.com/repo"
+
+                    let license = tryGetArg "--license" args |> Option.defaultValue "UNLICENSED"
+
+                    let authors =
+                        tryGetArg "--authors" args |> Option.map parseCsv |> Option.defaultValue []
+
+                    let capabilities =
+                        tryGetArg "--capabilities" args |> Option.map parseCsv |> Option.defaultValue []
+
+                    let authNodeResult =
+                        match tryGetArg "--auth-json" args with
+                        | None -> Ok(JsonArray() :> JsonNode)
+                        | Some path -> tryReadJsonArray path |> Result.map (fun arr -> arr.DeepClone())
+
+                    let distributionResult =
+                        match tryGetArg "--distribution-json" args with
+                        | None ->
+                            let dist = JsonObject()
+                            let target = JsonObject()
+                            target["archive"] <- JsonValue.Create("https://example.com/agent-darwin-arm64.zip")
+                            target["cmd"] <- JsonValue.Create("./agent")
+                            let argsArray = JsonArray()
+                            argsArray.Add(JsonValue.Create("acp"))
+                            target["args"] <- argsArray
+                            dist["darwin-aarch64"] <- target
+                            Ok(dist)
+                        | Some path -> tryReadJsonObject path |> Result.map (fun obj -> obj.DeepClone() :?> JsonObject)
+
+                    match authNodeResult, distributionResult with
+                    | Error err, _
+                    | _, Error err ->
+                        Console.Error.WriteLine($"[error] {err}")
+                        int ExitCode.RuntimeError
+                    | Ok authNode, Ok distribution ->
+                        let manifest = JsonObject()
+                        manifest["id"] <- JsonValue.Create(id)
+                        manifest["name"] <- JsonValue.Create(name)
+                        manifest["version"] <- JsonValue.Create(version)
+                        manifest["schema_version"] <- JsonValue.Create(schemaVersion)
+                        manifest["description"] <- JsonValue.Create(description)
+                        manifest["homepage"] <- JsonValue.Create(homepage)
+                        manifest["repository"] <- JsonValue.Create(repository)
+
+                        let authorsArray = JsonArray()
+                        authors |> List.iter (fun a -> authorsArray.Add(JsonValue.Create(a)))
+                        manifest["authors"] <- authorsArray
+
+                        manifest["license"] <- JsonValue.Create(license)
+
+                        let capsArray = JsonArray()
+                        capabilities |> List.iter (fun c -> capsArray.Add(JsonValue.Create(c)))
+                        manifest["capabilities"] <- capsArray
+
+                        manifest["auth"] <- authNode
+                        manifest["distribution"] <- distribution
+
+                        let dir = Path.GetDirectoryName(outPath)
+
+                        if not (String.IsNullOrWhiteSpace dir) then
+                            Directory.CreateDirectory(dir) |> ignore
+
+                        let json = manifest.ToJsonString(JsonSerializerOptions(WriteIndented = true))
+
+                        File.WriteAllText(outPath, json, UTF8Encoding(false))
+                        Console.Out.WriteLine($"manifest written: {outPath}")
+                        int ExitCode.Ok
 
     let report (args: string[]) =
         match tryGetArg "--trace" args with
@@ -1129,6 +1607,8 @@ let main argv =
             | "ws" -> Cli.ws args
             | "sse" -> Cli.sse args
             | "proxy-stdio" -> Cli.proxyStdio args
+            | "registry" -> Cli.registry args
+            | "agent-manifest" -> Cli.agentManifest args
             | _ ->
                 Console.Error.WriteLine($"Unknown command: {cmd}")
                 Cli.usage ()

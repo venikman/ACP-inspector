@@ -1,6 +1,6 @@
 # TASK-005: Proxy Chains Draft Support
 
-**Status**: Spec-Wait
+**Status**: Done
 **Priority**: Medium
 **Assignee**: Team
 **Created**: 2026-01-06
@@ -8,7 +8,7 @@
 
 ## Deferral
 
-This work is intentionally deferred until the proxy chains RFD stabilizes. Revisit after stable-spec catch-up work is complete.
+Completed with draft support behind `--acp-unstable`.
 
 ## Objective
 
@@ -16,11 +16,11 @@ Parse and render proxy chain methods as first-class events in the inspector (beh
 
 ## Scope
 
-- [ ] Add explicit domain types for `proxy/initialize` and `proxy/successor`
-- [ ] Decode/encode proxy chain methods in codec
-- [ ] Render proxy chain events in Inspector output
-- [ ] Recognize MCP-over-ACP `acp` transport as experimental
-- [ ] Add golden transcript tests for proxy chain messages
+- [x] Add explicit domain types for `proxy/initialize` and `proxy/successor`
+- [x] Decode/encode proxy chain methods in codec
+- [x] Render proxy chain events in Inspector output
+- [x] Recognize MCP-over-ACP `acp` transport as experimental
+- [x] Add golden transcript tests for proxy chain messages
 
 ## Deliverables
 
@@ -41,6 +41,6 @@ dotnet test tests/ACP.Tests.fsproj
 
 ## Success Criteria
 
-- [ ] Proxy chain messages decode without errors
-- [ ] Inspector renders proxy chain events with Draft labels
-- [ ] Tests cover at least one proxy initialize and successor example
+- [x] Proxy chain messages decode without errors
+- [x] Inspector renders proxy chain events with Draft labels
+- [x] Tests cover at least one proxy initialize and successor example

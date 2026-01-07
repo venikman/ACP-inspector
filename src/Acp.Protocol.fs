@@ -126,14 +126,28 @@ module Protocol =
         let step phase message =
             match phase, message with
 
+            // Allow proxy successor traffic in any phase (draft proxy chains).
+            | _, Message.FromClient(ClientToAgentMessage.ProxySuccessorRequest _)
+            | _, Message.FromClient(ClientToAgentMessage.ProxySuccessorNotification _)
+            | _, Message.FromClient(ClientToAgentMessage.ProxySuccessorResponse _)
+            | _, Message.FromClient(ClientToAgentMessage.ProxySuccessorError _)
+            | _, Message.FromAgent(AgentToClientMessage.ProxySuccessorRequest _)
+            | _, Message.FromAgent(AgentToClientMessage.ProxySuccessorNotification _)
+            | _, Message.FromAgent(AgentToClientMessage.ProxySuccessorResponse _)
+            | _, Message.FromAgent(AgentToClientMessage.ProxySuccessorError _) -> Ok phase
+
             // --- Initialization handshake ---
 
             | Phase.AwaitingInitialize, Message.FromClient(ClientToAgentMessage.Initialize init) ->
+                Ok(Phase.WaitingForInitializeResult init)
+            | Phase.AwaitingInitialize, Message.FromClient(ClientToAgentMessage.ProxyInitialize init) ->
                 Ok(Phase.WaitingForInitializeResult init)
 
             | Phase.AwaitingInitialize, _ -> Error(ProtocolError.UnexpectedMessage(phase, message))
 
             | Phase.WaitingForInitializeResult _, Message.FromClient(ClientToAgentMessage.Initialize _) ->
+                Error ProtocolError.DuplicateInitialize
+            | Phase.WaitingForInitializeResult _, Message.FromClient(ClientToAgentMessage.ProxyInitialize _) ->
                 Error ProtocolError.DuplicateInitialize
 
             | Phase.WaitingForInitializeResult clientInit,
@@ -144,9 +158,19 @@ module Protocol =
                       sessions = Map.empty }
 
                 Ok(Phase.Ready ctx)
+            | Phase.WaitingForInitializeResult clientInit,
+              Message.FromAgent(AgentToClientMessage.ProxyInitializeResult agentInit) ->
+                let ctx =
+                    { clientInit = clientInit
+                      agentInit = agentInit
+                      sessions = Map.empty }
+
+                Ok(Phase.Ready ctx)
 
             // If initialize fails, the connection is not ready; allow the client to retry.
             | Phase.WaitingForInitializeResult _, Message.FromAgent(AgentToClientMessage.InitializeError _) ->
+                Ok Phase.AwaitingInitialize
+            | Phase.WaitingForInitializeResult _, Message.FromAgent(AgentToClientMessage.ProxyInitializeError _) ->
                 Ok Phase.AwaitingInitialize
 
             | Phase.WaitingForInitializeResult _, Message.FromAgent _ ->
@@ -160,7 +184,10 @@ module Protocol =
 
             // Ignore duplicate initialize messages after Ready; treat as protocol error.
             | Phase.Ready _, Message.FromClient(ClientToAgentMessage.Initialize _)
+            | Phase.Ready _, Message.FromClient(ClientToAgentMessage.ProxyInitialize _)
             | Phase.Ready _, Message.FromAgent(AgentToClientMessage.InitializeResult _) ->
+                Error ProtocolError.DuplicateInitialize
+            | Phase.Ready _, Message.FromAgent(AgentToClientMessage.ProxyInitializeResult _) ->
                 Error ProtocolError.DuplicateInitialize
 
             // session/new request does not change state; result creates the session.
