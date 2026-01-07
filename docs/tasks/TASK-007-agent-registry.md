@@ -1,6 +1,6 @@
 # TASK-007: ACP Agent Registry Support
 
-**Status**: Spec-Wait
+**Status**: Done
 **Priority**: Medium
 **Assignee**: Team
 **Created**: 2026-01-06
@@ -8,7 +8,7 @@
 
 ## Deferral
 
-This work is intentionally deferred until the registry RFD stabilizes. Revisit after stable-spec catch-up work is complete.
+Completed with draft registry ingestion and manifest generation behind `--acp-unstable`.
 
 ## Objective
 
@@ -16,11 +16,11 @@ Add optional registry ingestion (client side) and manifest generation (agent sid
 
 ## Scope
 
-- [ ] Define draft registry/manifest models
-- [ ] Implement optional ingestion of `registry.json`
-- [ ] Render searchable agent list in inspector
-- [ ] (If agent) generate `<id>/agent.json` manifest
-- [ ] Add security controls (pinning, signatures if available, user consent)
+- [x] Define draft registry/manifest models
+- [x] Implement optional ingestion of `registry.json`
+- [x] Render searchable agent list in inspector
+- [x] (If agent) generate `<id>/agent.json` manifest
+- [x] Add security controls (pinning, signatures if available, user consent)
 
 ## Deliverables
 
@@ -41,6 +41,6 @@ dotnet test tests/ACP.Tests.fsproj
 
 ## Success Criteria
 
-- [ ] Registry ingestion is optional and safe by default
-- [ ] Agent list renders without breaking existing flows
-- [ ] Security checks documented
+- [x] Registry ingestion is optional and safe by default
+- [x] Agent list renders without breaking existing flows
+- [x] Security checks documented

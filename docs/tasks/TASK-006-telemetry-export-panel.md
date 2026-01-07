@@ -1,6 +1,6 @@
 # TASK-006: Telemetry Export Panel
 
-**Status**: Spec-Wait
+**Status**: Done
 **Priority**: Medium
 **Assignee**: Team
 **Created**: 2026-01-06
@@ -8,7 +8,7 @@
 
 ## Deferral
 
-This work is intentionally deferred until the telemetry RFD stabilizes. Revisit after stable-spec catch-up work is complete.
+Completed with draft guidance behind `--acp-unstable`.
 
 ## Objective
 
@@ -16,10 +16,10 @@ Surface telemetry export guidance in the inspector and connect it to `_meta` tra
 
 ## Scope
 
-- [ ] Add a "Telemetry" section in inspector output/UI
-- [ ] Surface recommended OTLP endpoint + exporter options
-- [ ] Link `_meta.traceparent`/`tracestate`/`baggage` to telemetry hints
-- [ ] Document required knobs/flags for telemetry export
+- [x] Add a "Telemetry" section in inspector output/UI
+- [x] Surface recommended OTLP endpoint + exporter options
+- [x] Link `_meta.traceparent`/`tracestate`/`baggage` to telemetry hints
+- [x] Document required knobs/flags for telemetry export
 
 ## Deliverables
 
@@ -39,6 +39,6 @@ dotnet test tests/ACP.Tests.fsproj
 
 ## Success Criteria
 
-- [ ] Telemetry section appears when `--acp-unstable` is enabled
-- [ ] Trace context keys displayed in telemetry guidance
-- [ ] Docs updated with exporter configuration notes
+- [x] Telemetry section appears when `--acp-unstable` is enabled
+- [x] Trace context keys displayed in telemetry guidance
+- [x] Docs updated with exporter configuration notes

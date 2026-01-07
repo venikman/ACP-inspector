@@ -53,10 +53,10 @@ These are Draft-stage RFDs from <https://agentclientprotocol.com/rfds> as of 202
 | Resuming of existing sessions                | Draft  | P2       | ❌ Not started    |
 | Meta Field Propagation Conventions           | Draft  | P1       | ✅ Implemented    |
 | Session Info Update                          | Draft  | P1       | ✅ Implemented    |
-| Agent Telemetry Export                       | Draft  | P2       | ❌ Spec-Wait      |
-| Proxy Chains: Composable Agent Architectures | Draft  | P2       | ❌ Spec-Wait      |
+| Agent Telemetry Export                       | Draft  | P2       | ✅ Implemented    |
+| Proxy Chains: Composable Agent Architectures | Draft  | P2       | ✅ Implemented    |
 | Session Usage and Context Status             | Draft  | P1       | ✅ Implemented    |
-| ACP Agent Registry                           | Draft  | P2       | ❌ Spec-Wait      |
+| ACP Agent Registry                           | Draft  | P2       | ✅ Implemented    |
 
 ### Priority Legend
 
@@ -106,30 +106,30 @@ These are Draft-stage RFDs from <https://agentclientprotocol.com/rfds> as of 202
 
 ### P5: Proxy Chains Support (Parse-Only)
 
-Status: Spec-Wait (draft; deferred until upstream stabilizes)
+Status: Implemented (draft; gated by --acp-unstable)
 
-- [ ] Parse `proxy/successor` method
-- [ ] Parse `proxy/initialize` method
-- [ ] Display proxy chain events in inspector
-- [ ] Recognize MCP-over-ACP "acp" transport (experimental)
+- [x] Parse `proxy/successor` method
+- [x] Parse `proxy/initialize` method
+- [x] Display proxy chain events in inspector
+- [x] Recognize MCP-over-ACP "acp" transport (experimental)
 
 ### P6: Telemetry Export Alignment
 
-Status: Spec-Wait (draft; deferred until upstream stabilizes)
+Status: Implemented (draft; gated by --acp-unstable)
 
-- [ ] Add "Telemetry" panel/section to inspector output
-- [ ] Surface recommended OpenTelemetry export configuration
-- [ ] Connect trace context from `_meta` (P3)
-- [ ] Document knobs for OTLP export
+- [x] Add "Telemetry" panel/section to inspector output
+- [x] Surface recommended OpenTelemetry export configuration
+- [x] Connect trace context from `_meta` (P3)
+- [x] Document knobs for OTLP export
 
 ### P7: Agent Registry Readiness
 
-Status: Spec-Wait (draft; deferred until upstream stabilizes)
+Status: Implemented (draft; gated by --acp-unstable)
 
-- [ ] (If inspector as agent) Generate `<id>/agent.json` manifest
-- [ ] (If inspector as client) Optional ingestion of `registry.json`
-- [ ] Render searchable agent list from registry
-- [ ] Security: pinning, signature verification, user consent
+- [x] (If inspector as agent) Generate `<id>/agent.json` manifest
+- [x] (If inspector as client) Optional ingestion of `registry.json`
+- [x] Render searchable agent list from registry
+- [x] Security: pinning, signature verification, user consent
 
 ## Testing Strategy
 

@@ -214,11 +214,14 @@ module Domain =
               args: string list
               env: EnvVariable list }
 
+        type McpServerAcp = { name: string; uuid: string }
+
         [<RequireQualifiedAccess>]
         type McpServer =
             | Http of McpServerHttp
             | Sse of McpServerSse
             | Stdio of McpServerStdio
+            | Acp of McpServerAcp
 
         /// Params for session/new (client -> agent).
         type NewSessionParams =
@@ -678,6 +681,14 @@ module Domain =
     // Message envelopes (decoded JSON-RPC + correlated responses)
     // -------------
 
+    module Proxying =
+
+        /// Proxy chain wrapper for forwarding ACP messages to successors.
+        type ProxySuccessorParams =
+            { method: string
+              parameters: JsonNode option
+              meta: JsonObject option }
+
     module Messaging =
 
         open Initialization
@@ -686,20 +697,24 @@ module Domain =
         open SessionSetup
         open SessionModes
         open Prompting
+        open Proxying
 
         /// Methods/notifications/responses originating at the client.
         [<RequireQualifiedAccess>]
         type ClientToAgentMessage =
             // Requests (client -> agent)
             | Initialize of InitializeParams
+            | ProxyInitialize of InitializeParams
             | Authenticate of AuthenticateParams
             | SessionNew of NewSessionParams
             | SessionLoad of LoadSessionParams
             | SessionPrompt of SessionPromptParams
             | SessionSetMode of SetSessionModeParams
+            | ProxySuccessorRequest of ProxySuccessorParams
             | ExtRequest of methodName: string * parameters: JsonNode option
             // Notifications (client -> agent)
             | SessionCancel of SessionCancelParams
+            | ProxySuccessorNotification of ProxySuccessorParams
             | ExtNotification of methodName: string * parameters: JsonNode option
             // Responses (client -> agent) to agent->client requests
             | FsReadTextFileResult of ReadTextFileResult
@@ -720,27 +735,34 @@ module Domain =
             | TerminalReleaseError of request: ReleaseTerminalParams * error: Error
             | ExtError of methodName: string * error: Error
             | ExtResponse of methodName: string * result: JsonNode option
+            | ProxySuccessorError of methodName: string * error: Error
+            | ProxySuccessorResponse of methodName: string * result: JsonNode option
 
         /// Methods/notifications/requests originating at the agent.
         [<RequireQualifiedAccess>]
         type AgentToClientMessage =
             // Responses (agent -> client) to client->agent requests
             | InitializeResult of InitializeResult
+            | ProxyInitializeResult of InitializeResult
             | AuthenticateResult of AuthenticateResult
             | SessionNewResult of NewSessionResult
             | SessionLoadResult of LoadSessionResult
             | SessionPromptResult of SessionPromptResult
             | SessionSetModeResult of SetSessionModeResult
             | ExtResponse of methodName: string * result: JsonNode option
+            | ProxySuccessorResponse of methodName: string * result: JsonNode option
             | InitializeError of error: Error
+            | ProxyInitializeError of error: Error
             | AuthenticateError of error: Error
             | SessionNewError of error: Error
             | SessionLoadError of request: LoadSessionParams * error: Error
             | SessionPromptError of request: SessionPromptParams * error: Error
             | SessionSetModeError of request: SetSessionModeParams * error: Error
             | ExtError of methodName: string * error: Error
+            | ProxySuccessorError of methodName: string * error: Error
             // Notifications (agent -> client)
             | SessionUpdate of SessionUpdateNotification
+            | ProxySuccessorNotification of ProxySuccessorParams
             | ExtNotification of methodName: string * parameters: JsonNode option
             // Requests (agent -> client)
             | FsReadTextFileRequest of ReadTextFileParams
@@ -751,6 +773,7 @@ module Domain =
             | TerminalWaitForExitRequest of WaitForTerminalExitParams
             | TerminalKillRequest of KillTerminalCommandParams
             | TerminalReleaseRequest of ReleaseTerminalParams
+            | ProxySuccessorRequest of ProxySuccessorParams
             | ExtRequest of methodName: string * parameters: JsonNode option
 
         /// Direction-tagged domain message stream for a single connection.

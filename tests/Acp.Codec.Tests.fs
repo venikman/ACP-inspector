@@ -9,6 +9,7 @@ open Acp.Domain.JsonRpc
 open Acp.Domain.PrimitivesAndParties
 open Acp.Domain.Messaging
 open Acp.Domain.Prompting
+open Acp.Domain.SessionSetup
 
 module CodecTests =
 
@@ -44,6 +45,108 @@ module CodecTests =
         | other -> failwithf "unexpected message %A" other
 
         Assert.True(state2.pendingClientRequests.IsEmpty)
+
+    [<Fact>]
+    let ``decode proxy initialize request and response correlates by id`` () =
+        let state0 = Codec.CodecState.empty
+
+        let initReq =
+            """{"jsonrpc":"2.0","id":10,"method":"proxy/initialize","params":{"protocolVersion":1,"clientCapabilities":{"fs":{"readTextFile":true,"writeTextFile":true},"terminal":false}}}"""
+
+        let state1, msg1 =
+            match Codec.decode Codec.Direction.FromClient state0 initReq with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg1 with
+        | Message.FromClient(ClientToAgentMessage.ProxyInitialize p) ->
+            Assert.Equal(ProtocolVersion.current, p.protocolVersion)
+        | other -> failwithf "unexpected message %A" other
+
+        Assert.True(state1.pendingClientRequests |> Map.containsKey (RequestId.Number 10L))
+
+        let initRes =
+            """{"jsonrpc":"2.0","id":10,"result":{"protocolVersion":1,"agentCapabilities":{"loadSession":true,"mcpCapabilities":{"http":false,"sse":false},"promptCapabilities":{"audio":false,"image":false,"embeddedContext":false}},"authMethods":[]}}"""
+
+        let state2, msg2 =
+            match Codec.decode Codec.Direction.FromAgent state1 initRes with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg2 with
+        | Message.FromAgent(AgentToClientMessage.ProxyInitializeResult r) ->
+            Assert.Equal(ProtocolVersion.current, r.protocolVersion)
+        | other -> failwithf "unexpected message %A" other
+
+        Assert.True(state2.pendingClientRequests.IsEmpty)
+
+    [<Fact>]
+    let ``decode proxy successor request and response preserves inner method`` () =
+        let state0 = Codec.CodecState.empty
+
+        let proxyReq =
+            """{"jsonrpc":"2.0","id":"proxy-1","method":"proxy/successor","params":{"method":"session/prompt","params":{"sessionId":"s-proxy","prompt":[{"type":"text","text":"hi"}]},"meta":{"traceparent":"00-abc-123-01"}}}"""
+
+        let state1, msg1 =
+            match Codec.decode Codec.Direction.FromClient state0 proxyReq with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg1 with
+        | Message.FromClient(ClientToAgentMessage.ProxySuccessorRequest p) ->
+            Assert.Equal("session/prompt", p.method)
+            Assert.True(p.parameters.IsSome)
+            Assert.True(p.meta.IsSome)
+
+            match p.parameters with
+            | Some(:? JsonObject as paramsObj) ->
+                let sessionId = (paramsObj["sessionId"] :?> JsonValue).GetValue<string>()
+                Assert.Equal("s-proxy", sessionId)
+            | _ -> failwith "expected params object"
+
+            match p.meta with
+            | Some meta ->
+                let traceparent = (meta["traceparent"] :?> JsonValue).GetValue<string>()
+                Assert.Equal("00-abc-123-01", traceparent)
+            | None -> failwith "expected meta object"
+        | other -> failwithf "unexpected message %A" other
+
+        let proxyRes =
+            """{"jsonrpc":"2.0","id":"proxy-1","result":{"stopReason":"end_turn"}}"""
+
+        let state2, msg2 =
+            match Codec.decode Codec.Direction.FromAgent state1 proxyRes with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg2 with
+        | Message.FromAgent(AgentToClientMessage.ProxySuccessorResponse(methodName, resultOpt)) ->
+            Assert.Equal("session/prompt", methodName)
+            Assert.True(resultOpt.IsSome)
+        | other -> failwithf "unexpected message %A" other
+
+        Assert.True(state2.pendingClientRequests.IsEmpty)
+
+    [<Fact>]
+    let ``decode session new with acp transport mcp server`` () =
+        let state0 = Codec.CodecState.empty
+
+        let sessionReq =
+            """{"jsonrpc":"2.0","id":3,"method":"session/new","params":{"cwd":"/tmp","mcpServers":[{"transport":"acp","uuid":"srv-1"}]}}"""
+
+        let _, msg =
+            match Codec.decode Codec.Direction.FromClient state0 sessionReq with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg with
+        | Message.FromClient(ClientToAgentMessage.SessionNew p) ->
+            match p.mcpServers with
+            | [ McpServer.Acp server ] ->
+                Assert.Equal("srv-1", server.uuid)
+                Assert.Equal("srv-1", server.name)
+            | other -> failwithf "unexpected mcp server list %A" other
+        | other -> failwithf "unexpected message %A" other
 
     [<Fact>]
     let ``decode session prompt response reattaches sessionId`` () =

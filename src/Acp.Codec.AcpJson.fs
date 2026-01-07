@@ -13,6 +13,7 @@ open Domain.SessionSetup
 open Domain.SessionModes
 open Domain.Prompting
 open Domain.Messaging
+open Domain.Proxying
 
 open CodecTypes
 open CodecJson
@@ -553,8 +554,13 @@ module internal CodecAcpJson =
     let private decodeMcpServer (node: JsonNode) : Result<McpServer, string> =
         result {
             let! o = asObject node
+            let transport = tryGet "transport" o |> Option.bind (asString >> Result.toOption)
 
-            match tryGet "type" o |> Option.bind (asString >> Result.toOption) with
+            let kind =
+                transport
+                |> Option.orElseWith (fun () -> tryGet "type" o |> Option.bind (asString >> Result.toOption))
+
+            match kind with
             | Some "http" ->
                 let! name = get "name" o |> Result.bind asString
                 let! url = get "url" o |> Result.bind asString
@@ -594,6 +600,16 @@ module internal CodecAcpJson =
                         { name = name
                           url = url
                           headers = headers }
+
+            | Some "acp" ->
+                let! uuid = get "uuid" o |> Result.bind asString
+
+                let name =
+                    tryGet "name" o
+                    |> Option.bind (asString >> Result.toOption)
+                    |> Option.defaultValue uuid
+
+                return McpServer.Acp { name = name; uuid = uuid }
 
             | _ ->
                 // Stdio has no explicit discriminator in schema; fall back to stdio shape.
@@ -660,6 +676,12 @@ module internal CodecAcpJson =
             let env = JsonArray()
             v.env |> List.iter (fun e -> env.Add(encodeEnvVar e))
             o["env"] <- env
+            o
+        | McpServer.Acp v ->
+            let o = JsonObject()
+            o["transport"] <- JsonValue.Create("acp")
+            o["name"] <- JsonValue.Create(v.name)
+            o["uuid"] <- JsonValue.Create(v.uuid)
             o
 
     let private decodeNewSessionParams (node: JsonNode) : Result<NewSessionParams, string> =
@@ -2114,6 +2136,42 @@ module internal CodecAcpJson =
         o["terminalId"] <- JsonValue.Create(p.terminalId)
         o
 
+    // ---- Proxy chains (draft) ----
+
+    let private decodeProxySuccessorParams (node: JsonNode) : Result<ProxySuccessorParams, string> =
+        result {
+            let! o = asObject node
+            let! methodName = get "method" o |> Result.bind asString
+            let parameters = tryGet "params" o |> cloneOpt
+
+            let meta =
+                match tryGet "meta" o with
+                | None -> None
+                | Some m ->
+                    match m with
+                    | :? JsonObject as o -> Some(o.DeepClone() :?> JsonObject)
+                    | _ -> None
+
+            return
+                { method = methodName
+                  parameters = parameters
+                  meta = meta }
+        }
+
+    let private encodeProxySuccessorParams (p: ProxySuccessorParams) : JsonObject =
+        let o = JsonObject()
+        o["method"] <- JsonValue.Create(p.method)
+
+        match p.parameters with
+        | None -> ()
+        | Some parameters -> o["params"] <- parameters.DeepClone()
+
+        match p.meta with
+        | None -> ()
+        | Some meta -> o["meta"] <- meta.DeepClone()
+
+        o
+
     // -----------------
     // Top-level method routing
     // -----------------
@@ -2121,11 +2179,13 @@ module internal CodecAcpJson =
     let methodOfPendingClient =
         function
         | PendingClientRequest.Initialize -> "initialize"
+        | PendingClientRequest.ProxyInitialize -> "proxy/initialize"
         | PendingClientRequest.Authenticate -> "authenticate"
         | PendingClientRequest.SessionNew -> "session/new"
         | PendingClientRequest.SessionLoad _ -> "session/load"
         | PendingClientRequest.SessionPrompt _ -> "session/prompt"
         | PendingClientRequest.SessionSetMode _ -> "session/set_mode"
+        | PendingClientRequest.ProxySuccessor _ -> "proxy/successor"
         | PendingClientRequest.ExtRequest m -> m
 
     let methodOfPendingAgent =
@@ -2138,6 +2198,7 @@ module internal CodecAcpJson =
         | PendingAgentRequest.TerminalWaitForExit _ -> "terminal/wait_for_exit"
         | PendingAgentRequest.TerminalKill _ -> "terminal/kill"
         | PendingAgentRequest.TerminalRelease _ -> "terminal/release"
+        | PendingAgentRequest.ProxySuccessor _ -> "proxy/successor"
         | PendingAgentRequest.ExtRequest m -> m
 
     let decodeClientRequest
@@ -2156,6 +2217,9 @@ module internal CodecAcpJson =
             | "initialize" ->
                 let! p = decodeInitializeParams paramsNode
                 return ClientToAgentMessage.Initialize p, PendingClientRequest.Initialize
+            | "proxy/initialize" ->
+                let! p = decodeInitializeParams paramsNode
+                return ClientToAgentMessage.ProxyInitialize p, PendingClientRequest.ProxyInitialize
             | "authenticate" ->
                 let! p = decodeAuthenticateParams paramsNode
                 return ClientToAgentMessage.Authenticate p, PendingClientRequest.Authenticate
@@ -2171,6 +2235,9 @@ module internal CodecAcpJson =
             | "session/set_mode" ->
                 let! p = decodeSetSessionModeParams paramsNode
                 return ClientToAgentMessage.SessionSetMode p, PendingClientRequest.SessionSetMode p
+            | "proxy/successor" ->
+                let! p = decodeProxySuccessorParams paramsNode
+                return ClientToAgentMessage.ProxySuccessorRequest p, PendingClientRequest.ProxySuccessor p.method
             | "session/cancel"
             | "session/update"
             | "session/request_permission"
@@ -2199,6 +2266,12 @@ module internal CodecAcpJson =
             | Some p ->
                 decodeSessionCancelParams p
                 |> Result.map (fun v -> ClientToAgentMessage.SessionCancel v)
+        | "proxy/successor" ->
+            match paramsNodeOpt with
+            | None -> Error "missing params"
+            | Some p ->
+                decodeProxySuccessorParams p
+                |> Result.map (fun v -> ClientToAgentMessage.ProxySuccessorNotification v)
         | other -> Ok(ClientToAgentMessage.ExtNotification(other, paramsNodeOpt))
 
     let decodeAgentRequest
@@ -2214,6 +2287,9 @@ module internal CodecAcpJson =
                 | None -> Error "missing params"
 
             match methodName with
+            | "proxy/successor" ->
+                let! p = decodeProxySuccessorParams paramsNode
+                return AgentToClientMessage.ProxySuccessorRequest p, PendingAgentRequest.ProxySuccessor p.method
             | "fs/read_text_file" ->
                 let! p = decodeReadTextFileParams paramsNode
                 return AgentToClientMessage.FsReadTextFileRequest p, PendingAgentRequest.FsReadTextFile p
@@ -2260,6 +2336,12 @@ module internal CodecAcpJson =
         let paramsNodeOpt = paramsNodeOpt |> cloneOpt
 
         match methodName with
+        | "proxy/successor" ->
+            match paramsNodeOpt with
+            | None -> Error "missing params"
+            | Some p ->
+                decodeProxySuccessorParams p
+                |> Result.map (fun v -> AgentToClientMessage.ProxySuccessorNotification v)
         | "session/update" ->
             match paramsNodeOpt with
             | None -> Error "missing params"
@@ -2281,6 +2363,12 @@ module internal CodecAcpJson =
             match resultNodeOpt with
             | None -> Error "missing result"
             | Some r -> decodeInitializeResult r |> Result.map AgentToClientMessage.InitializeResult
+        | PendingClientRequest.ProxyInitialize ->
+            match resultNodeOpt with
+            | None -> Error "missing result"
+            | Some r ->
+                decodeInitializeResult r
+                |> Result.map AgentToClientMessage.ProxyInitializeResult
 
         | PendingClientRequest.Authenticate ->
             Ok(AgentToClientMessage.AuthenticateResult(decodeAuthenticateResult resultNodeOpt))
@@ -2327,16 +2415,21 @@ module internal CodecAcpJson =
                       modeId = req.modeId }
             )
 
+        | PendingClientRequest.ProxySuccessor methodName ->
+            Ok(AgentToClientMessage.ProxySuccessorResponse(methodName, resultNodeOpt))
+
         | PendingClientRequest.ExtRequest methodName -> Ok(AgentToClientMessage.ExtResponse(methodName, resultNodeOpt))
 
     let decodeAgentError (pending: PendingClientRequest) (err: Error) : AgentToClientMessage =
         match pending with
         | PendingClientRequest.Initialize -> AgentToClientMessage.InitializeError err
+        | PendingClientRequest.ProxyInitialize -> AgentToClientMessage.ProxyInitializeError err
         | PendingClientRequest.Authenticate -> AgentToClientMessage.AuthenticateError err
         | PendingClientRequest.SessionNew -> AgentToClientMessage.SessionNewError err
         | PendingClientRequest.SessionLoad req -> AgentToClientMessage.SessionLoadError(req, err)
         | PendingClientRequest.SessionPrompt req -> AgentToClientMessage.SessionPromptError(req, err)
         | PendingClientRequest.SessionSetMode req -> AgentToClientMessage.SessionSetModeError(req, err)
+        | PendingClientRequest.ProxySuccessor methodName -> AgentToClientMessage.ProxySuccessorError(methodName, err)
         | PendingClientRequest.ExtRequest methodName -> AgentToClientMessage.ExtError(methodName, err)
 
     let decodeClientResult
@@ -2346,6 +2439,8 @@ module internal CodecAcpJson =
         let resultNodeOpt = resultNodeOpt |> cloneOpt
 
         match pending with
+        | PendingAgentRequest.ProxySuccessor methodName ->
+            Ok(ClientToAgentMessage.ProxySuccessorResponse(methodName, resultNodeOpt))
         | PendingAgentRequest.FsReadTextFile _ ->
             match resultNodeOpt with
             | None -> Error "missing result"
@@ -2394,6 +2489,7 @@ module internal CodecAcpJson =
 
     let decodeClientError (pending: PendingAgentRequest) (err: Error) : ClientToAgentMessage =
         match pending with
+        | PendingAgentRequest.ProxySuccessor methodName -> ClientToAgentMessage.ProxySuccessorError(methodName, err)
         | PendingAgentRequest.FsReadTextFile req -> ClientToAgentMessage.FsReadTextFileError(req, err)
         | PendingAgentRequest.FsWriteTextFile req -> ClientToAgentMessage.FsWriteTextFileError(req, err)
         | PendingAgentRequest.SessionRequestPermission req ->
@@ -2419,6 +2515,14 @@ module internal CodecAcpJson =
             | Some id ->
                 o["id"] <- encodeRequestId id
                 o["method"] <- JsonValue.Create("initialize")
+                o["params"] <- encodeInitializeParams p
+                Ok o
+        | ClientToAgentMessage.ProxyInitialize p ->
+            match idOpt with
+            | None -> Error EncodeError.MissingRequestId
+            | Some id ->
+                o["id"] <- encodeRequestId id
+                o["method"] <- JsonValue.Create("proxy/initialize")
                 o["params"] <- encodeInitializeParams p
                 Ok o
         | ClientToAgentMessage.Authenticate p ->
@@ -2461,6 +2565,14 @@ module internal CodecAcpJson =
                 o["method"] <- JsonValue.Create("session/set_mode")
                 o["params"] <- encodeSetSessionModeParams p
                 Ok o
+        | ClientToAgentMessage.ProxySuccessorRequest p ->
+            match idOpt with
+            | None -> Error EncodeError.MissingRequestId
+            | Some id ->
+                o["id"] <- encodeRequestId id
+                o["method"] <- JsonValue.Create("proxy/successor")
+                o["params"] <- encodeProxySuccessorParams p
+                Ok o
         | ClientToAgentMessage.ExtRequest(methodName, parameters) ->
             match idOpt with
             | None -> Error EncodeError.MissingRequestId
@@ -2481,6 +2593,13 @@ module internal CodecAcpJson =
             | None ->
                 o["method"] <- JsonValue.Create("session/cancel")
                 o["params"] <- encodeSessionCancelParams p
+                Ok o
+        | ClientToAgentMessage.ProxySuccessorNotification p ->
+            match idOpt with
+            | Some _ -> Error EncodeError.UnexpectedRequestId
+            | None ->
+                o["method"] <- JsonValue.Create("proxy/successor")
+                o["params"] <- encodeProxySuccessorParams p
                 Ok o
         | ClientToAgentMessage.ExtNotification(methodName, parameters) ->
             match idOpt with
@@ -2570,6 +2689,17 @@ module internal CodecAcpJson =
                 | Some r -> o["result"] <- r.DeepClone()
 
                 Ok o
+        | ClientToAgentMessage.ProxySuccessorResponse(_, resultNodeOpt) ->
+            match idOpt with
+            | None -> Error EncodeError.MissingRequestId
+            | Some id ->
+                o["id"] <- encodeRequestId id
+
+                match resultNodeOpt with
+                | None -> o["result"] <- null
+                | Some r -> o["result"] <- r.DeepClone()
+
+                Ok o
 
         // Responses (error)
         | ClientToAgentMessage.FsReadTextFileError(_, err)
@@ -2580,7 +2710,8 @@ module internal CodecAcpJson =
         | ClientToAgentMessage.TerminalWaitForExitError(_, err)
         | ClientToAgentMessage.TerminalKillError(_, err)
         | ClientToAgentMessage.TerminalReleaseError(_, err)
-        | ClientToAgentMessage.ExtError(_, err) ->
+        | ClientToAgentMessage.ExtError(_, err)
+        | ClientToAgentMessage.ProxySuccessorError(_, err) ->
             match idOpt with
             | None -> Error EncodeError.MissingRequestId
             | Some id ->
@@ -2595,6 +2726,13 @@ module internal CodecAcpJson =
         match msg with
         // Responses (success)
         | AgentToClientMessage.InitializeResult r ->
+            match idOpt with
+            | None -> Error EncodeError.MissingRequestId
+            | Some id ->
+                o["id"] <- encodeRequestId id
+                o["result"] <- encodeInitializeResult r
+                Ok o
+        | AgentToClientMessage.ProxyInitializeResult r ->
             match idOpt with
             | None -> Error EncodeError.MissingRequestId
             | Some id ->
@@ -2676,9 +2814,21 @@ module internal CodecAcpJson =
                 | Some r -> o["result"] <- r.DeepClone()
 
                 Ok o
+        | AgentToClientMessage.ProxySuccessorResponse(_, resultNodeOpt) ->
+            match idOpt with
+            | None -> Error EncodeError.MissingRequestId
+            | Some id ->
+                o["id"] <- encodeRequestId id
+
+                match resultNodeOpt with
+                | None -> o["result"] <- null
+                | Some r -> o["result"] <- r.DeepClone()
+
+                Ok o
 
         // Responses (error)
         | AgentToClientMessage.InitializeError err
+        | AgentToClientMessage.ProxyInitializeError err
         | AgentToClientMessage.AuthenticateError err
         | AgentToClientMessage.SessionNewError err ->
             match idOpt with
@@ -2691,7 +2841,8 @@ module internal CodecAcpJson =
         | AgentToClientMessage.SessionLoadError(_, err)
         | AgentToClientMessage.SessionPromptError(_, err)
         | AgentToClientMessage.SessionSetModeError(_, err)
-        | AgentToClientMessage.ExtError(_, err) ->
+        | AgentToClientMessage.ExtError(_, err)
+        | AgentToClientMessage.ProxySuccessorError(_, err) ->
             match idOpt with
             | None -> Error EncodeError.MissingRequestId
             | Some id ->
@@ -2706,6 +2857,13 @@ module internal CodecAcpJson =
             | None ->
                 o["method"] <- JsonValue.Create("session/update")
                 o["params"] <- encodeSessionUpdateNotification n
+                Ok o
+        | AgentToClientMessage.ProxySuccessorNotification p ->
+            match idOpt with
+            | Some _ -> Error EncodeError.UnexpectedRequestId
+            | None ->
+                o["method"] <- JsonValue.Create("proxy/successor")
+                o["params"] <- encodeProxySuccessorParams p
                 Ok o
         | AgentToClientMessage.ExtNotification(methodName, parameters) ->
             match idOpt with
@@ -2783,6 +2941,14 @@ module internal CodecAcpJson =
                 o["id"] <- encodeRequestId id
                 o["method"] <- JsonValue.Create("terminal/release")
                 o["params"] <- encodeReleaseParams p
+                Ok o
+        | AgentToClientMessage.ProxySuccessorRequest p ->
+            match idOpt with
+            | None -> Error EncodeError.MissingRequestId
+            | Some id ->
+                o["id"] <- encodeRequestId id
+                o["method"] <- JsonValue.Create("proxy/successor")
+                o["params"] <- encodeProxySuccessorParams p
                 Ok o
         | AgentToClientMessage.ExtRequest(methodName, parameters) ->
             match idOpt with

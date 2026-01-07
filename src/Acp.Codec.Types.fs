@@ -39,11 +39,13 @@ module CodecTypes =
     [<RequireQualifiedAccess>]
     type PendingClientRequest =
         | Initialize
+        | ProxyInitialize
         | Authenticate
         | SessionNew
         | SessionLoad of request: LoadSessionParams
         | SessionPrompt of request: SessionPromptParams
         | SessionSetMode of request: SetSessionModeParams
+        | ProxySuccessor of methodName: string
         | ExtRequest of methodName: string
 
     /// Pending agent request - tracks what we're waiting for from client
@@ -57,6 +59,7 @@ module CodecTypes =
         | TerminalWaitForExit of request: WaitForTerminalExitParams
         | TerminalKill of request: KillTerminalCommandParams
         | TerminalRelease of request: ReleaseTerminalParams
+        | ProxySuccessor of methodName: string
         | ExtRequest of methodName: string
 
     /// Codec state - tracks pending requests for correlation
