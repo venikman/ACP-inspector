@@ -50,7 +50,7 @@ let private printVersion () =
     Console.WriteLine()
     Console.WriteLine("Components:")
     Output.printKeyValue "  SDK" "ACP.Sentinel (F# .NET 10)"
-    Output.printKeyValue "  Protocol" "ACP 0.10.x"
+    Output.printKeyValue "  Protocol" $"ACP {Acp.Domain.Spec.Schema}"
     Output.printKeyValue "  License" "MIT"
     Console.WriteLine()
 

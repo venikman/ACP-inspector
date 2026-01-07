@@ -1,0 +1,219 @@
+name: ACP Upstream Watch
+
+on:
+  schedule:
+    # Run daily at 06:00 UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: read
+
+jobs:
+  check-acp-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get pinned version
+        id: pinned
+        run: |
+          PINNED=$(grep -oP 'let Schema = "\K[0-9]+\.[0-9]+\.[0-9]+' src/Acp.Domain.fs)
+          echo "version=$PINNED" >> $GITHUB_OUTPUT
+          echo "Pinned ACP version: $PINNED"
+
+      - name: Get latest ACP release
+        id: latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LATEST=$(gh api repos/agentclientprotocol/agent-client-protocol/releases/latest --jq '.tag_name' | sed 's/^v//')
+          echo "version=$LATEST" >> $GITHUB_OUTPUT
+          echo "Latest ACP release: $LATEST"
+
+      - name: Compare versions
+        id: compare
+        env:
+          PINNED: ${{ steps.pinned.outputs.version }}
+          LATEST: ${{ steps.latest.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [ "$PINNED" = "$LATEST" ]; then
+            echo "drift=false" >> $GITHUB_OUTPUT
+            echo "status=equal" >> $GITHUB_OUTPUT
+            echo "ACP version is up to date: $PINNED"
+            exit 0
+          fi
+
+          if [ "$(printf '%s\n%s\n' "$PINNED" "$LATEST" | sort -V | head -n1)" = "$PINNED" ]; then
+            echo "drift=true" >> $GITHUB_OUTPUT
+            echo "status=behind" >> $GITHUB_OUTPUT
+            echo "::warning::ACP version drift detected: pinned=$PINNED, latest=$LATEST"
+          else
+            echo "drift=true" >> $GITHUB_OUTPUT
+            echo "status=ahead" >> $GITHUB_OUTPUT
+            echo "::warning::Pinned ACP version ($PINNED) is newer than latest release ($LATEST)"
+          fi
+
+      - name: Create issue on drift
+        if: steps.compare.outputs.status == 'behind'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PINNED: ${{ steps.pinned.outputs.version }}
+          LATEST: ${{ steps.latest.outputs.version }}
+        run: |
+          LABEL="acp-upgrade"
+          LABEL_ARGS=()
+
+          if gh label list --search "$LABEL" --json name --jq '.[] | select(.name=="'"$LABEL"'") | .name' | grep -q .; then
+            LABEL_ARGS+=(--label "$LABEL")
+          else
+            echo "::notice::Label '$LABEL' not found; creating issue without a label."
+          fi
+
+          # Check if issue already exists
+          EXISTING=$(gh issue list --state open "${LABEL_ARGS[@]}" --search "ACP spec update available: in:title" --json number --jq 'length')
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "Issue already exists, skipping creation"
+            exit 0
+          fi
+
+          BODY_FILE="$(mktemp)"
+          cat > "$BODY_FILE" <<BODY
+## ACP Upstream Update Detected
+
+**Current pinned version**: \`$PINNED\`
+**Latest available version**: \`$LATEST\`
+
+### Action Required
+
+1. Review the [ACP release notes](https://github.com/agentclientprotocol/agent-client-protocol/releases/tag/v$LATEST)
+2. Update \`src/Acp.Domain.fs\` schema pin if compatible
+3. Update \`docs/ACP-RFD-TRACKER.md\` with any new features
+4. Run tests to verify compatibility
+
+### Links
+
+- [ACP Releases](https://github.com/agentclientprotocol/agent-client-protocol/releases)
+- [ACP Spec](https://agentclientprotocol.com/overview/introduction)
+
+---
+*This issue was automatically created by the ACP Upstream Watch workflow.*
+BODY
+
+          gh issue create \
+            --title "ACP spec update available: v$LATEST" \
+            "${LABEL_ARGS[@]}" \
+            --body-file "$BODY_FILE"
+
+  check-rfd-updates:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore previous RFD hash
+        id: rfd-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .rfd-hash
+          key: rfd-hash-${{ github.run_id }}
+          restore-keys: |
+            rfd-hash-
+
+      - name: Read previous RFD hash
+        id: previous
+        run: |
+          if [ -f .rfd-hash ]; then
+            PREVIOUS=$(cat .rfd-hash)
+            echo "hash=$PREVIOUS" >> $GITHUB_OUTPUT
+            echo "Previous RFD hash: $PREVIOUS"
+          else
+            echo "hash=" >> $GITHUB_OUTPUT
+            echo "No previous RFD hash found"
+          fi
+
+      - name: Fetch current RFD hash
+        id: current
+        run: |
+          set -euo pipefail
+          CURRENT=$(curl -fsSL "https://agentclientprotocol.com/rfds" | sha256sum | cut -d' ' -f1)
+          echo "hash=$CURRENT" >> $GITHUB_OUTPUT
+          echo "Current RFD hash: $CURRENT"
+
+      - name: Detect RFD changes
+        id: compare
+        env:
+          PREVIOUS: ${{ steps.previous.outputs.hash }}
+          CURRENT: ${{ steps.current.outputs.hash }}
+        run: |
+          if [ -z "$PREVIOUS" ]; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "::notice::No previous RFD hash found. Baseline stored for next run."
+            exit 0
+          fi
+
+          if [ "$PREVIOUS" != "$CURRENT" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "::notice::RFD page content changed since last run. Review https://agentclientprotocol.com/rfds for updates."
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "RFD page content unchanged since last run."
+          fi
+
+      - name: Create issue on RFD change
+        if: steps.compare.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIOUS: ${{ steps.previous.outputs.hash }}
+          CURRENT: ${{ steps.current.outputs.hash }}
+        run: |
+          LABEL="acp-upgrade"
+          LABEL_ARGS=()
+
+          if gh label list --search "$LABEL" --json name --jq '.[] | select(.name=="'"$LABEL"'") | .name' | grep -q .; then
+            LABEL_ARGS+=(--label "$LABEL")
+          else
+            echo "::notice::Label '$LABEL' not found; creating issue without a label."
+          fi
+
+          EXISTING=$(gh issue list --state open "${LABEL_ARGS[@]}" --search "ACP RFD update detected in:title" --json number --jq 'length')
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "Issue already exists, skipping creation"
+            exit 0
+          fi
+
+          BODY_FILE="$(mktemp)"
+          cat > "$BODY_FILE" <<BODY
+## ACP RFD Update Detected
+
+**Previous hash**: \`$PREVIOUS\`
+**Current hash**: \`$CURRENT\`
+
+### Action Required
+
+1. Review https://agentclientprotocol.com/rfds for changes
+2. Update \`docs/ACP-RFD-TRACKER.md\` if new RFDs or amendments are present
+
+---
+*This issue was automatically created by the ACP Upstream Watch workflow.*
+BODY
+
+          gh issue create \
+            --title "ACP RFD update detected" \
+            "${LABEL_ARGS[@]}" \
+            --body-file "$BODY_FILE"
+
+      - name: Store current RFD hash
+        run: echo "${{ steps.current.outputs.hash }}" > .rfd-hash
+
+      - name: Save RFD hash
+        uses: actions/cache/save@v4
+        with:
+          path: .rfd-hash
+          key: rfd-hash-${{ github.run_id }}

@@ -1,7 +1,7 @@
 # ACP RFD Tracker
 
-**Last Updated**: 2026-01-06
-**Current ACP Schema Target**: `0.10.x`
+**Last Updated**: 2026-01-07
+**Current ACP Schema Target**: `0.10.5` (pinned)
 **Protocol Version**: `1`
 
 ## Overview
