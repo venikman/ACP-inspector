@@ -1,10 +1,14 @@
 # TASK-005: Proxy Chains Draft Support
 
-**Status**: Pending  
-**Priority**: Medium  
-**Assignee**: Team  
-**Created**: 2026-01-06  
+**Status**: Spec-Wait
+**Priority**: Medium
+**Assignee**: Team
+**Created**: 2026-01-06
 **Context**: Draft RFD introduces proxy chains and proxy/initialize + proxy/successor methods.
+
+## Deferral
+
+This work is intentionally deferred until the proxy chains RFD stabilizes. Revisit after stable-spec catch-up work is complete.
 
 ## Objective
 

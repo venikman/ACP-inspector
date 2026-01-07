@@ -1,4 +1,4 @@
-# TASK-004: ACP _meta Passthrough & Domain Support
+# TASK-004: ACP \_meta Passthrough & Domain Support
 
 **Status**: Complete
 **Priority**: High
@@ -43,7 +43,7 @@ Updated `SessionUpdateAsync` method to accept optional `meta` parameter.
 
 ### Tests Added (`tests/Acp.Codec.Tests.fs`)
 
-New tests for _meta passthrough (W3C Trace Context):
+New tests for \_meta passthrough (W3C Trace Context):
 
 - `decode session prompt request preserves _meta payload`
 - `decode session update notification preserves _meta payload`
@@ -54,7 +54,7 @@ New tests for _meta passthrough (W3C Trace Context):
 
 1. Updated domain models and codec handling for `_meta` - Complete
 2. Proxy passthrough tests (golden or unit) - Complete (4 new codec tests)
-3. Documentation notes in `docs/ACP-RFD-TRACKER.md` - Pending (low priority)
+3. Documentation notes in `docs/ACP-RFD-TRACKER.md` - Complete
 
 ## Commands Reference
 

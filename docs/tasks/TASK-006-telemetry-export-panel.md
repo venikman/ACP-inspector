@@ -1,10 +1,14 @@
 # TASK-006: Telemetry Export Panel
 
-**Status**: Pending  
-**Priority**: Medium  
-**Assignee**: Team  
-**Created**: 2026-01-06  
+**Status**: Spec-Wait
+**Priority**: Medium
+**Assignee**: Team
+**Created**: 2026-01-06
 **Context**: Draft RFD recommends OpenTelemetry export guidance and trace context alignment.
+
+## Deferral
+
+This work is intentionally deferred until the telemetry RFD stabilizes. Revisit after stable-spec catch-up work is complete.
 
 ## Objective
 

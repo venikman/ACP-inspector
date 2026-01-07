@@ -1,10 +1,14 @@
 # TASK-007: ACP Agent Registry Support
 
-**Status**: Pending  
-**Priority**: Medium  
-**Assignee**: Team  
-**Created**: 2026-01-06  
+**Status**: Spec-Wait
+**Priority**: Medium
+**Assignee**: Team
+**Created**: 2026-01-06
 **Context**: Draft RFD proposes registry.json and agent manifest schema for discovery.
+
+## Deferral
+
+This work is intentionally deferred until the registry RFD stabilizes. Revisit after stable-spec catch-up work is complete.
 
 ## Objective
 
