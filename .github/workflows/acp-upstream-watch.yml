@@ -21,7 +21,7 @@ jobs:
       - name: Get pinned version
         id: pinned
         run: |
-          PINNED=$(grep -oP 'let Schema = "\K[^"]+' src/Acp.Domain.fs)
+          PINNED=$(grep -oP 'let Schema = "\K[0-9]+\.[0-9]+\.[0-9]+' src/Acp.Domain.fs)
           echo "version=$PINNED" >> $GITHUB_OUTPUT
           echo "Pinned ACP version: $PINNED"
 
@@ -40,16 +40,26 @@ jobs:
           PINNED: ${{ steps.pinned.outputs.version }}
           LATEST: ${{ steps.latest.outputs.version }}
         run: |
-          if [ "$PINNED" != "$LATEST" ]; then
+          set -euo pipefail
+          if [ "$PINNED" = "$LATEST" ]; then
+            echo "drift=false" >> $GITHUB_OUTPUT
+            echo "status=equal" >> $GITHUB_OUTPUT
+            echo "ACP version is up to date: $PINNED"
+            exit 0
+          fi
+
+          if [ "$(printf '%s\n%s\n' "$PINNED" "$LATEST" | sort -V | head -n1)" = "$PINNED" ]; then
             echo "drift=true" >> $GITHUB_OUTPUT
+            echo "status=behind" >> $GITHUB_OUTPUT
             echo "::warning::ACP version drift detected: pinned=$PINNED, latest=$LATEST"
           else
-            echo "drift=false" >> $GITHUB_OUTPUT
-            echo "ACP version is up to date: $PINNED"
+            echo "drift=true" >> $GITHUB_OUTPUT
+            echo "status=ahead" >> $GITHUB_OUTPUT
+            echo "::warning::Pinned ACP version ($PINNED) is newer than latest release ($LATEST)"
           fi
 
       - name: Create issue on drift
-        if: steps.compare.outputs.drift == 'true'
+        if: steps.compare.outputs.status == 'behind'
         env:
           GH_TOKEN: ${{ github.token }}
           PINNED: ${{ steps.pinned.outputs.version }}
@@ -131,7 +141,8 @@ BODY
       - name: Fetch current RFD hash
         id: current
         run: |
-          CURRENT=$(curl -sL "https://agentclientprotocol.com/rfds" | sha256sum | cut -d' ' -f1)
+          set -euo pipefail
+          CURRENT=$(curl -fsSL "https://agentclientprotocol.com/rfds" | sha256sum | cut -d' ' -f1)
           echo "hash=$CURRENT" >> $GITHUB_OUTPUT
           echo "Current RFD hash: $CURRENT"
 
