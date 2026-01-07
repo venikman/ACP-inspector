@@ -1,0 +1,106 @@
+name: ACP Upstream Watch
+
+on:
+  schedule:
+    # Run daily at 06:00 UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  check-acp-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get pinned version
+        id: pinned
+        run: |
+          PINNED=$(grep -oP 'let Schema = "\K[^"]+' src/Acp.Domain.fs)
+          echo "version=$PINNED" >> $GITHUB_OUTPUT
+          echo "Pinned ACP version: $PINNED"
+
+      - name: Get latest ACP release
+        id: latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LATEST=$(gh api repos/agentclientprotocol/agent-client-protocol/releases/latest --jq '.tag_name' | sed 's/^v//')
+          echo "version=$LATEST" >> $GITHUB_OUTPUT
+          echo "Latest ACP release: $LATEST"
+
+      - name: Compare versions
+        id: compare
+        env:
+          PINNED: ${{ steps.pinned.outputs.version }}
+          LATEST: ${{ steps.latest.outputs.version }}
+        run: |
+          if [ "$PINNED" != "$LATEST" ]; then
+            echo "drift=true" >> $GITHUB_OUTPUT
+            echo "::warning::ACP version drift detected: pinned=$PINNED, latest=$LATEST"
+          else
+            echo "drift=false" >> $GITHUB_OUTPUT
+            echo "ACP version is up to date: $PINNED"
+          fi
+
+      - name: Create issue on drift
+        if: steps.compare.outputs.drift == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PINNED: ${{ steps.pinned.outputs.version }}
+          LATEST: ${{ steps.latest.outputs.version }}
+        run: |
+          # Check if issue already exists
+          EXISTING=$(gh issue list --label "acp-upgrade" --state open --json number --jq 'length')
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "Issue already exists, skipping creation"
+            exit 0
+          fi
+
+          gh issue create \
+            --title "ACP spec update available: v$LATEST" \
+            --label "acp-upgrade" \
+            --body "## ACP Upstream Update Detected
+
+**Current pinned version**: \`$PINNED\`
+**Latest available version**: \`$LATEST\`
+
+### Action Required
+
+1. Review the [ACP release notes](https://github.com/agentclientprotocol/agent-client-protocol/releases/tag/v$LATEST)
+2. Update \`src/Acp.Domain.fs\` schema pin if compatible
+3. Update \`docs/ACP-RFD-TRACKER.md\` with any new features
+4. Run tests to verify compatibility
+
+### Links
+
+- [ACP Releases](https://github.com/agentclientprotocol/agent-client-protocol/releases)
+- [ACP Spec](https://agentclientprotocol.com/overview/introduction)
+
+---
+*This issue was automatically created by the ACP Upstream Watch workflow.*"
+
+  check-rfd-updates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check RFD page for updates
+        id: rfd-check
+        run: |
+          # Fetch RFD page and compute hash
+          RFD_HASH=$(curl -sL "https://agentclientprotocol.com/rfds" | sha256sum | cut -d' ' -f1)
+          echo "hash=$RFD_HASH" >> $GITHUB_OUTPUT
+          echo "RFD page hash: $RFD_HASH"
+
+      - name: Cache RFD hash
+        uses: actions/cache@v4
+        id: cache
+        with:
+          path: .rfd-hash
+          key: rfd-hash-${{ steps.rfd-check.outputs.hash }}
+
+      - name: Detect RFD changes
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          echo "${{ steps.rfd-check.outputs.hash }}" > .rfd-hash
+          echo "::notice::RFD page content may have changed. Review https://agentclientprotocol.com/rfds for updates."
