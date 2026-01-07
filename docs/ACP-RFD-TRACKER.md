@@ -44,19 +44,19 @@ We follow **Option 2: Stable + Parse Draft** — accept and display Draft messag
 
 These are Draft-stage RFDs from <https://agentclientprotocol.com/rfds> as of 2026-01-06:
 
-| RFD                                          | Status | Priority | Inspector Support        |
-| -------------------------------------------- | ------ | -------- | ------------------------ |
-| Session List                                 | Draft  | P2       | ❌ Not started           |
-| Session Config Options                       | Draft  | P2       | ❌ Not started           |
-| Forking of existing sessions                 | Draft  | P2       | ❌ Not started           |
-| Request Cancellation Mechanism               | Draft  | P1       | ❌ Not started           |
-| Resuming of existing sessions                | Draft  | P2       | ❌ Not started           |
-| Meta Field Propagation Conventions           | Draft  | P1       | ⚠️ Partially implemented |
-| Session Info Update                          | Draft  | P1       | ✅ Implemented           |
-| Agent Telemetry Export                       | Draft  | P2       | ❌ Not started           |
-| Proxy Chains: Composable Agent Architectures | Draft  | P2       | ❌ Not started           |
-| Session Usage and Context Status             | Draft  | P1       | ✅ Implemented           |
-| ACP Agent Registry                           | Draft  | P2       | ❌ Not started           |
+| RFD                                          | Status | Priority | Inspector Support |
+| -------------------------------------------- | ------ | -------- | ----------------- |
+| Session List                                 | Draft  | P2       | ❌ Not started    |
+| Session Config Options                       | Draft  | P2       | ❌ Not started    |
+| Forking of existing sessions                 | Draft  | P2       | ❌ Not started    |
+| Request Cancellation Mechanism               | Draft  | P1       | ❌ Not started    |
+| Resuming of existing sessions                | Draft  | P2       | ❌ Not started    |
+| Meta Field Propagation Conventions           | Draft  | P1       | ✅ Implemented    |
+| Session Info Update                          | Draft  | P1       | ✅ Implemented    |
+| Agent Telemetry Export                       | Draft  | P2       | ❌ Spec-Wait      |
+| Proxy Chains: Composable Agent Architectures | Draft  | P2       | ❌ Spec-Wait      |
+| Session Usage and Context Status             | Draft  | P1       | ✅ Implemented    |
+| ACP Agent Registry                           | Draft  | P2       | ❌ Spec-Wait      |
 
 ### Priority Legend
 
@@ -68,11 +68,11 @@ These are Draft-stage RFDs from <https://agentclientprotocol.com/rfds> as of 202
 
 ### P0: Rebase on Current Stable ACP
 
-- [ ] Verify `clientInfo` in `initialize` params
-- [ ] Verify `agentInfo` in `initialize` result
-- [ ] Confirm `session/cancel` support
-- [ ] Confirm streaming `session/update` support
-- [ ] Check schema pin for v0.10.1/v0.10.2 unstable fields
+- [x] Verify `clientInfo` in `initialize` params
+- [x] Verify `agentInfo` in `initialize` result
+- [x] Confirm `session/cancel` support
+- [x] Confirm streaming `session/update` support
+- [x] Check schema pin for v0.10.1/v0.10.2 unstable fields (pinned 0.10.5)
 
 ### P1: Unstable Feature Gate
 
@@ -90,10 +90,10 @@ These are Draft-stage RFDs from <https://agentclientprotocol.com/rfds> as of 202
 
 ### P3: Meta Field Propagation (`_meta`)
 
-- [ ] Add `_meta` field to domain types as `JsonNode option`
-- [ ] Reserve root keys: `traceparent`, `tracestate`, `baggage` (W3C Trace Context)
+- [x] Add `_meta` field to domain types as `JsonObject option`
+- [x] Reserve root keys: `traceparent`, `tracestate`, `baggage` (W3C Trace Context)
 - [x] Display these 3 keys prominently in inspector output
-- [ ] Passthrough preservation when proxying/forwarding
+- [x] Passthrough preservation when proxying/forwarding
 
 ### P4: Session Usage Parsing
 
@@ -106,6 +106,8 @@ These are Draft-stage RFDs from <https://agentclientprotocol.com/rfds> as of 202
 
 ### P5: Proxy Chains Support (Parse-Only)
 
+Status: Spec-Wait (draft; deferred until upstream stabilizes)
+
 - [ ] Parse `proxy/successor` method
 - [ ] Parse `proxy/initialize` method
 - [ ] Display proxy chain events in inspector
@@ -113,12 +115,16 @@ These are Draft-stage RFDs from <https://agentclientprotocol.com/rfds> as of 202
 
 ### P6: Telemetry Export Alignment
 
+Status: Spec-Wait (draft; deferred until upstream stabilizes)
+
 - [ ] Add "Telemetry" panel/section to inspector output
 - [ ] Surface recommended OpenTelemetry export configuration
 - [ ] Connect trace context from `_meta` (P3)
 - [ ] Document knobs for OTLP export
 
 ### P7: Agent Registry Readiness
+
+Status: Spec-Wait (draft; deferred until upstream stabilizes)
 
 - [ ] (If inspector as agent) Generate `<id>/agent.json` manifest
 - [ ] (If inspector as client) Optional ingestion of `registry.json`
@@ -150,9 +156,9 @@ These are Draft-stage RFDs from <https://agentclientprotocol.com/rfds> as of 202
 
 ## CI/Automation
 
-- [ ] Add CI job that alerts on ACP release/tag changes
-- [ ] Add CI job that alerts on RFD updates (scrape agentclientprotocol.com/rfds)
-- [ ] Pin schema version in `src/Acp.Domain.fs`
+- [x] Add CI job that alerts on ACP release/tag changes
+- [x] Add CI job that alerts on RFD updates (scrape agentclientprotocol.com/rfds)
+- [x] Pin schema version in `src/Acp.Domain.fs`
 
 ## References
 
