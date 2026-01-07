@@ -833,10 +833,8 @@ Common options:
                       distributionTargets = distributionTargets }
         | _ -> Error "expected object"
 
-    let private loadRegistryFile (path: string) : Result<AgentManifest list * string list, string> =
+    let private loadRegistryJson (root: JsonNode) : Result<AgentManifest list * string list, string> =
         try
-            let root = JsonNode.Parse(File.ReadAllText(path))
-
             if isNull root then
                 Error "registry.json is empty"
             else
@@ -867,6 +865,8 @@ Common options:
         sha.ComputeHash(bytes)
         |> Array.map (fun b -> b.ToString("x2"))
         |> String.concat ""
+
+    let private maxRegistryBytes = 10L * 1024L * 1024L
 
     let private truncate (maxLen: int) (value: string) =
         if value.Length <= maxLen then
@@ -950,6 +950,11 @@ Common options:
         | Ok _ -> Error "Expected JSON object"
         | Error err -> Error err
 
+    let private tryValidateUrl (label: string) (value: string) : Result<string, string> =
+        match Uri.TryCreate(value, UriKind.Absolute) with
+        | true, uri when uri.Scheme = Uri.UriSchemeHttp || uri.Scheme = Uri.UriSchemeHttps -> Ok value
+        | _ -> Error $"Invalid {label} URL: {value}"
+
     let private requireUnstable (args: string[]) =
         if hasFlagEnabled "--acp-unstable" args then
             Ok()
@@ -970,72 +975,108 @@ Common options:
                     Console.Error.WriteLine($"[error] Registry file not found: {path}")
                     int ExitCode.RuntimeError
                 else
-                    let bytes = File.ReadAllBytes path
+                    let readResult =
+                        try
+                            use fs = File.OpenRead(path)
 
-                    let hashCheckResult =
-                        match tryGetArg "--registry-sha256" args with
-                        | None -> Ok()
-                        | Some expected ->
-                            let actual = computeSha256 bytes
-
-                            if actual.Equals(expected, StringComparison.OrdinalIgnoreCase) then
-                                Ok()
-                            else
+                            if fs.Length > maxRegistryBytes then
                                 Console.Error.WriteLine(
-                                    $"[error] Registry sha256 mismatch (expected {expected}, got {actual})"
+                                    $"[error] Registry file too large: {fs.Length} bytes (max {maxRegistryBytes})"
                                 )
 
                                 Error(int ExitCode.RuntimeError)
-
-                    match hashCheckResult with
-                    | Error code -> code
-                    | Ok() ->
-                        match loadRegistryFile path with
-                        | Error msg ->
-                            Console.Error.WriteLine($"[error] Failed to parse registry: {msg}")
-                            int ExitCode.RuntimeError
-                        | Ok(manifests, warnings) ->
-                            for warning in warnings do
-                                Console.Error.WriteLine($"[warning] {warning}")
-
-                            let idFilter = tryGetArg "--id" args
-                            let queryFilter = tryGetArg "--query" args
-
-                            let requiredCaps =
-                                tryGetArg "--capability" args |> Option.map parseCsv |> Option.defaultValue []
-
-                            let filtered =
-                                manifests
-                                |> List.filter (fun m ->
-                                    let idOk =
-                                        match idFilter with
-                                        | None -> true
-                                        | Some id -> m.id.Equals(id, StringComparison.OrdinalIgnoreCase)
-
-                                    idOk && matchesQuery queryFilter m && matchesCapabilities requiredCaps m)
-
-                            let filtered =
-                                match tryGetArg "--limit" args with
-                                | None -> filtered
-                                | Some raw ->
-                                    match Int32.TryParse(raw) with
-                                    | true, limit when limit > 0 ->
-                                        if filtered.Length > limit then
-                                            filtered |> List.take limit
-                                        else
-                                            filtered
-                                    | _ -> filtered
-
-                            Console.Out.WriteLine($"registry: {path}")
-                            Console.Out.WriteLine($"agents: {manifests.Length} (matched={filtered.Length})")
-
-                            if filtered.IsEmpty then
-                                Console.Out.WriteLine("no matching agents")
                             else
-                                for manifest in filtered do
-                                    renderRegistryEntry manifest
+                                use ms = new MemoryStream()
+                                fs.CopyTo(ms)
+                                Ok(ms.ToArray())
+                        with ex ->
+                            Console.Error.WriteLine($"[error] Failed to read registry: {ex.Message}")
+                            Error(int ExitCode.RuntimeError)
 
-                            int ExitCode.Ok
+                    match readResult with
+                    | Error code -> code
+                    | Ok bytes ->
+                        let hashCheckResult =
+                            match tryGetArg "--registry-sha256" args with
+                            | None -> Ok()
+                            | Some expected ->
+                                let actual = computeSha256 bytes
+
+                                if actual.Equals(expected, StringComparison.OrdinalIgnoreCase) then
+                                    Ok()
+                                else
+                                    Console.Error.WriteLine(
+                                        $"[error] Registry sha256 mismatch (expected {expected}, got {actual}). Re-download the registry or update --registry-sha256."
+                                    )
+
+                                    Error(int ExitCode.RuntimeError)
+
+                        match hashCheckResult with
+                        | Error code -> code
+                        | Ok() ->
+                            let parseResult =
+                                try
+                                    let jsonText = Encoding.UTF8.GetString(bytes)
+                                    let root = JsonNode.Parse(jsonText)
+
+                                    if isNull root then
+                                        Error "registry.json is empty"
+                                    else
+                                        Ok root
+                                with ex ->
+                                    Error ex.Message
+
+                            match parseResult with
+                            | Error msg ->
+                                Console.Error.WriteLine($"[error] Failed to parse registry: {msg}")
+                                int ExitCode.RuntimeError
+                            | Ok root ->
+                                match loadRegistryJson root with
+                                | Error msg ->
+                                    Console.Error.WriteLine($"[error] Failed to parse registry: {msg}")
+                                    int ExitCode.RuntimeError
+                                | Ok(manifests, warnings) ->
+                                    for warning in warnings do
+                                        Console.Error.WriteLine($"[warning] {warning}")
+
+                                    let idFilter = tryGetArg "--id" args
+                                    let queryFilter = tryGetArg "--query" args
+
+                                    let requiredCaps =
+                                        tryGetArg "--capability" args |> Option.map parseCsv |> Option.defaultValue []
+
+                                    let filtered =
+                                        manifests
+                                        |> List.filter (fun m ->
+                                            let idOk =
+                                                match idFilter with
+                                                | None -> true
+                                                | Some id -> m.id.Equals(id, StringComparison.OrdinalIgnoreCase)
+
+                                            idOk && matchesQuery queryFilter m && matchesCapabilities requiredCaps m)
+
+                                    let filtered =
+                                        match tryGetArg "--limit" args with
+                                        | None -> filtered
+                                        | Some raw ->
+                                            match Int32.TryParse(raw) with
+                                            | true, limit when limit > 0 ->
+                                                if filtered.Length > limit then
+                                                    filtered |> List.take limit
+                                                else
+                                                    filtered
+                                            | _ -> filtered
+
+                                    Console.Out.WriteLine($"registry: {path}")
+                                    Console.Out.WriteLine($"agents: {manifests.Length} (matched={filtered.Length})")
+
+                                    if filtered.IsEmpty then
+                                        Console.Out.WriteLine("no matching agents")
+                                    else
+                                        for manifest in filtered do
+                                            renderRegistryEntry manifest
+
+                                    int ExitCode.Ok
 
     let agentManifest (args: string[]) =
         match requireUnstable args with
@@ -1099,12 +1140,17 @@ Common options:
                             Ok(dist)
                         | Some path -> tryReadJsonObject path |> Result.map (fun obj -> obj.DeepClone() :?> JsonObject)
 
-                    match authNodeResult, distributionResult with
-                    | Error err, _
-                    | _, Error err ->
+                    let homepageResult = tryValidateUrl "homepage" homepage
+                    let repositoryResult = tryValidateUrl "repository" repository
+
+                    match homepageResult, repositoryResult, authNodeResult, distributionResult with
+                    | Error err, _, _, _
+                    | _, Error err, _, _
+                    | _, _, Error err, _
+                    | _, _, _, Error err ->
                         Console.Error.WriteLine($"[error] {err}")
                         int ExitCode.RuntimeError
-                    | Ok authNode, Ok distribution ->
+                    | Ok homepage, Ok repository, Ok authNode, Ok distribution ->
                         let manifest = JsonObject()
                         manifest["id"] <- JsonValue.Create(id)
                         manifest["name"] <- JsonValue.Create(name)
