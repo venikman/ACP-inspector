@@ -17,7 +17,7 @@ Normative behavior follows the published ACP spec and schema:
 
 Implementation targets:
 
-- ACP schema: `Acp.Domain.Spec.Schema` (currently `0.10.x`)
+- ACP schema: `Acp.Domain.Spec.Schema` (currently `0.10.5`)
 - Negotiated major `protocolVersion`: `Acp.Domain.PrimitivesAndParties.ProtocolVersion.current` (currently `1`)
 
 This repo adds an architecture-first view on assurance and observability.

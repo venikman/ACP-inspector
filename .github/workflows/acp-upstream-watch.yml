@@ -6,9 +6,15 @@ on:
     - cron: '0 6 * * *'
   workflow_dispatch: # Allow manual trigger
 
+permissions:
+  contents: read
+
 jobs:
   check-acp-release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     steps:
       - uses: actions/checkout@v4
 
@@ -49,8 +55,17 @@ jobs:
           PINNED: ${{ steps.pinned.outputs.version }}
           LATEST: ${{ steps.latest.outputs.version }}
         run: |
+          LABEL="acp-upgrade"
+          LABEL_ARGS=()
+
+          if gh label list --search "$LABEL" --json name --jq '.[] | select(.name=="'"$LABEL"'") | .name' | grep -q .; then
+            LABEL_ARGS+=(--label "$LABEL")
+          else
+            echo "::notice::Label '$LABEL' not found; creating issue without a label."
+          fi
+
           # Check if issue already exists
-          EXISTING=$(gh issue list --label "acp-upgrade" --state open --json number --jq 'length')
+          EXISTING=$(gh issue list --state open "${LABEL_ARGS[@]}" --search "ACP spec update available: in:title" --json number --jq 'length')
           if [ "$EXISTING" -gt 0 ]; then
             echo "Issue already exists, skipping creation"
             exit 0
@@ -58,7 +73,7 @@ jobs:
 
           gh issue create \
             --title "ACP spec update available: v$LATEST" \
-            --label "acp-upgrade" \
+            "${LABEL_ARGS[@]}" \
             --body "## ACP Upstream Update Detected
 
 **Current pinned version**: \`$PINNED\`
@@ -81,26 +96,103 @@ jobs:
 
   check-rfd-updates:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check RFD page for updates
-        id: rfd-check
-        run: |
-          # Fetch RFD page and compute hash
-          RFD_HASH=$(curl -sL "https://agentclientprotocol.com/rfds" | sha256sum | cut -d' ' -f1)
-          echo "hash=$RFD_HASH" >> $GITHUB_OUTPUT
-          echo "RFD page hash: $RFD_HASH"
-
-      - name: Cache RFD hash
-        uses: actions/cache@v4
-        id: cache
+      - name: Restore previous RFD hash
+        id: rfd-cache
+        uses: actions/cache/restore@v4
         with:
           path: .rfd-hash
-          key: rfd-hash-${{ steps.rfd-check.outputs.hash }}
+          key: rfd-hash-${{ github.run_id }}
+          restore-keys: |
+            rfd-hash-
+
+      - name: Read previous RFD hash
+        id: previous
+        run: |
+          if [ -f .rfd-hash ]; then
+            PREVIOUS=$(cat .rfd-hash)
+            echo "hash=$PREVIOUS" >> $GITHUB_OUTPUT
+            echo "Previous RFD hash: $PREVIOUS"
+          else
+            echo "hash=" >> $GITHUB_OUTPUT
+            echo "No previous RFD hash found"
+          fi
+
+      - name: Fetch current RFD hash
+        id: current
+        run: |
+          CURRENT=$(curl -sL "https://agentclientprotocol.com/rfds" | sha256sum | cut -d' ' -f1)
+          echo "hash=$CURRENT" >> $GITHUB_OUTPUT
+          echo "Current RFD hash: $CURRENT"
 
       - name: Detect RFD changes
-        if: steps.cache.outputs.cache-hit != 'true'
+        id: compare
+        env:
+          PREVIOUS: ${{ steps.previous.outputs.hash }}
+          CURRENT: ${{ steps.current.outputs.hash }}
         run: |
-          echo "${{ steps.rfd-check.outputs.hash }}" > .rfd-hash
-          echo "::notice::RFD page content may have changed. Review https://agentclientprotocol.com/rfds for updates."
+          if [ -z "$PREVIOUS" ]; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "::notice::No previous RFD hash found. Baseline stored for next run."
+            exit 0
+          fi
+
+          if [ "$PREVIOUS" != "$CURRENT" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "::notice::RFD page content changed since last run. Review https://agentclientprotocol.com/rfds for updates."
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "RFD page content unchanged since last run."
+          fi
+
+      - name: Create issue on RFD change
+        if: steps.compare.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIOUS: ${{ steps.previous.outputs.hash }}
+          CURRENT: ${{ steps.current.outputs.hash }}
+        run: |
+          LABEL="acp-upgrade"
+          LABEL_ARGS=()
+
+          if gh label list --search "$LABEL" --json name --jq '.[] | select(.name=="'"$LABEL"'") | .name' | grep -q .; then
+            LABEL_ARGS+=(--label "$LABEL")
+          else
+            echo "::notice::Label '$LABEL' not found; creating issue without a label."
+          fi
+
+          EXISTING=$(gh issue list --state open "${LABEL_ARGS[@]}" --search "ACP RFD update detected in:title" --json number --jq 'length')
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "Issue already exists, skipping creation"
+            exit 0
+          fi
+
+          gh issue create \
+            --title "ACP RFD update detected" \
+            "${LABEL_ARGS[@]}" \
+            --body "## ACP RFD Update Detected
+
+**Previous hash**: \`$PREVIOUS\`
+**Current hash**: \`$CURRENT\`
+
+### Action Required
+
+1. Review https://agentclientprotocol.com/rfds for changes
+2. Update \`docs/ACP-RFD-TRACKER.md\` if new RFDs or amendments are present
+
+---
+*This issue was automatically created by the ACP Upstream Watch workflow.*"
+
+      - name: Store current RFD hash
+        run: echo "${{ steps.current.outputs.hash }}" > .rfd-hash
+
+      - name: Save RFD hash
+        uses: actions/cache/save@v4
+        with:
+          path: .rfd-hash
+          key: rfd-hash-${{ github.run_id }}

@@ -39,7 +39,8 @@ Two jobs run daily at 06:00 UTC:
 
 2. **check-rfd-updates**: Monitors RFD page for content changes
    - Uses SHA256 hash of page content
-   - Caches hash to detect changes between runs
+   - Stores last-run hash to detect changes between runs
+   - Creates issue with label `acp-upgrade` when changes are detected
 
 ### Documentation Updates
 
