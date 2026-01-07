@@ -178,3 +178,109 @@ module CodecTests =
                     Assert.Equal("New Title", title)
             | other -> failwithf "unexpected update payload %A" other
         | other -> failwithf "unexpected message %A" other
+
+    // ───────────────────────────────────────────────────────────────────────────────
+    // _meta passthrough tests (W3C Trace Context)
+    // ───────────────────────────────────────────────────────────────────────────────
+
+    [<Fact>]
+    let ``decode session prompt request preserves _meta payload`` () =
+        let state0 = Codec.CodecState.empty
+
+        let promptReq =
+            """{"jsonrpc":"2.0","id":"m1","method":"session/prompt","params":{"sessionId":"s-meta","prompt":[{"type":"text","text":"hello"}],"_meta":{"traceparent":"00-abc-123-01","tracestate":"vendor=x","baggage":"key=val"}}}"""
+
+        let _, msg =
+            match Codec.decode Codec.Direction.FromClient state0 promptReq with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg with
+        | Message.FromClient(ClientToAgentMessage.SessionPrompt p) ->
+            Assert.Equal("s-meta", SessionId.value p.sessionId)
+            Assert.True(p._meta.IsSome)
+
+            match p._meta with
+            | None -> failwith "expected _meta payload"
+            | Some meta ->
+                let traceparent = (meta["traceparent"] :?> JsonValue).GetValue<string>()
+                let tracestate = (meta["tracestate"] :?> JsonValue).GetValue<string>()
+                let baggage = (meta["baggage"] :?> JsonValue).GetValue<string>()
+                Assert.Equal("00-abc-123-01", traceparent)
+                Assert.Equal("vendor=x", tracestate)
+                Assert.Equal("key=val", baggage)
+        | other -> failwithf "unexpected message %A" other
+
+    [<Fact>]
+    let ``decode session update notification preserves _meta payload`` () =
+        let state0 = Codec.CodecState.empty
+
+        let update =
+            """{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s-meta2","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"hi"}},"_meta":{"traceparent":"00-def-456-02"}}}"""
+
+        let _, msg =
+            match Codec.decode Codec.Direction.FromAgent state0 update with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg with
+        | Message.FromAgent(AgentToClientMessage.SessionUpdate u) ->
+            Assert.Equal("s-meta2", SessionId.value u.sessionId)
+            Assert.True(u._meta.IsSome)
+
+            match u._meta with
+            | None -> failwith "expected _meta payload"
+            | Some meta ->
+                let traceparent = (meta["traceparent"] :?> JsonValue).GetValue<string>()
+                Assert.Equal("00-def-456-02", traceparent)
+        | other -> failwithf "unexpected message %A" other
+
+    [<Fact>]
+    let ``decode session prompt response preserves _meta payload`` () =
+        let state0 = Codec.CodecState.empty
+
+        let promptReq =
+            """{"jsonrpc":"2.0","id":"meta-res","method":"session/prompt","params":{"sessionId":"s-res-meta","prompt":[{"type":"text","text":"hi"}]}}"""
+
+        let state1, _ =
+            match Codec.decode Codec.Direction.FromClient state0 promptReq with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        let promptRes =
+            """{"jsonrpc":"2.0","id":"meta-res","result":{"stopReason":"end_turn","_meta":{"traceparent":"00-ghi-789-03"}}}"""
+
+        let _, msg2 =
+            match Codec.decode Codec.Direction.FromAgent state1 promptRes with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg2 with
+        | Message.FromAgent(AgentToClientMessage.SessionPromptResult r) ->
+            Assert.Equal("s-res-meta", SessionId.value r.sessionId)
+            Assert.True(r._meta.IsSome)
+
+            match r._meta with
+            | None -> failwith "expected _meta payload"
+            | Some meta ->
+                let traceparent = (meta["traceparent"] :?> JsonValue).GetValue<string>()
+                Assert.Equal("00-ghi-789-03", traceparent)
+        | other -> failwithf "unexpected message %A" other
+
+    [<Fact>]
+    let ``decode session prompt without _meta yields None`` () =
+        let state0 = Codec.CodecState.empty
+
+        let promptReq =
+            """{"jsonrpc":"2.0","id":"no-meta","method":"session/prompt","params":{"sessionId":"s-nometa","prompt":[{"type":"text","text":"hello"}]}}"""
+
+        let _, msg =
+            match Codec.decode Codec.Direction.FromClient state0 promptReq with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg with
+        | Message.FromClient(ClientToAgentMessage.SessionPrompt p) ->
+            Assert.Equal("s-nometa", SessionId.value p.sessionId)
+            Assert.True(p._meta.IsNone)
+        | other -> failwithf "unexpected message %A" other

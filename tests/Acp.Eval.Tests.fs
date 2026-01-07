@@ -24,7 +24,8 @@ module EvalTests =
             Message.FromClient(
                 ClientToAgentMessage.SessionPrompt
                     { sessionId = sid
-                      prompt = [ textBlock "hi" ] }
+                      prompt = [ textBlock "hi" ]
+                      _meta = None }
             )
 
         let findings = runPromptChecks defaultProfile msg
@@ -33,7 +34,12 @@ module EvalTests =
     [<Fact>]
     let ``empty prompt fails code judge`` () =
         let msg =
-            Message.FromClient(ClientToAgentMessage.SessionPrompt { sessionId = sid; prompt = [] })
+            Message.FromClient(
+                ClientToAgentMessage.SessionPrompt
+                    { sessionId = sid
+                      prompt = []
+                      _meta = None }
+            )
 
         let findings = runPromptChecks defaultProfile msg
         Assert.Equal(1, findings.Length)
@@ -58,7 +64,8 @@ module EvalTests =
             Message.FromAgent(
                 AgentToClientMessage.SessionUpdate
                     { sessionId = sid
-                      update = SessionUpdate.ToolCall tc }
+                      update = SessionUpdate.ToolCall tc
+                      _meta = None }
             )
 
         let findings = runPromptChecks defaultProfile msg
@@ -80,7 +87,8 @@ module EvalTests =
             Message.FromAgent(
                 AgentToClientMessage.SessionUpdate
                     { sessionId = sid
-                      update = SessionUpdate.ToolCall tc }
+                      update = SessionUpdate.ToolCall tc
+                      _meta = None }
             )
 
         let findings = runPromptChecks defaultProfile msg
@@ -95,7 +103,8 @@ module EvalTests =
             Message.FromClient(
                 ClientToAgentMessage.SessionPrompt
                     { sessionId = sid
-                      prompt = [ textBlock code ] }
+                      prompt = [ textBlock code ]
+                      _meta = None }
             )
 
         let findings = runPromptChecks defaultProfile msg
@@ -109,7 +118,8 @@ module EvalTests =
             Message.FromClient(
                 ClientToAgentMessage.SessionPrompt
                     { sessionId = sid
-                      prompt = [ textBlock code ] }
+                      prompt = [ textBlock code ]
+                      _meta = None }
             )
 
         let findings = runPromptChecks defaultProfile msg
@@ -123,7 +133,8 @@ module EvalTests =
             Message.FromClient(
                 ClientToAgentMessage.SessionPrompt
                     { sessionId = sid
-                      prompt = [ textBlock code ] }
+                      prompt = [ textBlock code ]
+                      _meta = None }
             )
 
         let findings = runPromptChecks defaultProfile msg

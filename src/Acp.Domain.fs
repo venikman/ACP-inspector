@@ -419,15 +419,23 @@ module Domain =
         // ---- Prompt request/response ----
 
         type SessionPromptParams =
-            { sessionId: SessionId
-              prompt: ContentBlock list }
+            {
+                sessionId: SessionId
+                prompt: ContentBlock list
+                /// Draft RFD: _meta field for W3C trace context propagation (traceparent, tracestate, baggage).
+                _meta: JsonObject option
+            }
 
         /// Domain-level result for session/prompt (agent -> client).
         /// Wire result does not include a session id; we reattach it from the request.
         type SessionPromptResult =
-            { sessionId: SessionId
-              stopReason: StopReason
-              usage: JsonObject option }
+            {
+                sessionId: SessionId
+                stopReason: StopReason
+                usage: JsonObject option
+                /// Draft RFD: _meta field for W3C trace context propagation (traceparent, tracestate, baggage).
+                _meta: JsonObject option
+            }
 
         /// Domain-level error outcome (non-wire, for sentinel and higher-level tooling).
         [<RequireQualifiedAccess>]
@@ -581,8 +589,12 @@ module Domain =
             | Ext of tag: string * payload: JsonObject
 
         type SessionUpdateNotification =
-            { sessionId: SessionId
-              update: SessionUpdate }
+            {
+                sessionId: SessionId
+                update: SessionUpdate
+                /// Draft RFD: _meta field for W3C trace context propagation (traceparent, tracestate, baggage).
+                _meta: JsonObject option
+            }
 
         /// Params for session/cancel (client -> agent). Notification.
         type SessionCancelParams = { sessionId: SessionId }

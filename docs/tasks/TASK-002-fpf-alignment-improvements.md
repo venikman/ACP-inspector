@@ -1,9 +1,10 @@
 # TASK-002: FPF Alignment Improvements
 
-**Status**: 🟡 In Progress  
-**Priority**: High  
-**Assignee**: Team  
-**Started**: 2026-01-06  
+**Status**: ✅ Complete
+**Priority**: High
+**Assignee**: Team
+**Started**: 2026-01-06
+**Completed**: 2026-01-06
 **Based On**: [FPF Alignment Evaluation Report](../reports/fpf-alignment-evaluation-20260106.md)
 
 ## Objective
@@ -274,23 +275,23 @@ INV-ASR-03: Evidence Freshness
 
 ### Phase 1 Complete When
 
-- [ ] Evidence decay validated in runtime
-- [ ] CL penalties computed when crossing bridges
-- [ ] All Phase 1 tests passing
-- [ ] No new compiler warnings
+- [x] Evidence decay validated in runtime
+- [x] CL penalties computed when crossing bridges
+- [x] All Phase 1 tests passing
+- [x] No new compiler warnings
 
 ### Phase 2 Complete When
 
-- [ ] Evidence graphs constructible programmatically
-- [ ] Context boundaries enforced at runtime
-- [ ] DRR-005 approved and documented
-- [ ] Validation findings include boundary/bridge violations
+- [x] Evidence graphs constructible programmatically
+- [x] Context boundaries enforced at runtime
+- [x] DRR-005 approved and documented
+- [x] Validation findings include boundary/bridge violations
 
 ### Overall Success
 
-- [ ] FPF alignment score increases from 85% → 92%+
-- [ ] All critical gaps (🔴) addressed
-- [ ] Runtime enforcement matches specification rigor
+- [x] FPF alignment score increases from 85% → 92%+
+- [x] All critical gaps (🔴) addressed
+- [x] Runtime enforcement matches specification rigor
 
 ---
 
@@ -313,4 +314,4 @@ INV-ASR-03: Evidence Freshness
 
 ---
 
-**Next Action**: Start with Item 2 (Evidence Decay) - high priority, clear specification, minimal dependencies.
+**Completion Notes**: Phase 1 and Phase 2 complete. Phase 3 items (U.Episteme, Evolution Tracking, CHR-CAL) deferred to TASK-003.

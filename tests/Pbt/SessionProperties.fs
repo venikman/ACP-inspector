@@ -69,7 +69,8 @@ module SessionProperties =
                             AgentToClientMessage.SessionPromptResult
                                 { sessionId = sid
                                   stopReason = StopReason.EndTurn
-                                  usage = None }
+                                  usage = None
+                                  _meta = None }
                         ) ]
 
                 let r = runWithValidation sid spec msgs false None None
@@ -84,8 +85,18 @@ module SessionProperties =
                 let msgs =
                     handshake
                     @ [ Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
-                        Message.FromClient(ClientToAgentMessage.SessionPrompt { sessionId = sid; prompt = [] })
-                        Message.FromClient(ClientToAgentMessage.SessionPrompt { sessionId = sid; prompt = [] }) ]
+                        Message.FromClient(
+                            ClientToAgentMessage.SessionPrompt
+                                { sessionId = sid
+                                  prompt = []
+                                  _meta = None }
+                        )
+                        Message.FromClient(
+                            ClientToAgentMessage.SessionPrompt
+                                { sessionId = sid
+                                  prompt = []
+                                  _meta = None }
+                        ) ]
 
                 let r = runWithValidation sid spec msgs false None None
                 hasSessionFailure "ACP.SESSION.MULTIPLE_PROMPTS_IN_FLIGHT" r.findings)
@@ -105,13 +116,19 @@ module SessionProperties =
                     let msgs =
                         handshake
                         @ [ Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
-                            Message.FromClient(ClientToAgentMessage.SessionPrompt { sessionId = sid; prompt = [] })
+                            Message.FromClient(
+                                ClientToAgentMessage.SessionPrompt
+                                    { sessionId = sid
+                                      prompt = []
+                                      _meta = None }
+                            )
                             Message.FromClient(ClientToAgentMessage.SessionCancel { sessionId = sid })
                             Message.FromAgent(
                                 AgentToClientMessage.SessionPromptResult
                                     { sessionId = sid
                                       stopReason = sr
-                                      usage = None }
+                                      usage = None
+                                      _meta = None }
                             ) ]
 
                     let r = runWithValidation sid spec msgs false None None

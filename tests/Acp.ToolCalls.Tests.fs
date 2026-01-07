@@ -36,7 +36,8 @@ let makeToolCallUpdate
 
 let makeNotification update : SessionUpdateNotification =
     { sessionId = sessionId
-      update = update }
+      update = update
+      _meta = None }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Empty State
@@ -323,7 +324,8 @@ let ``AutoReset on session change clears tool calls`` () =
 
     tracker.Apply(
         { sessionId = session1
-          update = SessionUpdate.ToolCall tc1 }
+          update = SessionUpdate.ToolCall tc1
+          _meta = None }
     )
 
     Assert.Equal(1, tracker.All().Length)
@@ -333,7 +335,8 @@ let ``AutoReset on session change clears tool calls`` () =
 
     tracker.Apply(
         { sessionId = session2
-          update = SessionUpdate.ToolCall tc2 }
+          update = SessionUpdate.ToolCall tc2
+          _meta = None }
     )
 
     Assert.Equal(1, tracker.All().Length)
@@ -351,7 +354,8 @@ let ``No autoReset throws on session change`` () =
 
     tracker.Apply(
         { sessionId = session1
-          update = SessionUpdate.ToolCall tc1 }
+          update = SessionUpdate.ToolCall tc1
+          _meta = None }
     )
 
     let tc2 = makeToolCall "tc2" "Second" ToolKind.Edit ToolCallStatus.Pending
@@ -359,7 +363,8 @@ let ``No autoReset throws on session change`` () =
     Assert.Throws<ToolCallSessionMismatchError>(fun () ->
         tracker.Apply(
             { sessionId = session2
-              update = SessionUpdate.ToolCall tc2 }
+              update = SessionUpdate.ToolCall tc2
+              _meta = None }
         ))
     |> ignore
 

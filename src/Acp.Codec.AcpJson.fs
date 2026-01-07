@@ -1031,9 +1031,13 @@ module internal CodecAcpJson =
                     | n -> decodeContentBlock n |> Result.toOption)
                 |> Seq.toList
 
+            let meta =
+                tryGet "_meta" o |> Option.bind (fun n -> n |> asObject |> Result.toOption)
+
             return
                 { sessionId = sessionId
-                  prompt = blocks }
+                  prompt = blocks
+                  _meta = meta }
         }
 
     let private encodeSessionPromptParams (p: SessionPromptParams) : JsonObject =
@@ -1042,6 +1046,11 @@ module internal CodecAcpJson =
         let arr = JsonArray()
         p.prompt |> List.iter (fun b -> arr.Add(encodeContentBlock b))
         o["prompt"] <- arr
+
+        match p._meta with
+        | Some m -> o["_meta"] <- m.DeepClone()
+        | None -> ()
+
         o
 
     let private decodeSessionCancelParams (node: JsonNode) : Result<SessionCancelParams, string> =
@@ -1065,13 +1074,19 @@ module internal CodecAcpJson =
             | _ -> None
         | _ -> None
 
-    let private decodeSessionPromptResponse (node: JsonNode) : Result<StopReason * JsonObject option, string> =
+    let private decodeSessionPromptResponse
+        (node: JsonNode)
+        : Result<StopReason * JsonObject option * JsonObject option, string> =
         result {
             let! o = asObject node
             let! srNode = get "stopReason" o
             let! stopReason = decodeStopReason srNode
             let usage = tryGetObjectClone o "usage"
-            return stopReason, usage
+
+            let meta =
+                tryGet "_meta" o |> Option.bind (fun n -> n |> asObject |> Result.toOption)
+
+            return stopReason, usage, meta
         }
 
     // ---- Plan ----
@@ -1776,13 +1791,25 @@ module internal CodecAcpJson =
             let! updNode = get "update" o
             let! sid = decodeSessionId sidNode
             let! upd = decodeSessionUpdate updNode
-            return { sessionId = sid; update = upd }
+
+            let meta =
+                tryGet "_meta" o |> Option.bind (fun n -> n |> asObject |> Result.toOption)
+
+            return
+                { sessionId = sid
+                  update = upd
+                  _meta = meta }
         }
 
     let private encodeSessionUpdateNotification (n: SessionUpdateNotification) : JsonObject =
         let o = JsonObject()
         o["sessionId"] <- encodeSessionId n.sessionId
         o["update"] <- encodeSessionUpdate n.update
+
+        match n._meta with
+        | Some m -> o["_meta"] <- m.DeepClone()
+        | None -> ()
+
         o
 
     // ---- Tool surface: fs + terminals ----
@@ -2286,11 +2313,12 @@ module internal CodecAcpJson =
             | None -> Error "missing result"
             | Some r ->
                 decodeSessionPromptResponse r
-                |> Result.map (fun (sr, usage) ->
+                |> Result.map (fun (sr, usage, meta) ->
                     AgentToClientMessage.SessionPromptResult
                         { sessionId = req.sessionId
                           stopReason = sr
-                          usage = usage })
+                          usage = usage
+                          _meta = meta })
 
         | PendingClientRequest.SessionSetMode req ->
             Ok(
@@ -2621,6 +2649,10 @@ module internal CodecAcpJson =
                         | _ -> JsonObject()
 
                     res["usage"] <- payload
+
+                match r._meta with
+                | Some m -> res["_meta"] <- m.DeepClone()
+                | None -> ()
 
                 o["result"] <- res
                 Ok o
