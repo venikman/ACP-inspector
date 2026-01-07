@@ -71,10 +71,9 @@ jobs:
             exit 0
           fi
 
-          gh issue create \
-            --title "ACP spec update available: v$LATEST" \
-            "${LABEL_ARGS[@]}" \
-            --body "## ACP Upstream Update Detected
+          BODY_FILE="$(mktemp)"
+          cat > "$BODY_FILE" <<BODY
+## ACP Upstream Update Detected
 
 **Current pinned version**: \`$PINNED\`
 **Latest available version**: \`$LATEST\`
@@ -92,7 +91,13 @@ jobs:
 - [ACP Spec](https://agentclientprotocol.com/overview/introduction)
 
 ---
-*This issue was automatically created by the ACP Upstream Watch workflow.*"
+*This issue was automatically created by the ACP Upstream Watch workflow.*
+BODY
+
+          gh issue create \
+            --title "ACP spec update available: v$LATEST" \
+            "${LABEL_ARGS[@]}" \
+            --body-file "$BODY_FILE"
 
   check-rfd-updates:
     runs-on: ubuntu-latest
@@ -172,10 +177,9 @@ jobs:
             exit 0
           fi
 
-          gh issue create \
-            --title "ACP RFD update detected" \
-            "${LABEL_ARGS[@]}" \
-            --body "## ACP RFD Update Detected
+          BODY_FILE="$(mktemp)"
+          cat > "$BODY_FILE" <<BODY
+## ACP RFD Update Detected
 
 **Previous hash**: \`$PREVIOUS\`
 **Current hash**: \`$CURRENT\`
@@ -186,7 +190,13 @@ jobs:
 2. Update \`docs/ACP-RFD-TRACKER.md\` if new RFDs or amendments are present
 
 ---
-*This issue was automatically created by the ACP Upstream Watch workflow.*"
+*This issue was automatically created by the ACP Upstream Watch workflow.*
+BODY
+
+          gh issue create \
+            --title "ACP RFD update detected" \
+            "${LABEL_ARGS[@]}" \
+            --body-file "$BODY_FILE"
 
       - name: Store current RFD hash
         run: echo "${{ steps.current.outputs.hash }}" > .rfd-hash
