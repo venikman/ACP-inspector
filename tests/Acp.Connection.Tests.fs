@@ -63,7 +63,8 @@ module ConnectionTests =
                                 Ok
                                     { sessionId = p.sessionId
                                       stopReason = StopReason.EndTurn
-                                      usage = None }
+                                      usage = None
+                                      _meta = None }
                         }
                   onCancel = fun _ -> task { () }
                   onSetMode =
@@ -208,7 +209,8 @@ module ConnectionTests =
                                 Ok
                                     { sessionId = p.sessionId
                                       stopReason = StopReason.EndTurn
-                                      usage = None }
+                                      usage = None
+                                      _meta = None }
                         }
                   onCancel = fun _ -> task { () }
                   onSetMode = fun _ -> task { return Error "not implemented" } }
@@ -240,7 +242,8 @@ module ConnectionTests =
                       prompt =
                         [ ContentBlock.Text
                               { text = "Hello agent!"
-                                annotations = None } ] }
+                                annotations = None } ]
+                      _meta = None }
                 )
 
             // Verify

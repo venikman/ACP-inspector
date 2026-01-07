@@ -24,7 +24,8 @@ module EvalGoldenTests =
             Message.FromClient(
                 ClientToAgentMessage.SessionPrompt
                     { sessionId = sid
-                      prompt = [ ContentBlock.Text { text = text; annotations = None } ] }
+                      prompt = [ ContentBlock.Text { text = text; annotations = None } ]
+                      _meta = None }
             )
 
         runPromptChecks defaultProfile msg |> List.map (fun f -> f.code) |> Set.ofList

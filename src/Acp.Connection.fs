@@ -4,6 +4,7 @@ open System
 open System.Collections.Concurrent
 open System.Diagnostics
 open System.Text
+open System.Text.Json.Nodes
 open System.Threading
 open System.Threading.Tasks
 
@@ -815,11 +816,12 @@ module Connection =
             }
 
         /// Send session/update notification to client.
-        member _.SessionUpdateAsync(sessionId: SessionId, update: SessionUpdate) =
+        member _.SessionUpdateAsync(sessionId: SessionId, update: SessionUpdate, ?meta: JsonObject) =
             sendNotification (
                 AgentToClientMessage.SessionUpdate
                     { sessionId = sessionId
-                      update = update }
+                      update = update
+                      _meta = meta }
             )
 
         /// Request fs/read_text_file from client.

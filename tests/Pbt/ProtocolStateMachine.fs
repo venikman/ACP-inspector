@@ -133,7 +133,12 @@ module ProtocolStateMachine =
             | m -> m)
             (fun (actual, model) ->
                 let msg =
-                    Message.FromClient(ClientToAgentMessage.SessionPrompt { sessionId = sid; prompt = [] })
+                    Message.FromClient(
+                        ClientToAgentMessage.SessionPrompt
+                            { sessionId = sid
+                              prompt = []
+                              _meta = None }
+                    )
 
                 let ok = apply actual msg
 
@@ -154,7 +159,8 @@ module ProtocolStateMachine =
                         AgentToClientMessage.SessionPromptResult
                             { sessionId = sid
                               stopReason = sr
-                              usage = None }
+                              usage = None
+                              _meta = None }
                     )
 
                 let ok = apply actual msg
@@ -178,7 +184,8 @@ module ProtocolStateMachine =
                           update =
                             SessionUpdate.AgentMessageChunk(
                                 ({ content = ContentBlock.Text { text = "ok"; annotations = None } }: ContentChunk)
-                            ) }
+                            )
+                          _meta = None }
                 )
 
             apply actual msg && (projectPhase actual.Value = model))

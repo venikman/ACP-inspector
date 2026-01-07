@@ -132,14 +132,19 @@ module Generators =
               mcpServers = [] }
 
     let private genSessionPromptParams (sid: SessionId) : Gen<SessionPromptParams> =
-        genContentBlocks |> G.map (fun blocks -> { sessionId = sid; prompt = blocks })
+        genContentBlocks
+        |> G.map (fun blocks ->
+            { sessionId = sid
+              prompt = blocks
+              _meta = None })
 
     let private genSessionPromptResult (sid: SessionId) : Gen<SessionPromptResult> =
         genStopReason
         |> G.map (fun sr ->
             { sessionId = sid
               stopReason = sr
-              usage = None })
+              usage = None
+              _meta = None })
 
     let private genSessionUpdate (sid: SessionId) : Gen<SessionUpdateNotification> =
         let genChunk = genContentBlock |> G.map (fun cb -> ({ content = cb }: ContentChunk))
@@ -150,7 +155,11 @@ module Generators =
                   3, genChunk |> G.map SessionUpdate.AgentMessageChunk
                   1, genChunk |> G.map SessionUpdate.AgentThoughtChunk ]
 
-        genUpdate |> G.map (fun u -> { sessionId = sid; update = u })
+        genUpdate
+        |> G.map (fun u ->
+            { sessionId = sid
+              update = u
+              _meta = None })
 
     let private genToolCallUpdate: Gen<ToolCallUpdate> =
         G.zip genSmallString genContentBlock

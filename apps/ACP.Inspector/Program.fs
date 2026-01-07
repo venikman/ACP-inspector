@@ -25,6 +25,7 @@ open Acp
 open Acp.Domain
 open Acp.Domain.JsonRpc
 open Acp.Domain.PrimitivesAndParties
+open Acp.Domain.Prompting
 open Acp.Domain.Messaging
 
 module private Cli =
@@ -286,10 +287,10 @@ module private Cli =
         | None -> ()
         | Some(remKey, rem, limitKey, lim, ratio) ->
             let percent = ratio * 100.0
-            Console.Out.WriteLine($"  [draft] context headroom {remKey}={rem} {limitKey}={lim} ({percent:F1}%)")
+            Console.Out.WriteLine($"  [draft] context headroom {remKey}={rem} {limitKey}={lim} ({percent:F1}%%)")
 
             if ratio < lowContextHeadroomThreshold then
-                Console.Out.WriteLine($"  [warning] low context headroom ({percent:F1}%)")
+                Console.Out.WriteLine($"  [warning] low context headroom ({percent:F1}%%)")
 
     let private tryGetMetaObject (element: JsonElement) =
         if element.ValueKind <> JsonValueKind.Object then

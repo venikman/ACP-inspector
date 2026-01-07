@@ -62,6 +62,22 @@ module ValidationTests =
     let private textBlock (text: string) : ContentBlock =
         ContentBlock.Text { text = text; annotations = None }
 
+    let private mkPromptParams (sid: SessionId) (blocks: ContentBlock list) : SessionPromptParams =
+        { sessionId = sid
+          prompt = blocks
+          _meta = None }
+
+    let private mkPromptResult (sid: SessionId) (stopReason: StopReason) : SessionPromptResult =
+        { sessionId = sid
+          stopReason = stopReason
+          usage = None
+          _meta = None }
+
+    let private mkSessionUpdate (sid: SessionId) (update: SessionUpdate) : SessionUpdateNotification =
+        { sessionId = sid
+          update = update
+          _meta = None }
+
     let private mkModeState () : SessionModeState =
         let ask: SessionMode =
             { id = SessionModeId "ask"
@@ -81,115 +97,52 @@ module ValidationTests =
           Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
           Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
           Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
-          Message.FromClient(
-              ClientToAgentMessage.SessionPrompt
-                  { sessionId = sid
-                    prompt = [ textBlock "hi" ] }
-          )
-          Message.FromAgent(
-              AgentToClientMessage.SessionPromptResult
-                  { sessionId = sid
-                    stopReason = StopReason.EndTurn
-                    usage = None }
-          ) ]
+          Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "hi" ]))
+          Message.FromAgent(AgentToClientMessage.SessionPromptResult(mkPromptResult sid StopReason.EndTurn)) ]
 
     let mkCancelledTraceGood (sid: SessionId) : Message list =
         [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
           Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
           Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
           Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
-          Message.FromClient(
-              ClientToAgentMessage.SessionPrompt
-                  { sessionId = sid
-                    prompt = [ textBlock "hi" ] }
-          )
+          Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "hi" ]))
           Message.FromClient(ClientToAgentMessage.SessionCancel { sessionId = sid })
-          Message.FromAgent(
-              AgentToClientMessage.SessionPromptResult
-                  { sessionId = sid
-                    stopReason = StopReason.Cancelled
-                    usage = None }
-          ) ]
+          Message.FromAgent(AgentToClientMessage.SessionPromptResult(mkPromptResult sid StopReason.Cancelled)) ]
 
     let mkCancelledTraceBad (sid: SessionId) : Message list =
         [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
           Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
           Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
           Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
-          Message.FromClient(
-              ClientToAgentMessage.SessionPrompt
-                  { sessionId = sid
-                    prompt = [ textBlock "hi" ] }
-          )
+          Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "hi" ]))
           Message.FromClient(ClientToAgentMessage.SessionCancel { sessionId = sid })
-          Message.FromAgent(
-              AgentToClientMessage.SessionPromptResult
-                  { sessionId = sid
-                    stopReason = StopReason.EndTurn
-                    usage = None }
-          ) ]
+          Message.FromAgent(AgentToClientMessage.SessionPromptResult(mkPromptResult sid StopReason.EndTurn)) ]
 
     let mkSequentialPromptsTraceGood (sid: SessionId) : Message list =
         [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
           Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
           Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
           Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
-          Message.FromClient(
-              ClientToAgentMessage.SessionPrompt
-                  { sessionId = sid
-                    prompt = [ textBlock "p1" ] }
-          )
-          Message.FromAgent(
-              AgentToClientMessage.SessionPromptResult
-                  { sessionId = sid
-                    stopReason = StopReason.EndTurn
-                    usage = None }
-          )
-          Message.FromClient(
-              ClientToAgentMessage.SessionPrompt
-                  { sessionId = sid
-                    prompt = [ textBlock "p2" ] }
-          )
-          Message.FromAgent(
-              AgentToClientMessage.SessionPromptResult
-                  { sessionId = sid
-                    stopReason = StopReason.EndTurn
-                    usage = None }
-          ) ]
+          Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "p1" ]))
+          Message.FromAgent(AgentToClientMessage.SessionPromptResult(mkPromptResult sid StopReason.EndTurn))
+          Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "p2" ]))
+          Message.FromAgent(AgentToClientMessage.SessionPromptResult(mkPromptResult sid StopReason.EndTurn)) ]
 
     let mkConcurrentPromptsTraceBad (sid: SessionId) : Message list =
         [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
           Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
           Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
           Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
-          Message.FromClient(
-              ClientToAgentMessage.SessionPrompt
-                  { sessionId = sid
-                    prompt = [ textBlock "p1" ] }
-          )
-          Message.FromClient(
-              ClientToAgentMessage.SessionPrompt
-                  { sessionId = sid
-                    prompt = [ textBlock "p2" ] }
-          )
-          Message.FromAgent(
-              AgentToClientMessage.SessionPromptResult
-                  { sessionId = sid
-                    stopReason = StopReason.EndTurn
-                    usage = None }
-          ) ]
+          Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "p1" ]))
+          Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "p2" ]))
+          Message.FromAgent(AgentToClientMessage.SessionPromptResult(mkPromptResult sid StopReason.EndTurn)) ]
 
     let mkResultWithoutPromptTraceBad (sid: SessionId) : Message list =
         [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
           Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
           Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
           Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
-          Message.FromAgent(
-              AgentToClientMessage.SessionPromptResult
-                  { sessionId = sid
-                    stopReason = StopReason.EndTurn
-                    usage = None }
-          ) ]
+          Message.FromAgent(AgentToClientMessage.SessionPromptResult(mkPromptResult sid StopReason.EndTurn)) ]
 
     [<Fact>]
     let ``happy path produces Ready phase and no findings`` () =
@@ -208,11 +161,7 @@ module ValidationTests =
         let sid = SessionId "s-err"
 
         let badThenInit: Message list =
-            [ Message.FromClient(
-                  ClientToAgentMessage.SessionPrompt
-                      { sessionId = sid
-                        prompt = [ textBlock "oops" ] }
-              )
+            [ Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "oops" ]))
               Message.FromClient(ClientToAgentMessage.Initialize initParams) ]
 
         let result = runWithValidation sid spec badThenInit false None None
@@ -232,18 +181,9 @@ module ValidationTests =
               Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
               Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
               Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
-              Message.FromClient(
-                  ClientToAgentMessage.SessionPrompt
-                      { sessionId = sid
-                        prompt = [ textBlock "hi" ] }
-              )
+              Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "hi" ]))
               Message.FromClient(ClientToAgentMessage.SessionCancel { sessionId = sid })
-              Message.FromAgent(
-                  AgentToClientMessage.SessionPromptResult
-                      { sessionId = sid
-                        stopReason = StopReason.Cancelled
-                        usage = None }
-              ) ]
+              Message.FromAgent(AgentToClientMessage.SessionPromptResult(mkPromptResult sid StopReason.Cancelled)) ]
 
         let result = runWithValidation sid spec trace true None None
         let outcome = classify sid result.trace result.finalPhase result.findings
@@ -350,11 +290,7 @@ module ValidationTests =
         let sid = SessionId "s-protoerr"
 
         let badMessages: Message list =
-            [ Message.FromClient(
-                  ClientToAgentMessage.SessionPrompt
-                      { sessionId = sid
-                        prompt = [ textBlock "hi before init" ] }
-              ) ]
+            [ Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "hi before init" ])) ]
 
         let result = runWithValidation sid spec badMessages true None None
         let outcome = classify sid result.trace result.finalPhase result.findings
@@ -427,9 +363,9 @@ module ValidationTests =
               Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
               Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = Some modes })
               Message.FromAgent(
-                  AgentToClientMessage.SessionUpdate
-                      { sessionId = sid
-                        update = SessionUpdate.CurrentModeUpdate { currentModeId = next } }
+                  AgentToClientMessage.SessionUpdate(
+                      mkSessionUpdate sid (SessionUpdate.CurrentModeUpdate { currentModeId = next })
+                  )
               ) ]
 
         let result = runWithValidation sid spec trace true None None

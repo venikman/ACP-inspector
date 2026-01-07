@@ -114,7 +114,13 @@ module RuntimeAdapterTests =
 
         let frame: InboundFrame =
             { rawByteLength = None
-              message = Message.FromClient(ClientToAgentMessage.SessionPrompt { sessionId = sid; prompt = [] }) }
+              message =
+                Message.FromClient(
+                    ClientToAgentMessage.SessionPrompt
+                        { sessionId = sid
+                          prompt = []
+                          _meta = None }
+                ) }
 
         let result = validateInboundWithEval sid None (Some evalProfile) frame true
 
