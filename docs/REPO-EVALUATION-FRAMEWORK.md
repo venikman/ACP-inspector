@@ -1,18 +1,14 @@
-# Repository Evaluation Framework
+# ACP-Inspector Evaluation Framework
 
-A measurement system for assessing open-source project quality and viability from an external perspective.
-
-## Purpose
-
-Establish objective criteria to evaluate whether a repository effectively communicates its value and can be adopted by its target audience.
+Assessment criteria for understanding and improving this repository's clarity, utility, and adoption potential.
 
 ---
 
-## Dimensions
+## Evaluation Dimensions
 
-### 1. Clarity
+### 1. Clarity (Current: 2/5)
 
-**What it measures:** Can someone understand the purpose quickly?
+Can someone understand what ACP-sentinel does quickly?
 
 | Score | Criteria |
 |-------|----------|
@@ -22,13 +18,16 @@ Establish objective criteria to evaluate whether a repository effectively commun
 | 2 | Need to explore code to understand |
 | 1 | Still confused after significant effort |
 
-**Test:** Time a newcomer from landing to "I get what this does"
+**Current issues:**
+- Assumes reader knows what ACP is
+- Uses unexplained terms: holon, sentinel, lanes, findings
+- Technical depth before context
 
 ---
 
-### 2. Necessity
+### 2. Necessity (Current: 2.5/5)
 
-**What it measures:** Does it solve a problem people actually have?
+Does this solve a problem people actually have?
 
 | Score | Criteria |
 |-------|----------|
@@ -38,29 +37,36 @@ Establish objective criteria to evaluate whether a repository effectively commun
 | 2 | Solution looking for problem |
 | 1 | No discernible need |
 
-**Test:** Find evidence of people asking for this solution before it existed
+**Current issues:**
+- ACP itself is niche protocol
+- No "problem statement" in docs
+- Unclear who urgently needs this
 
 ---
 
-### 3. Accessibility
+### 3. Accessibility (Current: 2/5)
 
-**What it measures:** Can the target audience actually use it?
+Can the target audience actually use it?
 
 | Score | Criteria |
 |-------|----------|
 | 5 | Anyone can use immediately |
 | 4 | Target audience can use easily |
 | 3 | Requires learning but achievable |
-| 2 | Significant barriers (language, setup, concepts) |
+| 2 | Significant barriers |
 | 1 | Effectively unusable for most |
 
-**Test:** Count barriers between "I want to use this" and "I'm using this"
+**Current issues:**
+- F# has ~1% developer mindshare
+- Official ACP SDKs are TypeScript/Python
+- .NET 10 (preview) required
+- No bindings for other languages
 
 ---
 
-### 4. Proportionality
+### 4. Proportionality (Current: 2/5)
 
-**What it measures:** Is complexity justified by value delivered?
+Is the complexity justified?
 
 | Score | Criteria |
 |-------|----------|
@@ -70,169 +76,164 @@ Establish objective criteria to evaluate whether a repository effectively commun
 | 2 | Significantly over-engineered |
 | 1 | Complexity obscures value |
 
-**Test:** Map every major component to a concrete user need
+**Current issues:**
+- 6 validation lanes (most users need 1-2)
+- 25+ modules for message validation
+- OpenTelemetry integration before proving basic value
+- Extensive internal docs (DRR, BC) for external project
 
 ---
 
-### 5. Coherence
+### 5. Coherence (Current: 2/5)
 
-**What it measures:** Do naming, structure, and docs tell one consistent story?
+Do naming, structure, and docs tell one story?
 
 | Score | Criteria |
 |-------|----------|
 | 5 | Everything aligns perfectly |
 | 4 | Minor inconsistencies |
-| 3 | Noticeable friction between parts |
+| 3 | Noticeable friction |
 | 2 | Multiple competing narratives |
-| 1 | Contradictory/confusing throughout |
+| 1 | Contradictory throughout |
 
-**Test:** List all names/terms used for the same concept; count > 1 = problem
+**Current issues:**
+- Folder: `ACP-inspector`
+- README title: `ACP-sentinel`
+- Package ID: `ACP.Sentinel`
+- CLI tool: `acp-cli`
+- Four names for one project
 
 ---
 
-### 6. Leverage
+### 6. Leverage (Current: 3.5/5)
 
-**What it measures:** Can it be used beyond its stated purpose?
+Can it be used beyond stated purpose?
 
 | Score | Criteria |
 |-------|----------|
-| 5 | Highly reusable for unintended purposes |
+| 5 | Highly reusable |
 | 4 | Some reusable components |
 | 3 | Useful only for stated purpose |
 | 2 | Limited even for stated purpose |
 | 1 | Hard to use for anything |
 
-**Test:** Attempt three uses not mentioned in docs
+**Current strengths:**
+- Transport abstractions useful for testing any protocol
+- State machine patterns are transferable
+- Trace replay applicable beyond ACP
+- Validation architecture is a study reference
 
 ---
 
-## Scoring Template
+## Current Score
 
+| Dimension | Score | Status |
+|-----------|-------|--------|
+| Clarity | 2.0 | 🔴 Below bar |
+| Necessity | 2.5 | 🔴 Below bar |
+| Accessibility | 2.0 | 🔴 Below bar |
+| Proportionality | 2.0 | 🔴 Below bar |
+| Coherence | 2.0 | 🔴 Below bar |
+| Leverage | 3.5 | 🟢 Above bar |
+| **Aggregate** | **2.3** | 🔴 Below minimum (3.0) |
+
+---
+
+## Specific Problems Identified
+
+### Naming Inconsistency
 ```
-Project: _______________
-Date: _______________
-Evaluator: _______________
-
-| Dimension       | Score (1-5) | Evidence |
-|-----------------|-------------|----------|
-| Clarity         |             |          |
-| Necessity       |             |          |
-| Accessibility   |             |          |
-| Proportionality |             |          |
-| Coherence       |             |          |
-| Leverage        |             |          |
-|-----------------|-------------|----------|
-| **Aggregate**   |             |          |
+Location              Name Used
+─────────────────────────────────
+Folder                ACP-inspector
+README.md line 1      ACP-sentinel
+Package ID            ACP.Sentinel
+CLI tool              acp-cli
 ```
 
----
+### Missing Context
+- No "What is ACP?" for newcomers
+- No link explaining the protocol before diving into implementation
+- Assumes reader already decided to use ACP
 
-## Acceptance Bars
+### Jargon Without Glossary
+| Term | Used Without Definition |
+|------|------------------------|
+| Holon | README line 9-11 |
+| Sentinel | Throughout |
+| Lanes | Validation concept |
+| Findings | Validation output |
+| RuntimeAdapter | Module name |
 
-### Minimum Viable (External Adoption)
+### Language Barrier
+- F# chosen over TypeScript/Python (where ACP community exists)
+- No FFI or bindings provided
+- Examples only in F#
 
-| Dimension | Minimum | Notes |
-|-----------|---------|-------|
-| Clarity | 3 | Must be understandable from docs |
-| Necessity | 3 | Must solve real problem for someone |
-| Accessibility | 3 | Must be learnable |
-| Proportionality | 3 | Some bloat acceptable |
-| Coherence | 3 | Minor friction acceptable |
-| Leverage | 2 | Bonus, not required |
-
-**Minimum aggregate: 3.0 / 5**
-
-### Production Ready (Recommended for Teams)
-
-| Dimension | Target | Notes |
-|-----------|--------|-------|
-| Clarity | 4 | Clear from intro paragraph |
-| Necessity | 4 | Documented pain points |
-| Accessibility | 4 | Easy for target audience |
-| Proportionality | 4 | Justified complexity |
-| Coherence | 4 | Consistent naming/structure |
-| Leverage | 3 | Works well for stated purpose |
-
-**Target aggregate: 3.8 / 5**
-
----
-
-## Anti-Patterns to Detect
-
-| Anti-Pattern | Signals | Affected Dimension |
-|--------------|---------|-------------------|
-| Jargon Wall | Unexplained domain terms in intro | Clarity |
-| Solution Searching | No "problem" section in docs | Necessity |
-| Technology Moat | Niche language, complex setup | Accessibility |
-| Resume-Driven | Features nobody asked for | Proportionality |
-| Identity Crisis | Multiple names for same thing | Coherence |
-| One-Trick Pony | Impossible to adapt/extend | Leverage |
-
----
-
-## Application: ACP-Inspector/Sentinel
-
-### Initial Assessment (Pre-Investigation)
-
-| Dimension | Score | Evidence |
-|-----------|-------|----------|
-| Clarity | 2 | Jargon heavy; requires code exploration |
-| Necessity | 2.5 | ACP is niche; unclear urgent need |
-| Accessibility | 2 | F# barrier; assumes ACP knowledge |
-| Proportionality | 2 | 6 validation lanes, 25+ modules |
-| Coherence | 2 | 4 names: inspector/sentinel/cli/package |
-| Leverage | 3.5 | Patterns reusable; testing tools valuable |
-| **Aggregate** | **2.3** | Below minimum viable bar |
-
-### Identified Issues
-
-1. **Naming inconsistency**
-   - Folder: `ACP-inspector`
-   - README: `ACP-sentinel`
-   - Package: `ACP.Sentinel`
-   - CLI: `acp-cli`
-
-2. **Missing context**
-   - No "What is ACP?" explanation
-   - Assumes reader knows the protocol
-
-3. **Jargon without glossary**
-   - Holon, Sentinel, Lanes, Findings
-   - Domain terms used without definition
-
-4. **Language barrier**
-   - F# (~1% developer mindshare)
-   - Official SDKs are TypeScript/Python
-
-5. **Over-architecture signals**
-   - 6 validation lanes
-   - OpenTelemetry before user validation
-   - Extensive internal docs (DRR, BC)
+### Architecture vs Audience Mismatch
+| Feature | Complexity | Likely Users Who Need It |
+|---------|------------|-------------------------|
+| 6 validation lanes | High | < 5% |
+| OpenTelemetry export | Medium | < 20% |
+| Benchmark suite | Medium | < 10% |
+| Design Records (DRR) | High | Internal only |
 
 ---
 
 ## Improvement Roadmap
 
-To reach minimum viable (3.0):
+### Quick Wins (Low Effort, High Impact)
 
-| Priority | Action | Target Dimension | Effort |
-|----------|--------|------------------|--------|
-| 1 | Add "What is ACP?" section | Clarity | Low |
-| 2 | Unify naming to one term | Coherence | Low |
-| 3 | Add glossary for terms | Clarity | Low |
-| 4 | Write problem/pain statement | Necessity | Medium |
-| 5 | Create "hello world" in 5 lines | Accessibility | Medium |
-| 6 | Document which features map to which needs | Proportionality | Medium |
+| Action | Fixes | Effort |
+|--------|-------|--------|
+| Add 2-paragraph "What is ACP?" at README top | Clarity | 30 min |
+| Pick ONE name, rename everywhere | Coherence | 1 hour |
+| Add glossary section | Clarity | 30 min |
+| Add "Problem this solves" section | Necessity | 1 hour |
+
+### Medium Effort
+
+| Action | Fixes | Effort |
+|--------|-------|--------|
+| Create 5-line "hello world" example | Accessibility | 2 hours |
+| Map each module to user need | Proportionality | 3 hours |
+| Hide advanced features behind simple API | Proportionality | 4 hours |
+
+### Larger Changes
+
+| Action | Fixes | Effort |
+|--------|-------|--------|
+| Python bindings via pythonnet | Accessibility | Days |
+| TypeScript types generation | Accessibility | Days |
+| Simplify to core + extensions | Proportionality | Week |
 
 ---
 
-## Usage
+## Validation Tests
 
-1. Score the project honestly using the template
-2. Compare aggregate to acceptance bars
-3. Identify lowest-scoring dimensions
-4. Use anti-pattern list to diagnose issues
-5. Prioritize improvements by impact/effort
-6. Re-score after changes
+To verify improvements, test these:
 
-This framework prioritizes external viability over internal quality. A well-tested, well-architected project can still score poorly if it fails to communicate value to potential users.
+| Hypothesis | Test | Pass Criteria |
+|------------|------|---------------|
+| Clarity improved | Show README to newcomer | Understands purpose in < 2 min |
+| Naming fixed | Search repo for old names | Zero results |
+| Necessity clearer | Ask "why use this?" | Answer in README intro |
+| Accessibility better | Count setup steps | ≤ 3 commands to working example |
+
+---
+
+## Target State
+
+After improvements:
+
+| Dimension | Current | Target | Gap |
+|-----------|---------|--------|-----|
+| Clarity | 2.0 | 4.0 | +2.0 |
+| Necessity | 2.5 | 3.5 | +1.0 |
+| Accessibility | 2.0 | 3.0 | +1.0 |
+| Proportionality | 2.0 | 3.0 | +1.0 |
+| Coherence | 2.0 | 4.0 | +2.0 |
+| Leverage | 3.5 | 3.5 | 0 |
+| **Aggregate** | **2.3** | **3.5** | **+1.2** |
+
+Achievable with quick wins alone: **~3.0** (minimum viable)
