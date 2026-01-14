@@ -16,5 +16,8 @@ docs/_site/
 
 .fake
 
+# JS dependencies
+node_modules/
+
 # PBT runner output (canonical evidence is tracked)
 core/evidence/pbt/*latest-failure.json
