@@ -1,0 +1,20 @@
+# macOS noise
+.DS_Store
+__MACOSX/
+
+# build outputs
+bin/
+obj/
+TestResults/
+*.user
+*.suo
+*.cache
+nupkg/
+coverage/
+docs/_site/
+.fsdocs/
+
+.fake
+
+# PBT runner output (canonical evidence is tracked)
+core/evidence/pbt/*latest-failure.json

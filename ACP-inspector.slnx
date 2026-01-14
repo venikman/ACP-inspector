@@ -1,16 +1,20 @@
 <Solution>
-  <Folder Name="/apps/">
-    <Project Path="apps/ACP.Cli/ACP.Cli.fsproj" />
-    <Project Path="apps/ACP.Benchmark/ACP.Benchmark.fsproj" />
-    <Project Path="apps/ACP.Inspector/ACP.Inspector.fsproj" />
+  <Folder Name="/cli/">
+    <Project Path="cli/apps/ACP.Cli/ACP.Cli.fsproj" />
+    <Project Path="cli/apps/ACP.Benchmark/ACP.Benchmark.fsproj" />
+    <Project Path="cli/apps/ACP.Inspector/ACP.Inspector.fsproj" />
   </Folder>
-  <Folder Name="/src/">
-    <Project Path="src/ACP.fsproj" />
+  <Folder Name="/protocol/">
+    <Project Path="protocol/src/ACP.fsproj" />
   </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/ACP.Tests.fsproj" />
-    <Project Path="tests/Epistemology.Harness/Epistemology.Harness.fsproj" />
-    <Project Path="tests/SDK.Harness/SDK.Harness.fsproj" />
-    <Project Path="tests/Validation.Harness/Validation.Harness.fsproj" />
+  <Folder Name="/runtime/">
+    <Project Path="runtime/src/ACP.fsproj" />
+  </Folder>
+  <Folder Name="/sentinel/">
+    <Project Path="sentinel/src/ACP.fsproj" />
+    <Project Path="sentinel/tests/ACP.Tests.fsproj" />
+    <Project Path="sentinel/tests/Epistemology.Harness/Epistemology.Harness.fsproj" />
+    <Project Path="sentinel/tests/SDK.Harness/SDK.Harness.fsproj" />
+    <Project Path="sentinel/tests/Validation.Harness/Validation.Harness.fsproj" />
   </Folder>
 </Solution>

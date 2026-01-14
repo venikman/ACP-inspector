@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>ACP.Protocol</AssemblyName>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+
+    <!-- NuGet Package Properties -->
+    <PackageId>ACP.Protocol</PackageId>
+    <Version>0.1.1</Version>
+    <Authors>ACP-Protocol Contributors</Authors>
+    <Description>F# protocol core for ACP: typed domain model and protocol state machine.</Description>
+    <PackageTags>acp;agent-client-protocol;protocol;fsharp</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/venikman/acp-protocol-fsharp</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/venikman/acp-protocol-fsharp</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <!-- Enable deterministic builds for reproducibility -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+
+    <!-- Generate XML documentation -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Acp.Domain.fs" />
+    <Compile Include="Acp.Protocol.fs" />
+  </ItemGroup>
+</Project>
