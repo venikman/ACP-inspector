@@ -39,7 +39,7 @@ repos:
 
       - id: markdownlint
         name: Markdownlint (bunx markdownlint-cli2)
-        entry: bunx markdownlint-cli2 --config .markdownlint-cli2.yaml
+        entry: bash -c 'BUN_INSTALL_BACKEND=copyfile bunx markdownlint-cli2 --config .markdownlint-cli2.yaml'
         language: system
         files: \.(md|markdown)$
 
