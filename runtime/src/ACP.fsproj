@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>ACP.Runtime</AssemblyName>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+
+    <PackageId>ACP.Runtime</PackageId>
+    <Version>0.1.1</Version>
+    <Authors>ACP-Runtime Contributors</Authors>
+    <Description>F# runtime SDK for ACP: transports, codec, connections, contrib helpers, and observability tags.</Description>
+    <PackageTags>acp;agent-client-protocol;runtime;sdk;fsharp</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/venikman/acp-runtime-fsharp</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/venikman/acp-runtime-fsharp</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Acp.Transport.fs" />
+    <Compile Include="Acp.Observability.fs" />
+    <Compile Include="Acp.Codec.Types.fs" />
+    <Compile Include="Acp.Codec.Json.fs" />
+    <Compile Include="Acp.Codec.AcpJson.fs" />
+    <Compile Include="Acp.Codec.fs" />
+    <Compile Include="Acp.Connection.fs" />
+    <Compile Include="Acp.Contrib.SessionState.fs" />
+    <Compile Include="Acp.Contrib.ToolCalls.fs" />
+    <Compile Include="Acp.Contrib.Permissions.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../protocol/src/ACP.fsproj" />
+    <PackageReference Include="FsToolkit.ErrorHandling" Version="5.1.0" />
+  </ItemGroup>
+</Project>

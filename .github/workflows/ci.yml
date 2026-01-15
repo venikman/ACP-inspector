@@ -19,7 +19,7 @@ jobs:
       - name: Link check (lychee)
         uses: lycheeverse/lychee-action@v2
         with:
-          args: --config lychee.toml 'README.md' 'docs/**/*.md' 'examples/**/*.md'
+          args: --config lychee.toml 'README.md' 'docs/**/*.md' 'cli/examples/**/*.md' 'runtime/examples/**/*.md'
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -30,22 +30,22 @@ jobs:
         run: dotnet tool restore
 
       - name: Fantomas (check)
-        run: dotnet fantomas src tests apps --check
+        run: dotnet fantomas protocol/src runtime/src sentinel/src sentinel/tests cli/src cli/apps --check
 
       - name: Tests with coverage
         run: |
-          dotnet test tests/ACP.Tests.fsproj -c Release \
+          dotnet test sentinel/tests/ACP.Tests.fsproj -c Release \
             --collect:"XPlat Code Coverage" \
             --results-directory ./coverage
 
       - name: Test Epistemology Harness
-        run: dotnet test tests/Epistemology.Harness/Epistemology.Harness.fsproj -c Release
+        run: dotnet test sentinel/tests/Epistemology.Harness/Epistemology.Harness.fsproj -c Release
 
       - name: Test Validation Harness
-        run: dotnet test tests/Validation.Harness/Validation.Harness.fsproj -c Release
+        run: dotnet test sentinel/tests/Validation.Harness/Validation.Harness.fsproj -c Release
 
       - name: Test SDK Harness
-        run: dotnet test tests/SDK.Harness/SDK.Harness.fsproj -c Release
+        run: dotnet test sentinel/tests/SDK.Harness/SDK.Harness.fsproj -c Release
 
       - name: Generate coverage report
         run: |
@@ -71,4 +71,4 @@ jobs:
           path: ./coverage/report
 
       - name: Build CLI
-        run: dotnet build apps/ACP.Cli/ACP.Cli.fsproj -c Release
+        run: dotnet build cli/apps/ACP.Cli/ACP.Cli.fsproj -c Release

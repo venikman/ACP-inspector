@@ -21,7 +21,7 @@ jobs:
       - name: Get pinned version
         id: pinned
         run: |
-          PINNED=$(grep -oP 'let Schema = "\K[0-9]+\.[0-9]+\.[0-9]+' src/Acp.Domain.fs)
+          PINNED=$(grep -oP 'let Schema = "\K[0-9]+\.[0-9]+\.[0-9]+' protocol/src/Acp.Domain.fs)
           echo "version=$PINNED" >> $GITHUB_OUTPUT
           echo "Pinned ACP version: $PINNED"
 
@@ -91,7 +91,7 @@ jobs:
 ### Action Required
 
 1. Review the [ACP release notes](https://github.com/agentclientprotocol/agent-client-protocol/releases/tag/v$LATEST)
-2. Update \`src/Acp.Domain.fs\` schema pin if compatible
+2. Update \`protocol/src/Acp.Domain.fs\` schema pin if compatible
 3. Update \`docs/ACP-RFD-TRACKER.md\` with any new features
 4. Run tests to verify compatibility
 
