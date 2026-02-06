@@ -20,7 +20,7 @@ Example line:
 
 ## Recording
 
-Use the inspector to record and then replay:
+Use the inspector to record and then replay.
 
-- Record: `dotnet run --project cli/apps/ACP.Inspector/ACP.Inspector.fsproj -- proxy-stdio --client-cmd "<client>" --agent-cmd "<agent>" --record sentinel/tests/traces/my-trace.jsonl`
-- Replay locally: `dotnet run --project cli/apps/ACP.Inspector/ACP.Inspector.fsproj -- replay --trace sentinel/tests/traces/my-trace.jsonl`
+- Record (legacy capture tool; not part of the default build): `dotnet run --project cli/apps/ACP.Inspector/ACP.Inspector.fsproj -- proxy-stdio --client-cmd "<client>" --agent-cmd "<agent>" --record sentinel/tests/traces/my-trace.jsonl`
+- Replay locally (unified CLI): `dotnet run --project cli/apps/ACP.Cli -c Release -- replay sentinel/tests/traces/my-trace.jsonl`

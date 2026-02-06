@@ -47,6 +47,7 @@
 ## Open questions / risks
 
 - Resolved: CLI tool name is `acp-inspector`.
+- Note: A legacy capture tool exists for recording traces, but it is not part of the default solution build.
 - Risk 1: CLI commands drift from inspector/runtime package versions.
 
 ## Changelog

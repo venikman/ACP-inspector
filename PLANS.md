@@ -234,4 +234,7 @@ Revert the milestone commit(s) via `git revert <sha>`.
     - `bunx markdownlint-cli2 --config .markdownlint-cli2.yaml README.md "docs/**/*.md" "cli/examples/**/*.md" "runtime/examples/**/*.md"` (0 errors)
     - `lychee --config lychee.toml README.md docs/**/*.md cli/examples/**/*.md runtime/examples/**/*.md` (0 errors)
     - `bash scripts/docs_audit.sh` (OK)
-- Next: Milestone 1 (fix root `dotnet build -c Release` by resolving `ACP-inspector.slnx` ambiguity).
+- 2026-02-06T09:04:37Z: Completed Milestone 1 (root `dotnet build -c Release` works).
+  - Validation:
+    - `dotnet build -c Release -v minimal` (exit 0; warnings only)
+- Next: Milestone 2 (gate ANSI output in CLI; no color sequences when redirected).
