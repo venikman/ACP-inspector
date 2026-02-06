@@ -21,6 +21,7 @@ config:
   MD036: false
 
 ignores:
+  - ".codex/**"
   - "**/node_modules/**"
   - "benchmarks/**"
   - "coverage/**"

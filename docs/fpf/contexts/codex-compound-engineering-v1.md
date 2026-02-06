@@ -64,4 +64,3 @@
 ## Changelog
 
 - 2026-02-06: created
-

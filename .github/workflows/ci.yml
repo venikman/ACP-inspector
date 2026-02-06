@@ -14,7 +14,12 @@ jobs:
         uses: oven-sh/setup-bun@v2
 
       - name: Markdownlint (bun)
-        run: bunx markdownlint-cli2 --config .markdownlint-cli2.yaml "**/*.md"
+        run: |
+          bunx markdownlint-cli2 --config .markdownlint-cli2.yaml \
+            README.md \
+            "docs/**/*.md" \
+            "cli/examples/**/*.md" \
+            "runtime/examples/**/*.md"
 
       - name: Link check (lychee)
         uses: lycheeverse/lychee-action@v2

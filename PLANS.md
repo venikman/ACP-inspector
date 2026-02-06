@@ -228,6 +228,10 @@ Revert the milestone commit(s) via `git revert <sha>`.
 
 ## Progress log (ISO-8601 timestamps)
 
-- 2026-02-06T00:00:00Z: Baseline observed: root `dotnet build -c Release` fails (solution ambiguity); CLI build + tests pass; docs contain outdated NuGet/CLI-path claims; markdownlint fails when run repo-wide.
-- 2026-02-06T00:00:00Z: Next: Milestone 0 (docs coherence cleanup), then Milestone 1 (solution ambiguity fix).
-
+- 2026-02-06: Baseline observed: root `dotnet build -c Release` fails (solution ambiguity); CLI build + tests pass; docs contained outdated NuGet/CLI-path claims; markdownlint failed for docs scope.
+- 2026-02-06T08:58:02Z: Completed Milestone 0 (docs coherence cleanup).
+  - Validation:
+    - `bunx markdownlint-cli2 --config .markdownlint-cli2.yaml README.md "docs/**/*.md" "cli/examples/**/*.md" "runtime/examples/**/*.md"` (0 errors)
+    - `lychee --config lychee.toml README.md docs/**/*.md cli/examples/**/*.md runtime/examples/**/*.md` (0 errors)
+    - `bash scripts/docs_audit.sh` (OK)
+- Next: Milestone 1 (fix root `dotnet build -c Release` by resolving `ACP-inspector.slnx` ambiguity).

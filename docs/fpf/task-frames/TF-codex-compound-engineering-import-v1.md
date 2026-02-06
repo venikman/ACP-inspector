@@ -1,9 +1,11 @@
 # FPF Task Frame
 
 ## 0. Prompt (verbatim)
-> Convert https://github.com/EveryInc/compound-engineering-plugin/tree/main into Codex agents, using FPF.
+
+> Convert <https://github.com/EveryInc/compound-engineering-plugin/tree/main> into Codex agents, using FPF.
 
 ## 1. BoundedContext (U.BoundedContext)
+
 - ContextId: urn:acp-inspector:context:codex-compound-engineering:v1
 - Scope boundary (in / out):
   - In: project-local Codex prompts/skills under `./.codex/` + scripts to generate/validate them.
@@ -15,6 +17,7 @@
   - FPF conceptual reference: `/Users/stas-studio/Downloads/FPF-Spec (12).md`
 
 ## 2. Role (U.Role) and holder
+
 - Role (who is acting): Codex (agent) acting on behalf of ACP Inspector maintainers
 - Holder scope: this repository working tree (`/Users/stas-studio/Developer/ACP-inspector`)
 - Constraints (permissions, policies, safety):
@@ -23,6 +26,7 @@
   - Keep conversion repeatable and verifiable with a smoke-check.
 
 ## 3. Capability (what can be done)
+
 - Capability statement:
   - Import upstream Compound Engineering plugin markdown assets into Codex prompts/skills for use while developing ACP Inspector, while maintaining FPF auditability (Context + Task Frame + acceptance harness).
 - Non-goals:
@@ -30,6 +34,7 @@
   - Do not introduce new runtime dependencies in ACP Inspector itself.
 
 ## 4. Method / MethodDescription / Work
+
 - Method (idea):
   - Generate a Codex bundle from the upstream plugin, then post-process it to be project-safe: namespaced + Claude-only paths removed + smoke-checked.
 - MethodDescription (recipe artifact to create):
@@ -42,6 +47,7 @@
     - `docs/fpf/task-frames/TF-codex-compound-engineering-import-v1.md`
 
 ## 5. Acceptance harness (tests)
+
 - Success criteria (objective, measurable):
   - `bash scripts/ce_smoke_check.sh` exits 0 and prints `OK`.
 - Negative tests / failure modes:
@@ -52,10 +58,10 @@
   - Run: `bash scripts/ce_smoke_check.sh`
 
 ## 6. Unknowns and next questions
+
 - Dominant unknowns:
   - Whether to commit `./.codex/` to git (team-shared) or treat it as local tooling only.
 - Fastest way to reduce uncertainty:
   - Decide repo policy:
     - Option A: commit `./.codex/` and scripts (recommended for team use).
     - Option B: add `.codex/` to `.gitignore` and treat as local-only.
-

@@ -28,18 +28,33 @@ Naming: Product = ACP Inspector, repo = `ACP-inspector`, CLI tool = `acp-inspect
 
 ## Getting Started
 
+ACP Inspector packages are not published to nuget.org yet. For now, use the repo as the source of truth.
+
+### CLI
+
+```bash
+dotnet build cli/apps/ACP.Cli/ACP.Cli.fsproj -c Release
+dotnet run --project cli/apps/ACP.Cli -c Release -- inspect cli/examples/cli-demo/demo-session.jsonl
+```
+
+### SDK (F# Interactive)
+
+```bash
+dotnet build sentinel/src/ACP.fsproj
+```
+
 ```fsharp
-#r "nuget: ACP.Inspector"
+#r "sentinel/src/bin/Debug/net10.0/ACP.Inspector.dll"
 
 open Acp
 open Acp.Domain
 open Acp.Transport
 open Acp.Connection
 
-// Create a duplex transport pair for testing
+// Create a duplex transport pair for testing.
 let clientTransport, agentTransport = DuplexTransport.CreatePair()
 
-// Set up a client
+// Set up a client.
 let client = ClientConnection(clientTransport)
 ```
 

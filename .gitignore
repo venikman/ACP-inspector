@@ -19,5 +19,8 @@ docs/_site/
 # JS dependencies
 node_modules/
 
+# Generated TS benchmark output (build via `npx tsc`)
+cli/benchmarks/sdk-benchmarks/typescript/dist/
+
 # PBT runner output (canonical evidence is tracked)
 core/evidence/pbt/*latest-failure.json

@@ -120,7 +120,6 @@ This document defines the four-holon architecture for the ACP ecosystem with tes
 **Core Files**:
 
 - `cli/apps/ACP.Cli/`
-- `cli/apps/ACP.Inspector/`
 - `cli/apps/ACP.Benchmark/`
 - `cli/benchmarks/`
 - `cli/examples/cli-demo/`

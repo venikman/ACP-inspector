@@ -265,7 +265,7 @@ outcome = await broker.wait_for_response(request_id)
 | **Runtime Adapter**     | `validateInbound`/`validateOutbound` gates   | 3 runtime adapter tests   |
 | **Trace Replay**        | Record and replay ACP sessions               | 1 trace replay test + CLI |
 | **Golden Tests**        | Protocol conformance test suite              | 1 golden test suite       |
-| **Inspector CLI**       | CLI tool for ACP traffic analysis            | `cli/apps/ACP.Inspector/`     |
+| **Inspector CLI**       | CLI tool for ACP traffic analysis            | `cli/apps/ACP.Cli/`       |
 | **Type Safety**         | Full F# discriminated unions, no nulls       | 96 domain types           |
 | **Auto-Response Rules** | Permission broker auto-rules                 | 4 auto-rule tests         |
 | **Response History**    | Full permission audit trail                  | 2 history tests           |
