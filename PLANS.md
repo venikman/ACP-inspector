@@ -249,4 +249,7 @@ Revert the milestone commit(s) via `git revert <sha>`.
 - 2026-02-06T09:17:58Z: Completed Milestone 4 (2-minute try script + quick start docs).
   - Validation:
     - `bash scripts/try.sh` (exit 0)
-- Next: Milestone 5 (GitHub Releases workflow for prebuilt binaries).
+- 2026-02-06T09:21:02Z: Completed Milestone 5 (GitHub Releases workflow for prebuilt binaries).
+  - Validation:
+    - `dotnet publish cli/apps/ACP.Cli/ACP.Cli.fsproj -c Release -r linux-x64 --self-contained true /p:PublishSingleFile=true` (binary produced)
+- Next: Milestone 6 (add LICENSE + align package metadata URLs).

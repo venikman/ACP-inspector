@@ -38,6 +38,14 @@ ACP implementations can drift or accept malformed messages, making production de
 bash scripts/try.sh
 ```
 
+## Install (GitHub Releases)
+
+Prebuilt, self-contained binaries are published on GitHub Releases:
+
+- <https://github.com/venikman/ACP-inspector/releases>
+
+Download the archive for your OS/arch, extract it, and put `acp-inspector` on your `PATH`.
+
 ## 3-line CLI Quick Start
 
 ```bash

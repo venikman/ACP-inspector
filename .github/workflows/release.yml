@@ -1,0 +1,97 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.rid }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: linux-x64
+            archive: tar.gz
+          - rid: linux-arm64
+            archive: tar.gz
+          - rid: osx-x64
+            archive: tar.gz
+          - rid: osx-arm64
+            archive: tar.gz
+          - rid: win-x64
+            archive: zip
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish self-contained binary
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="${GITHUB_REF_NAME#v}"
+          RID="${{ matrix.rid }}"
+          OUT="out/$RID"
+          DIST="dist"
+
+          rm -rf "$OUT" "$DIST"
+          mkdir -p "$OUT" "$DIST"
+
+          dotnet publish cli/apps/ACP.Cli/ACP.Cli.fsproj \
+            -c Release \
+            -r "$RID" \
+            --self-contained true \
+            /p:PublishSingleFile=true \
+            /p:IncludeNativeLibrariesForSelfExtract=true \
+            -o "$OUT"
+
+          if [[ "$RID" == win-* ]]; then
+            mv "$OUT/ACP.Cli.exe" "$OUT/acp-inspector.exe"
+          else
+            mv "$OUT/ACP.Cli" "$OUT/acp-inspector"
+          fi
+
+          PKG_BASENAME="acp-inspector-${VERSION}-${RID}"
+          if [[ "${{ matrix.archive }}" == "zip" ]]; then
+            (cd "$OUT" && zip -9 -r "../../$DIST/${PKG_BASENAME}.zip" "acp-inspector.exe")
+          else
+            (cd "$OUT" && tar -czf "../../$DIST/${PKG_BASENAME}.tar.gz" "acp-inspector")
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.rid }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/**/*.tar.gz
+            dist/**/*.zip
