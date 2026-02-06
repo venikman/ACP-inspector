@@ -14,7 +14,7 @@
     <Description>ACP Inspector CLI for ACP protocol inspection, validation, and benchmarking</Description>
     <PackageTags>acp;agent-client-protocol;inspector;cli;validation;benchmark</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/venikman/acp-inspector</RepositoryUrl>
+    <RepositoryUrl>https://github.com/venikman/ACP-inspector</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 

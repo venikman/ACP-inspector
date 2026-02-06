@@ -11,8 +11,8 @@
     <Description>F# inspector validation for ACP: findings, assurance helpers, and runtime adapter.</Description>
     <PackageTags>acp;agent-client-protocol;inspector;validation;fsharp</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/venikman/acp-inspector-fsharp</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/venikman/acp-inspector-fsharp</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/venikman/ACP-inspector</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/venikman/ACP-inspector</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
 

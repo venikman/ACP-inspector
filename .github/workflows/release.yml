@@ -64,10 +64,23 @@ jobs:
           fi
 
           PKG_BASENAME="acp-inspector-${VERSION}-${RID}"
-          if [[ "${{ matrix.archive }}" == "zip" ]]; then
-            (cd "$OUT" && zip -9 -r "../../$DIST/${PKG_BASENAME}.zip" "acp-inspector.exe")
+          STAGE="$OUT/$PKG_BASENAME"
+          mkdir -p "$STAGE"
+
+          if [[ "$RID" == win-* ]]; then
+            mv "$OUT/acp-inspector.exe" "$STAGE/acp-inspector.exe"
           else
-            (cd "$OUT" && tar -czf "../../$DIST/${PKG_BASENAME}.tar.gz" "acp-inspector")
+            mv "$OUT/acp-inspector" "$STAGE/acp-inspector"
+          fi
+
+          # Include repo metadata for offline installs.
+          if [[ -f LICENSE ]]; then cp LICENSE "$STAGE/LICENSE"; fi
+          if [[ -f README.md ]]; then cp README.md "$STAGE/README.md"; fi
+
+          if [[ "${{ matrix.archive }}" == "zip" ]]; then
+            (cd "$OUT" && zip -9 -r "../../$DIST/${PKG_BASENAME}.zip" "$PKG_BASENAME")
+          else
+            (cd "$OUT" && tar -czf "../../$DIST/${PKG_BASENAME}.tar.gz" "$PKG_BASENAME")
           fi
 
       - name: Upload artifact

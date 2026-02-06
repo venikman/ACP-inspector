@@ -252,4 +252,8 @@ Revert the milestone commit(s) via `git revert <sha>`.
 - 2026-02-06T09:21:02Z: Completed Milestone 5 (GitHub Releases workflow for prebuilt binaries).
   - Validation:
     - `dotnet publish cli/apps/ACP.Cli/ACP.Cli.fsproj -c Release -r linux-x64 --self-contained true /p:PublishSingleFile=true` (binary produced)
-- Next: Milestone 6 (add LICENSE + align package metadata URLs).
+- 2026-02-06T09:23:28Z: Completed Milestone 6 (OSS hygiene: LICENSE + metadata URLs).
+  - Validation:
+    - `test -f LICENSE` (exit 0)
+    - `dotnet build -c Release -v minimal` (exit 0; warnings only)
+- Next: Tag a release (`vX.Y.Z`) to exercise `.github/workflows/release.yml`.
