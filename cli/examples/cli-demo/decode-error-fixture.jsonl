@@ -1,0 +1,5 @@
+{"ts":"2025-01-15T10:00:00.000Z","direction":"fromClient","json":"{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":1,\"clientCapabilities\":{\"fs\":{\"readTextFile\":true,\"writeTextFile\":true},\"terminal\":true},\"clientInfo\":{\"name\":\"CodeAnalyzer\",\"version\":\"2.1.0\"}}}"}
+{"ts":"2025-01-15T10:00:00.025Z","direction":"fromClient","json":"{not-json}"}
+{"ts":"2025-01-15T10:00:00.050Z","direction":"fromAgent","json":"{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":1,\"agentCapabilities\":{\"loadSession\":true,\"mcpCapabilities\":{\"http\":false,\"sse\":false},\"promptCapabilities\":{\"audio\":false,\"image\":true,\"embeddedContext\":true}},\"agentInfo\":{\"name\":\"AnalysisAgent\",\"version\":\"3.5.2\"},\"authMethods\":[]}}"}
+{"ts":"2025-01-15T10:00:00.100Z","direction":"fromClient","json":"{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"session/new\",\"params\":{\"cwd\":\"/home/dev/my-project\",\"mcpServers\":[]}}"}
+{"ts":"2025-01-15T10:00:00.150Z","direction":"fromAgent","json":"{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{\"sessionId\":\"ses-20250115-001\"}}"}

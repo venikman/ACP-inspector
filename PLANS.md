@@ -242,4 +242,8 @@ Revert the milestone commit(s) via `git revert <sha>`.
     - `dotnet build cli/apps/ACP.Cli/ACP.Cli.fsproj -c Release` (exit 0; warnings only)
     - `bash cli/scripts/cli-smoke.sh > /tmp/acp-inspector-smoke.txt`
     - `! rg -n -F $'\\x1b[' /tmp/acp-inspector-smoke.txt` (no matches)
-- Next: Milestone 3 (implement `inspect --record` and fix `--stop-on-error`).
+- 2026-02-06T09:14:25Z: Completed Milestone 3 (`inspect --record` works; `--stop-on-error` stops on frame/direction/decode errors).
+  - Validation:
+    - `dotnet build cli/apps/ACP.Cli/ACP.Cli.fsproj -c Release` (exit 0; warnings only)
+    - `bash cli/scripts/cli-regressions.sh` (OK)
+- Next: Milestone 4 (add `scripts/try.sh` and README quick start).

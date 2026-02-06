@@ -135,88 +135,145 @@ let run (args: ParseResults<InspectArgs>) : int =
             Output.printKeyValue "  Stop on error" (if stopOnError then "yes" else "no")
             Output.printKeyValue "  Print raw" (if printRaw then "yes" else "no")
 
-            match recordPath with
-            | Some path -> Output.printKeyValue "  Record to" path
-            | None -> ()
+            // Initialize optional recording writer.
+            let withRecordWriter (fn: StreamWriter option -> int) : int =
+                match recordPath with
+                | None -> fn None
+                | Some path ->
+                    match Security.validateOutputPath path with
+                    | Error err ->
+                        Output.printError err
+                        1
+                    | Ok outPath ->
+                        Output.printKeyValue "  Record to" outPath
+
+                        try
+                            use writer = new StreamWriter(outPath, false)
+                            fn (Some writer)
+                        with ex ->
+                            Output.printError $"Failed to open record file: {ex.Message}"
+                            1
 
             // Process trace frames
-            let mutable state = Codec.CodecState.empty
-            let messages = ResizeArray<Message>()
-            let mutable frameCount = 0
-            let mutable decodeErrors = 0
-            let seenFindings = HashSet<string>(StringComparer.Ordinal)
+            withRecordWriter (fun recordWriter ->
+                let writeRecordFrame (frame: TraceFrame) (direction: Codec.Direction) =
+                    match recordWriter with
+                    | None -> ()
+                    | Some w ->
+                        let directionStr =
+                            match direction with
+                            | Codec.Direction.FromClient -> "fromClient"
+                            | Codec.Direction.FromAgent -> "fromAgent"
 
-            Console.WriteLine()
-            Output.printHeading "Processing messages"
+                        // Canonical JSONL shape: { ts, direction, json }.
+                        let line =
+                            JsonSerializer.Serialize(
+                                {| ts = frame.ts
+                                   direction = directionStr
+                                   json = frame.json |}
+                            )
 
-            for line in lines do
-                match TraceFrame.tryDecode line with
-                | None ->
-                    Output.printWarning $"Skipped invalid frame at line {frameCount + 1}"
-                    frameCount <- frameCount + 1
-                | Some frame ->
-                    frameCount <- frameCount + 1
+                        w.WriteLine(line)
 
-                    match Parsing.parseDirection frame.direction with
-                    | None -> Output.printWarning $"Unknown direction '{frame.direction}' at frame {frameCount}"
-                    | Some direction ->
-                        match Codec.decode direction state frame.json with
-                        | Error e ->
-                            Output.printError $"[{frameCount}] Decode error: {e}"
-                            decodeErrors <- decodeErrors + 1
+                let mutable state = Codec.CodecState.empty
+                let messages = ResizeArray<Message>()
+                let mutable frameCount = 0
+                let mutable invalidFrames = 0
+                let mutable directionErrors = 0
+                let mutable decodeErrors = 0
+                let mutable shouldContinue = true
+                let seenFindings = HashSet<string>(StringComparer.Ordinal)
+
+                Console.WriteLine()
+                Output.printHeading "Processing messages"
+
+                for line in lines do
+                    if shouldContinue then
+                        frameCount <- frameCount + 1
+
+                        match TraceFrame.tryDecode line with
+                        | None ->
+                            invalidFrames <- invalidFrames + 1
+                            Output.printWarning $"Frame {frameCount}: invalid trace frame JSON"
 
                             if stopOnError then
-                                Output.printError "Stopping on first error"
-                                ()
-                        | Ok(newState, msg) ->
-                            state <- newState
-                            messages.Add(msg)
+                                Output.printError "Stopping on first frame error (--stop-on-error)"
+                                shouldContinue <- false
+                        | Some frame ->
+                            match Parsing.parseDirection frame.direction with
+                            | None ->
+                                directionErrors <- directionErrors + 1
+                                Output.printWarning $"Frame {frameCount}: unknown direction '{frame.direction}'"
 
-                            let dirStr =
-                                match direction with
-                                | Codec.Direction.FromClient -> "C→A"
-                                | Codec.Direction.FromAgent -> "A→C"
+                                if stopOnError then
+                                    Output.printError "Stopping on first direction error (--stop-on-error)"
+                                    shouldContinue <- false
+                            | Some direction ->
+                                match Codec.decode direction state frame.json with
+                                | Error e ->
+                                    Output.printError $"[{frameCount}] Decode error: {e}"
+                                    decodeErrors <- decodeErrors + 1
 
-                            Console.WriteLine($"[{messages.Count}] {dirStr} {MessageTag.render msg}")
+                                    if stopOnError then
+                                        Output.printError "Stopping on first decode error (--stop-on-error)"
+                                        shouldContinue <- false
+                                | Ok(newState, msg) ->
+                                    state <- newState
+                                    messages.Add(msg)
+                                    writeRecordFrame frame direction
 
-                            if printRaw then
-                                Output.printColored Output.Colors.gray frame.json
-                                Console.WriteLine()
+                                    let dirStr =
+                                        match direction with
+                                        | Codec.Direction.FromClient -> "C→A"
+                                        | Codec.Direction.FromAgent -> "A→C"
 
-            // Run validation
-            Console.WriteLine()
-            Output.printHeading "Validation results"
+                                    Console.WriteLine($"[{messages.Count}] {dirStr} {MessageTag.render msg}")
 
-            let connectionId = SessionId(Guid.NewGuid().ToString())
-            let messageList = messages |> Seq.toList
+                                    if printRaw then
+                                        Output.printColored Output.Colors.gray frame.json
+                                        Console.WriteLine()
 
-            let spec =
-                Validation.runWithValidation connectionId Protocol.spec messageList stopOnError None None
-
-            for f in spec.findings do
-                let key =
-                    sprintf "%A|%A|%A" f.lane f.severity (f.failure |> Option.map _.code |> Option.defaultValue "")
-
-                if seenFindings.Add(key) then
-                    printFinding f
-
-            // Summary
-            Console.WriteLine()
-            Output.printHeading "Summary"
-            Output.printKeyValue "Total frames" (string frameCount)
-            Output.printKeyValue "Messages decoded" (string messages.Count)
-            Output.printKeyValue "Decode errors" (string decodeErrors)
-            Output.printKeyValue "Validation findings" (string spec.findings.Length)
-            Output.printKeyValue "Unique issues" (string seenFindings.Count)
-
-            if decodeErrors > 0 || spec.findings.Length > 0 then
+                // Run validation
                 Console.WriteLine()
-                Output.printWarning "Issues detected - review findings above"
-                1
-            else
+                Output.printHeading "Validation results"
+
+                let connectionId = SessionId(Guid.NewGuid().ToString())
+                let messageList = messages |> Seq.toList
+
+                let spec =
+                    Validation.runWithValidation connectionId Protocol.spec messageList stopOnError None None
+
+                for f in spec.findings do
+                    let key =
+                        sprintf "%A|%A|%A" f.lane f.severity (f.failure |> Option.map _.code |> Option.defaultValue "")
+
+                    if seenFindings.Add(key) then
+                        printFinding f
+
+                // Summary
                 Console.WriteLine()
-                Output.printSuccess "All messages valid!"
-                0
+                Output.printHeading "Summary"
+                Output.printKeyValue "Total frames" (string frameCount)
+                Output.printKeyValue "Messages decoded" (string messages.Count)
+                Output.printKeyValue "Invalid frames" (string invalidFrames)
+                Output.printKeyValue "Direction errors" (string directionErrors)
+                Output.printKeyValue "Decode errors" (string decodeErrors)
+                Output.printKeyValue "Validation findings" (string spec.findings.Length)
+                Output.printKeyValue "Unique issues" (string seenFindings.Count)
+
+                if
+                    invalidFrames > 0
+                    || directionErrors > 0
+                    || decodeErrors > 0
+                    || spec.findings.Length > 0
+                then
+                    Console.WriteLine()
+                    Output.printWarning "Issues detected - review findings above"
+                    1
+                else
+                    Console.WriteLine()
+                    Output.printSuccess "All messages valid!"
+                    0)
 
         with ex ->
             Output.printError $"Failed to process trace: {ex.Message}"
