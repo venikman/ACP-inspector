@@ -42,9 +42,11 @@ repos:
         entry: bash -c 'BUN_INSTALL_BACKEND=copyfile bunx markdownlint-cli2 --config .markdownlint-cli2.yaml'
         language: system
         files: \.(md|markdown)$
+        exclude: ^\.codex/
 
       - id: links
         name: Link check (lychee)
         entry: lychee --config lychee.toml
         language: system
         files: \.(md|markdown)$
+        exclude: ^\.codex/
