@@ -12,7 +12,7 @@ Ship a trustworthy, easy-to-try ACP Inspector:
 - From repo root: `dotnet build -c Release` succeeds.
 - From repo root: `bash scripts/try.sh` exits `0` in <= ~2 minutes on a clean machine (with .NET 10).
 - Redirected output contains no ANSI escape codes:
-  - `bash cli/scripts/cli-smoke.sh > /tmp/acp-smoke.txt` then `rg $'\\x1b\\[' /tmp/acp-smoke.txt` has no matches.
+  - `bash cli/scripts/cli-smoke.sh > /tmp/acp-smoke.txt` then `rg -F $'\\x1b[' /tmp/acp-smoke.txt` has no matches.
 - `inspect --record <path>` creates a valid JSONL trace that can be re-inspected successfully.
 - `inspect --stop-on-error` truly stops on the first frame/direction/decode error (not just prints a message).
 - A `LICENSE` file exists and matches the project’s MIT license claims.
@@ -118,7 +118,7 @@ The CLI currently emits ANSI sequences even when output is redirected, which bre
 - `dotnet build cli/apps/ACP.Cli/ACP.Cli.fsproj -c Release`
   - Expected: exit `0`
 - `bash cli/scripts/cli-smoke.sh > /tmp/acp-inspector-smoke.txt`
-- `! rg -n $'\\x1b\\[' /tmp/acp-inspector-smoke.txt`
+- `! rg -n -F $'\\x1b[' /tmp/acp-inspector-smoke.txt`
   - Expected: no matches
 
 #### Rollback
@@ -237,4 +237,9 @@ Revert the milestone commit(s) via `git revert <sha>`.
 - 2026-02-06T09:04:37Z: Completed Milestone 1 (root `dotnet build -c Release` works).
   - Validation:
     - `dotnet build -c Release -v minimal` (exit 0; warnings only)
-- Next: Milestone 2 (gate ANSI output in CLI; no color sequences when redirected).
+- 2026-02-06T09:07:38Z: Completed Milestone 2 (no ANSI color sequences when redirected).
+  - Validation:
+    - `dotnet build cli/apps/ACP.Cli/ACP.Cli.fsproj -c Release` (exit 0; warnings only)
+    - `bash cli/scripts/cli-smoke.sh > /tmp/acp-inspector-smoke.txt`
+    - `! rg -n -F $'\\x1b[' /tmp/acp-inspector-smoke.txt` (no matches)
+- Next: Milestone 3 (implement `inspect --record` and fix `--stop-on-error`).

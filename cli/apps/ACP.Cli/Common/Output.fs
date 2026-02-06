@@ -14,11 +14,25 @@ module Colors =
     let gray = "\u001b[90m"
     let bold = "\u001b[1m"
 
+/// Check if terminal supports colors.
+///
+/// We intentionally disable ANSI sequences when either stdout or stderr is redirected so that:
+/// - CI logs stay parseable
+/// - users can redirect output to files without escape sequences
+let supportsColor () =
+    not (Console.IsOutputRedirected || Console.IsErrorRedirected)
+    && Environment.GetEnvironmentVariable("NO_COLOR") = null
+    && (Environment.GetEnvironmentVariable("TERM") <> null
+        || Environment.GetEnvironmentVariable("COLORTERM") <> null)
+
 /// Print colored output to console
 let printColored (color: string) (message: string) =
-    Console.Write(color)
-    Console.Write(message)
-    Console.Write(Colors.reset)
+    if supportsColor () then
+        Console.Write(color)
+        Console.Write(message)
+        Console.Write(Colors.reset)
+    else
+        Console.Write(message)
 
 let printColoredLine (color: string) (message: string) =
     printColored color message
@@ -50,10 +64,3 @@ let printHeading (message: string) =
 let printKeyValue (key: string) (value: string) =
     printColored Colors.gray $"{key}: "
     Console.WriteLine(value)
-
-/// Check if terminal supports colors
-let supportsColor () =
-    not (Console.IsOutputRedirected || Console.IsErrorRedirected)
-    && Environment.GetEnvironmentVariable("NO_COLOR") = null
-    && (Environment.GetEnvironmentVariable("TERM") <> null
-        || Environment.GetEnvironmentVariable("COLORTERM") <> null)
