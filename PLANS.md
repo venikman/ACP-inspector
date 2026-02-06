@@ -246,4 +246,7 @@ Revert the milestone commit(s) via `git revert <sha>`.
   - Validation:
     - `dotnet build cli/apps/ACP.Cli/ACP.Cli.fsproj -c Release` (exit 0; warnings only)
     - `bash cli/scripts/cli-regressions.sh` (OK)
-- Next: Milestone 4 (add `scripts/try.sh` and README quick start).
+- 2026-02-06T09:17:58Z: Completed Milestone 4 (2-minute try script + quick start docs).
+  - Validation:
+    - `bash scripts/try.sh` (exit 0)
+- Next: Milestone 5 (GitHub Releases workflow for prebuilt binaries).

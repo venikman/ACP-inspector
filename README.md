@@ -32,6 +32,12 @@ ACP (Agent Client Protocol) is a JSON-RPC 2.0 protocol that defines how a client
 
 ACP implementations can drift or accept malformed messages, making production debugging and compliance hard. Teams need a way to validate ACP traffic at boundaries and inspect traces without building their own protocol model, state machine, and validation logic. ACP Inspector provides the typed core, runtime adapters, and a CLI inspector to close that gap.
 
+## 2-minute Try (Recommended)
+
+```bash
+bash scripts/try.sh
+```
+
 ## 3-line CLI Quick Start
 
 ```bash
@@ -139,12 +145,14 @@ cat cli/examples/cli-demo/single-message.json | dotnet run --project cli/apps/AC
 Or run the same checks via script:
 
 ```bash
-bash cli/scripts/cli-smoke.sh
+bash scripts/try.sh
 ```
 
 ## Documentation
 
 - Tooling (paths, build/run commands): [docs/tooling/acp-inspector.md](docs/tooling/acp-inspector.md)
+- Trace format (JSONL): [docs/tooling/trace-format.md](docs/tooling/trace-format.md)
+- CI integration: [docs/tooling/ci-integration.md](docs/tooling/ci-integration.md)
 - FPF (external): <https://github.com/ailev/FPF> — **Note**: FPF is fetched daily to `/tmp/FPF-YYYYMMDD` for evaluation. No local copy is maintained in this repo.
 - FPF Alignment: [docs/reports/fpf-alignment-evaluation-20260106.md](docs/reports/fpf-alignment-evaluation-20260106.md)
 - SDK docs entrypoint: [docs/index.md](docs/index.md)
