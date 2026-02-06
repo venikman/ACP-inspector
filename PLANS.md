@@ -256,4 +256,5 @@ Revert the milestone commit(s) via `git revert <sha>`.
   - Validation:
     - `test -f LICENSE` (exit 0)
     - `dotnet build -c Release -v minimal` (exit 0; warnings only)
-- Next: Tag a release (`vX.Y.Z`) to exercise `.github/workflows/release.yml`.
+- 2026-02-06T09:32:48Z: Tagged `v0.1.1` and published GitHub Release assets via `.github/workflows/release.yml`.
+- Next: Open a PR and merge `codex/make-acp-inspector-valuable` to the default branch (optional: clean up nullness warnings).
