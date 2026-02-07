@@ -37,6 +37,7 @@ choco install hyperfine       # Windows
 ## SDK Targets
 
 Each SDK needs a wrapper script in `targets/` that:
+
 1. Accepts ACP messages via stdin
 2. Outputs ACP responses to stdout
 3. Supports `--mode` flag for different test scenarios
@@ -53,6 +54,7 @@ Each SDK needs a wrapper script in `targets/` that:
 ## Adding a New SDK
 
 1. Create wrapper script:
+
 ```bash
 # targets/my-sdk.sh
 #!/bin/bash
@@ -61,11 +63,13 @@ cd /path/to/my-sdk
 ```
 
 2. Add to `run-all.sh`:
+
 ```bash
 SDKS["my-sdk"]="./targets/my-sdk.sh"
 ```
 
 3. Run benchmarks:
+
 ```bash
 ./cli/benchmarks/run-all.sh
 ```
@@ -73,19 +77,25 @@ SDKS["my-sdk"]="./targets/my-sdk.sh"
 ## Test Scenarios
 
 ### Cold Start (`scenarios/cold-start.json`)
+
 Measures time from process spawn to first response:
+
 - Runtime initialization
 - SDK setup
 - Transport handshake
 
 ### Throughput (`scenarios/throughput.json`)
+
 Measures sustained message processing:
+
 - Messages per second
 - Latency under load
 - Resource utilization
 
 ### Codec (`scenarios/codec.json`)
+
 Measures JSON-RPC encoding/decoding:
+
 - Parse speed
 - Serialization speed
 - Memory allocations
@@ -93,6 +103,7 @@ Measures JSON-RPC encoding/decoding:
 ## Output
 
 Results are saved to `results/` in multiple formats:
+
 - `results.json` - Machine-readable
 - `results.md` - Markdown table
 - `results.csv` - Spreadsheet-compatible

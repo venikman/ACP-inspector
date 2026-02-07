@@ -8,6 +8,7 @@ Each idea includes projected score impact and effort estimate.
 ## Idea Evaluation Criteria
 
 For an idea to be "good" it must:
+
 - Improve at least one dimension by ≥ 0.5 points
 - Not decrease any dimension
 - Have clear implementation path
@@ -146,6 +147,7 @@ your-agent | dotnet run --project cli/apps/ACP.Cli -- validate --direction a2c
 ```
 
 That's it. No F# knowledge required for basic validation.
+
 ```
 
 **Score Impact:**
@@ -322,6 +324,7 @@ result = validate(message, direction="c2a")
 
 **The Change:**
 `acp-inspector tutorial` command that walks through:
+
 1. What ACP is
 2. Inspecting a sample trace
 3. Understanding findings
@@ -417,15 +420,18 @@ result = validate(message, direction="c2a")
 ## Summary
 
 **Best ROI ideas (do first):**
+
 1. "What is ACP?" section (3.0 points/hour)
 2. 3-line quick start (3.0 points/hour)
 3. Glossary (2.0 points/hour)
 4. Problem statement (1.5 points/hour)
 
 **Biggest single impact:**
+
 - Single canonical name (+2.0 to Coherence)
 
 **Strategic long-term:**
+
 - Python wrapper (unlocks largest potential user base)
 
 **Path to viable (3.0):** Tier 1 alone gets to 2.9

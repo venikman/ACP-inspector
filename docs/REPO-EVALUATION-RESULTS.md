@@ -74,6 +74,7 @@ Framework used: [REPO-EVALUATION-FRAMEWORK.md](./REPO-EVALUATION-FRAMEWORK.md)
 
 **Test performed:** Count steps from "interested" to "working example".
 **Result:**
+
 1. Install .NET 10 SDK
 2. Clone repo
 3. Build SDK
@@ -161,6 +162,7 @@ Framework used: [REPO-EVALUATION-FRAMEWORK.md](./REPO-EVALUATION-FRAMEWORK.md)
 
 **Test performed:** Identify uses not mentioned in docs.
 **Result:**
+
 1. ✓ Protocol design study material
 2. ✓ Testing infrastructure patterns
 3. ✓ F# domain modeling reference

@@ -19,6 +19,7 @@ Can someone understand what ACP Inspector does quickly?
 | 1 | Still confused after significant effort |
 
 **Current issues:**
+
 - Assumes reader knows what ACP is
 - Uses unexplained terms: holon, sentinel, lanes, findings
 - Technical depth before context
@@ -38,6 +39,7 @@ Does this solve a problem people actually have?
 | 1 | No discernible need |
 
 **Current issues:**
+
 - ACP itself is niche protocol
 - No "problem statement" in docs
 - Unclear who urgently needs this
@@ -57,6 +59,7 @@ Can the target audience actually use it?
 | 1 | Effectively unusable for most |
 
 **Current issues:**
+
 - F# has ~1% developer mindshare
 - Official ACP SDKs are TypeScript/Python
 - .NET 10 (preview) required
@@ -77,6 +80,7 @@ Is the complexity justified?
 | 1 | Complexity obscures value |
 
 **Current issues:**
+
 - 6 validation lanes (most users need 1-2)
 - 25+ modules for message validation
 - OpenTelemetry integration before proving basic value
@@ -97,6 +101,7 @@ Do naming, structure, and docs tell one story?
 | 1 | Contradictory throughout |
 
 **Current notes:**
+
 - Folder: `ACP-inspector`
 - README title: `ACP Inspector`
 - Package ID: `ACP.Inspector`
@@ -118,6 +123,7 @@ Can it be used beyond stated purpose?
 | 1 | Hard to use for anything |
 
 **Current strengths:**
+
 - Transport abstractions useful for testing any protocol
 - State machine patterns are transferable
 - Trace replay applicable beyond ACP
@@ -142,6 +148,7 @@ Can it be used beyond stated purpose?
 ## Specific Problems Identified
 
 ### Naming Conventions
+
 ```
 Location              Name Used
 ─────────────────────────────────
@@ -153,11 +160,13 @@ Note                  Consistent "Inspector" branding with artifact-specific sep
 ```
 
 ### Missing Context
+
 - No "What is ACP?" for newcomers
 - No link explaining the protocol before diving into implementation
 - Assumes reader already decided to use ACP
 
 ### Jargon Without Glossary
+
 | Term | Used Without Definition |
 |------|------------------------|
 | Holon | README line 9-11 |
@@ -167,11 +176,13 @@ Note                  Consistent "Inspector" branding with artifact-specific sep
 | RuntimeAdapter | Module name |
 
 ### Language Barrier
+
 - F# chosen over TypeScript/Python (where ACP community exists)
 - No FFI or bindings provided
 - Examples only in F#
 
 ### Architecture vs Audience Mismatch
+
 | Feature | Complexity | Likely Users Who Need It |
 |---------|------------|-------------------------|
 | 6 validation lanes | High | < 5% |

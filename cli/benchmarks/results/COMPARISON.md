@@ -11,7 +11,7 @@ All measurements taken with hyperfine (20 runs, 5 warmup) on Apple Silicon.
 | **Python** | `json.loads()`           | (no official ACP SDK exists)    |
 | **F#**     | Full `Codec.decode`      | ✅ Same as measured             |
 
-### The Official TypeScript SDK Validates Too!
+### The Official TypeScript SDK Validates Too
 
 The official `@agentclientprotocol/sdk` by Zed Industries uses **Zod schema validation**:
 

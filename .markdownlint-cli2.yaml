@@ -20,6 +20,12 @@ config:
   # Allow emphasis for visual separation (not always headers).
   MD036: false
 
+  # Tables are common in benchmark output and docs; pipe alignment/spacing is too noisy.
+  MD060: false
+
+  # Many docs use fenced blocks for plain text/ASCII diagrams; don't require a language everywhere.
+  MD040: false
+
 ignores:
   - "**/node_modules/**"
   - "benchmarks/**"
