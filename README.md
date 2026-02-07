@@ -183,7 +183,7 @@ bash cli/scripts/cli-smoke.sh
 2. Quick probe via F# Interactive (from `sentinel/src/` after build):
 
 ```fsharp
-#r "bin/Debug/net10.0/ACP.Inspector.dll"
+#r "bin/Debug/net10.0/ACP.Inspector.dll" // built output of sentinel/src/ACP.fsproj
 open Acp
 open Acp.Domain
 open Acp.Domain.PrimitivesAndParties
@@ -391,8 +391,8 @@ See the `cli/examples/` directory for complete integration demos:
 
 - **Format with Fantomas.**
   This repo uses Fantomas as the formatter (and as a formatting "linter" in `--check` mode):
-  - Format: `dotnet tool restore && dotnet fantomas src tests apps`
-  - Check only: `dotnet tool restore && dotnet fantomas src tests apps --check`
+  - Format: `dotnet tool restore && dotnet fantomas protocol/src runtime/src sentinel/src sentinel/tests cli/src cli/apps`
+  - Check only: `dotnet tool restore && dotnet fantomas protocol/src runtime/src sentinel/src sentinel/tests cli/src cli/apps --check`
   - Note: `sentinel/tests/golden/` is ignored via `.fantomasignore` (it contains intentionally-invalid F# samples).
 
 - **Optional: enable repo git hooks.**
