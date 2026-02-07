@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Acp.AssuranceTests.fs" />
+    <Compile Include="Acp.Domain.Tests.fs" />
+    <Compile Include="Acp.EvidenceGraphTests.fs" />
+    <Compile Include="Acp.CapabilityTests.fs" />
+    <Compile Include="Acp.SemanticTests.fs" />
+    <Compile Include="Acp.EvolutionTests.fs" />
+    <Compile Include="Acp.Validation.Tests.fs" />
+    <Compile Include="Acp.RuntimeAdapter.Tests.fs" />
+    <Compile Include="Acp.Eval.Tests.fs" />
+    <Compile Include="Acp.Eval.Golden.Tests.fs" />
+    <Compile Include="Acp.FSharpTokenizer.Tests.fs" />
+    <Compile Include="Acp.Security.Tests.fs" />
+    <Compile Include="Acp.RepoPolicy.Tests.fs" />
+    <Compile Include="Acp.Codec.Tests.fs" />
+    <Compile Include="Acp.TraceReplay.Tests.fs" />
+    <Compile Include="Acp.Transport.Tests.fs" />
+    <Compile Include="Acp.Connection.Tests.fs" />
+    <Compile Include="Acp.Observability.Tests.fs" />
+    <Compile Include="Acp.SessionState.Tests.fs" />
+    <Compile Include="Acp.ToolCalls.Tests.fs" />
+    <Compile Include="Acp.Permissions.Tests.fs" />
+    <Compile Include="Pbt/EvidenceRunner.fs" />
+    <Compile Include="Pbt/Generators.fs" />
+    <Compile Include="Pbt/TokenizerProperties.fs" />
+    <Compile Include="Pbt/TraceReplay.fs" />
+    <Compile Include="Pbt/ProtocolProperties.fs" />
+    <Compile Include="Pbt/ProtocolStateMachine.fs" />
+    <Compile Include="Pbt/RuntimeAdapterProperties.fs" />
+    <Compile Include="Pbt/SessionProperties.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../protocol/src/ACP.fsproj" />
+    <ProjectReference Include="../../runtime/src/ACP.fsproj" />
+    <ProjectReference Include="../src/ACP.fsproj" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+    <PackageReference Include="FsCheck" Version="3.3.2" />
+    <PackageReference Include="xunit" Version="2.6.6" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.4" />
+    <PackageReference Include="coverlet.collector" Version="6.0.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>
