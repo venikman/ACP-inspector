@@ -296,31 +296,119 @@ All 7 are reachable from `origin/master` via `git branch -r --merged
 origin/master`. Deletion is safe — the commits remain in master's history.
 Archive tags preserve the branch name for later reference.
 
-### 10.B — Not merged (11 branches; per-branch disposition required)
+### 10.B — Not merged on `origin/master` (11 branches; per-branch disposition required)
 
-| Branch | Last commit | Age at 2026-04-07 | Initial classification |
-|---|---|---|---|
-| `docs/linear-migration-planning` | 2025-12-08 | ~4 months | candidate for ARCHIVE |
-| `add-claude-github-actions-1765859631445` | 2025-12-15 | ~4 months | candidate for ARCHIVE |
-| `copilot/sub-pr-17` | 2025-12-15 | ~4 months | candidate for ARCHIVE |
-| `fix/compliance-feedback` | 2025-12-15 | ~4 months | candidate for EXTRACT-FILES or ARCHIVE |
-| `chore/2025-12-16` | 2025-12-16 | ~4 months | candidate for ARCHIVE |
-| `feat/bounded-contexts-and-codec-refactor` | 2026-01-05 | ~3 months | candidate for ARCHIVE (predates holon restructure, major conflicts expected) |
-| `docs/overview-image-and-task-index` | 2026-01-06 | ~3 months | candidate for EXTRACT-FILES (docs only, may be salvageable) |
-| `docs/remove-mermaid-diagrams` | 2026-01-06 | ~3 months | candidate for RE-APPLY (docs-only, likely still relevant) |
-| `fix/remove-mistaken-image` | 2026-01-06 | ~3 months | candidate for CHERRY-PICK (small, targeted fix) |
-| `codex/make-acp-inspector-valuable` | 2026-02-06 | ~2 months | candidate for ARCHIVE (superseded by holon restructure) |
-| `codex/sub-pr-35` | 2026-02-07 | ~2 months | candidate for ARCHIVE (merged follow-up work) |
+**Triage performed 2026-04-07** using `git cherry origin/master <branch>`
+(patch-id matching, catches squash-merge artifacts that ancestry-based
+`--no-merged` misses) and `git diff --name-only origin/master...origin/<branch>`
+cross-referenced against the current bucket-B (§6).
 
-**Classifications are initial recommendations only.** Commit #6 produces a
-full disposition report with per-branch commit lists, file touches, and
-conflict predictions. The user signs off per-branch in PR review. No unmerged
-branch is deleted or revived in this session without explicit approval.
+| # | Branch | Cherry status | Files | Lines (+/−) | Disposition | Confidence |
+|---|---|---|---|---|---|---|
+| 1 | `docs/linear-migration-planning` | 1 unmerged | 1 | +63 | EXTRACT-CANDIDATE | medium |
+| 2 | `add-claude-github-actions-1765859631445` | 2 unmerged | 2 | +107 | ARCHIVE | high |
+| 3 | `copilot/sub-pr-17` | 4 unmerged + 4 squash-merged | 12 | +1256 / −105 | ARCHIVE | high |
+| 4 | `fix/compliance-feedback` | 4 unmerged | 8 | +240 / −190 | ARCHIVE | high |
+| 5 | `chore/2025-12-16` | 11 unmerged | 14 | +332 / −47 | ARCHIVE | high |
+| 6 | `feat/bounded-contexts-and-codec-refactor` | 4 unmerged | 29 | +9549 / −2979 | ARCHIVE | high |
+| 7 | `docs/overview-image-and-task-index` | **0 unmerged + 1 squash-merged** | 6 | +7 / −163 | ARCHIVE-SQUASH-MERGED | certain |
+| 8 | `docs/remove-mermaid-diagrams` | **0 unmerged + 1 squash-merged** | 1 | −34 | ARCHIVE-SQUASH-MERGED | certain |
+| 9 | `fix/remove-mistaken-image` | **0 unmerged + 1 squash-merged** | 1 | binary | ARCHIVE-SQUASH-MERGED | certain |
+| 10 | `codex/make-acp-inspector-valuable` | 18 unmerged | 639 | +42902 / −496484 | ARCHIVE | high |
+| 11 | `codex/sub-pr-35` | 10 unmerged | 503 | +10508 / −496114 | ARCHIVE | high |
 
-## 11. Revival Decision Framework (6-Outcome Taxonomy)
+**Per-branch evidence** (numbered to match the table):
+
+1. **`docs/linear-migration-planning`** — single new file
+   `docs/planning/linear-migration.md`. The `docs/planning/` directory does not
+   exist on current master, so a clean apply would land without conflict.
+   Outcome depends on whether the linear migration is still relevant; review
+   the file content before deciding revive vs. archive. **EXTRACT-CANDIDATE
+   pending content review.**
+
+2. **`add-claude-github-actions-1765859631445`** — touches
+   `.github/workflows/claude-code-review.yml` and `.github/workflows/claude.yml`.
+   **Both files already exist on current master.** Whatever this branch tried
+   to do has been re-implemented or merged differently. **ARCHIVE.**
+
+3. **`copilot/sub-pr-17`** — 8 commits, 4 already squash-merged into master.
+   Surviving 4 commits touch pre-restructure paths (`apps/`, `src/` instead of
+   `cli/apps/`, `protocol/src/`). Path translation would be substantial. Half
+   the work is already in master anyway. **ARCHIVE.**
+
+4. **`fix/compliance-feedback`** — pre-restructure paths, plus
+   `.github/workflows/ci.yml` changes that may or may not still be relevant.
+   The CI workflow change is the only piece worth a second look; the `apps/`,
+   `src/`, `tests/` edits are dead-on-arrival under the holon layout.
+   **ARCHIVE** by default; flag if you want the ci.yml diff extracted for
+   review.
+
+5. **`chore/2025-12-16`** — date-named scratch branch with 11 commits across
+   `.vscode/settings.json`, the .slnx, pre-restructure source files, and a
+   now-renamed `docs/spec/fpf/FPF-Spec.md`. No coherent intent visible.
+   **ARCHIVE.**
+
+6. **`feat/bounded-contexts-and-codec-refactor`** — large branch (29 files,
+   +9549/−2979) that originally proposed splitting `Acp.Codec.fs` (matching
+   audit-001's recommendation) and adding bounded-context docs. Two problems:
+   (a) source files use pre-restructure `src/Acp.*.fs` paths and would need
+   full translation; (b) **3 of its files intersect current bucket-B**
+   (`docs/contexts/BC-001-assurance.md`, `docs/contexts/BC-004-protocol-evolution.md`,
+   `docs/reports/README.md`), meaning revival would conflict with your
+   in-flight schema work. The codec-split intent has been partially absorbed
+   by the holon restructure; the remainder is best deferred until after the
+   schema upgrade lands. **ARCHIVE.**
+
+7. **`docs/overview-image-and-task-index`** — `git cherry` reports
+   **0 unmerged + 1 squash-merged**. The work is already in master (PR #27).
+   Branch is a leftover ref. **ARCHIVE-SQUASH-MERGED.**
+
+8. **`docs/remove-mermaid-diagrams`** — `git cherry` reports
+   **0 unmerged + 1 squash-merged**. The work is already in master (PR #28:
+   `3a17be9 docs: remove mermaid diagrams from README (#28)`).
+   **ARCHIVE-SQUASH-MERGED.**
+
+9. **`fix/remove-mistaken-image`** — `git cherry` reports
+   **0 unmerged + 1 squash-merged**. Single binary-file change (image swap).
+   The work is already in master. **ARCHIVE-SQUASH-MERGED.**
+
+10. **`codex/make-acp-inspector-valuable`** — codex agent's exploration.
+    Touches `.codex/AGENTS.md`, `.codex/config.toml`, prompts, and 631 other
+    files. `.codex/` directory does not exist on current master, indicating
+    the experiment was never adopted. Massive deletion volume (−496484 lines)
+    suggests heavy state inversion. **ARCHIVE.**
+
+11. **`codex/sub-pr-35`** — codex agent's branch related to PR #35 (the holon
+    restructure), but `git cherry` shows 0 squash-merged, meaning the actual
+    SHA-level work is distinct from `f4d0756`. The branch has
+    accidentally-committed `node_modules` (responsible for the −496114
+    deletions when diffed against master). Even if conceptually adjacent to
+    PR #35, the branch is unfit for revival. **ARCHIVE.**
+
+**Distribution after triage**:
+
+| Outcome | Count | Branches |
+|---|---|---|
+| ARCHIVE-SQUASH-MERGED | **3** | #7, #8, #9 (work already in master; branches are leftover refs) |
+| ARCHIVE | **7** | #2, #3, #4, #5, #6, #10, #11 (work unrecoverable or superseded) |
+| EXTRACT-CANDIDATE | **1** | #1 (pending content review) |
+| CHERRY-PICK / RE-APPLY / SQUASH-MERGE / REBASE-REVIVE | 0 | — |
+
+**Sign-off implication**: 10 of the 11 are high or certain confidence,
+requiring quick yes/no per branch. Only branch #1
+(`docs/linear-migration-planning`) needs a content read before sign-off. The
+expected sign-off session is short — minutes, not hours.
+
+**Classifications above are evidence-based recommendations.** Commit #6 still
+produces the full disposition report (with per-branch commit lists and exact
+archive tag messages) at implementation time, but the dispositions themselves
+are now pre-decided up to the user's per-branch sign-off. No unmerged branch
+is deleted or revived without explicit approval.
+
+## 11. Revival Decision Framework (7-Outcome Taxonomy)
 
 For each unmerged branch, the disposition report (commit #6) assigns one of
-six outcomes based on the answers to four questions:
+seven outcomes based on the answers to four questions:
 
 1. Is the branch's intent still relevant to current `master`?
 2. Does the branch touch files currently in bucket-B?
@@ -335,20 +423,32 @@ six outcomes based on the answers to four questions:
 | **SQUASH-MERGE** | Branch is ready but never opened as PR | `git merge --squash origin/<branch>` into rollup |
 | **EXTRACT FILES** | Only a subset of changes is still relevant | `git show <sha> -- <path> \| git apply` for selected paths; commit in rollup |
 | **ARCHIVE-AND-ABANDON** | Superseded, wrong direction, or cold-archaeology | Push `archive/<branch>` tag; do not delete until per-branch sign-off; record in disposition report |
+| **ARCHIVE-SQUASH-MERGED** | `git cherry` shows all branch commits already squash-merged into master (work IS in master under different SHAs) | Same operation as ARCHIVE-AND-ABANDON, but the tag message records the source PR number for forensic clarity. Sign-off is fast-track because no work is at risk. |
 
-**Predicted 2026-04-07 distribution for the 11 unmerged branches**:
-- ARCHIVE-AND-ABANDON: 5–7 branches
-- EXTRACT FILES: 1–2 branches
-- RE-APPLY FRESH: 1–2 branches
-- CHERRY-PICK: 0–1 branch
-- REBASE-AND-REVIVE: 0–1 branch (deferred out of rollup if present)
-- SQUASH-MERGE: 0 branches
+The seventh outcome (ARCHIVE-SQUASH-MERGED) was added after the 2026-04-07
+triage discovered that 3 of the 11 unmerged branches were already-done work
+in disguise: their tip commits are not ancestors of `master` (because
+squash-merge breaks ancestry), but `git cherry origin/master <branch>` reports
+their patch IDs as already present. Operationally identical to
+ARCHIVE-AND-ABANDON, but rationale and risk profile differ.
 
-**Default for this spec**: zero revivals are attempted in the rollup. Commit
-#6 produces recommendations only; any revivals become commits #7..N−1 only
-if the user pre-approves during design review. This spec ships with zero
-revivals pre-approved, meaning the default rollup has 7 commits (1–6 plus
-close).
+**Actual 2026-04-07 distribution for the 11 unmerged branches** (from §10.B
+triage):
+
+| Outcome | Count |
+|---|---|
+| ARCHIVE-SQUASH-MERGED | 3 |
+| ARCHIVE-AND-ABANDON | 7 |
+| EXTRACT-CANDIDATE (pending content review) | 1 |
+| CHERRY-PICK / RE-APPLY / SQUASH-MERGE / REBASE-REVIVE | 0 |
+
+**Default for this spec**: zero revivals attempted in the rollup. Commit #6
+produces the full disposition report at implementation time but the
+classifications are pre-decided. This spec ships with zero revivals
+pre-approved, meaning the default rollup has 7 commits (1–6 plus close).
+The single EXTRACT-CANDIDATE (`docs/linear-migration-planning`) becomes a
+revival commit only if the user reviews the file content before
+implementation and decides to keep it.
 
 ## 12. Archive Tag Pattern
 
