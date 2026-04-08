@@ -195,12 +195,9 @@ module Protocol =
             | Phase.Ready ctx, Message.FromClient(ClientToAgentMessage.SessionList _) -> Ok(Phase.Ready ctx)
 
             | Phase.Ready ctx,
-              Message.FromAgent(
-                  AgentToClientMessage.SessionNewResult
-                      { sessionId = sid
-                        configOptions = configOptions
-                        modes = modes }
-              ) ->
+              Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid
+                                                                        configOptions = configOptions
+                                                                        modes = modes }) ->
                 if ctx.sessions |> Map.containsKey sid then
                     Error(ProtocolError.SessionAlreadyExists sid)
                 else
@@ -219,12 +216,9 @@ module Protocol =
             | Phase.Ready ctx, Message.FromClient(ClientToAgentMessage.SessionLoad _) -> Ok(Phase.Ready ctx)
 
             | Phase.Ready ctx,
-              Message.FromAgent(
-                  AgentToClientMessage.SessionLoadResult
-                      { sessionId = sid
-                        configOptions = configOptions
-                        modes = modes }
-              ) ->
+              Message.FromAgent(AgentToClientMessage.SessionLoadResult { sessionId = sid
+                                                                         configOptions = configOptions
+                                                                         modes = modes }) ->
                 let sessions' =
                     if ctx.sessions |> Map.containsKey sid then
                         let s = ctx.sessions.[sid]
@@ -275,7 +269,10 @@ module Protocol =
                 match ctx.sessions |> Map.tryFind r.sessionId with
                 | None -> Error(ProtocolError.UnknownSession r.sessionId)
                 | Some s ->
-                    let s' = { s with configOptions = Some r.configOptions }
+                    let s' =
+                        { s with
+                            configOptions = Some r.configOptions }
+
                     let sessions' = ctx.sessions |> Map.add s.sessionId s'
                     Ok(Phase.Ready { ctx with sessions = sessions' })
 
@@ -360,7 +357,10 @@ module Protocol =
                         let sessions' = ctx.sessions |> Map.add s.sessionId s'
                         Ok(Phase.Ready { ctx with sessions = sessions' })
                     | SessionUpdate.ConfigOptionUpdate { configOptions = configOptions } ->
-                        let s' = { s with configOptions = Some configOptions }
+                        let s' =
+                            { s with
+                                configOptions = Some configOptions }
+
                         let sessions' = ctx.sessions |> Map.add s.sessionId s'
                         Ok(Phase.Ready { ctx with sessions = sessions' })
                     | _ -> Ok(Phase.Ready ctx)

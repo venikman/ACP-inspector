@@ -196,7 +196,9 @@ module SessionState =
 
         let applySessionInfoUpdate (payload: JsonObject) =
             tryGetString payload "title" |> Option.iter (fun t -> sessionTitle <- Some t)
-            tryGetString payload "updatedAt" |> Option.iter (fun updatedAt -> sessionUpdatedAt <- Some updatedAt)
+
+            tryGetString payload "updatedAt"
+            |> Option.iter (fun updatedAt -> sessionUpdatedAt <- Some updatedAt)
 
             match tryGetObject payload "_meta" with
             | None -> ()
@@ -207,7 +209,10 @@ module SessionState =
 
         let applyTypedSessionInfoUpdate (update: SessionInfoUpdate) =
             update.title |> Option.iter (fun title -> sessionTitle <- Some title)
-            update.updatedAt |> Option.iter (fun updatedAt -> sessionUpdatedAt <- Some updatedAt)
+
+            update.updatedAt
+            |> Option.iter (fun updatedAt -> sessionUpdatedAt <- Some updatedAt)
+
             match update._meta with
             | None -> ()
             | Some meta -> sessionMeta <- mergeMeta sessionMeta meta

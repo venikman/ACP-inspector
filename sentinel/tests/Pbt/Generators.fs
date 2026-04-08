@@ -216,9 +216,11 @@ module Generators =
         G.frequency
             [ 2, genInitializeResult |> G.map AgentToClientMessage.InitializeResult
               2,
-              genSessionId |> G.map (mkNewSessionResult >> AgentToClientMessage.SessionNewResult)
+              genSessionId
+              |> G.map (mkNewSessionResult >> AgentToClientMessage.SessionNewResult)
               2,
-              genSessionId |> G.map (mkLoadSessionResult >> AgentToClientMessage.SessionLoadResult)
+              genSessionId
+              |> G.map (mkLoadSessionResult >> AgentToClientMessage.SessionLoadResult)
               3,
               genSessionId
               |> G.bind genSessionPromptResult
@@ -295,8 +297,7 @@ module Generators =
                         else
                             sessions |> Map.add sid false
 
-                    Message.FromAgent(AgentToClientMessage.SessionLoadResult(mkLoadSessionResult sid)),
-                    Ready sessions')
+                    Message.FromAgent(AgentToClientMessage.SessionLoadResult(mkLoadSessionResult sid)), Ready sessions')
 
             let genPromptReq =
                 G.elements idle

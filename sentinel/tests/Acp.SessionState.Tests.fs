@@ -165,15 +165,15 @@ module SessionStateTests =
                     ``type`` = "select"
                     currentValue = SessionConfigValueId "code"
                     options =
-                        SessionConfigSelectOptions.Ungrouped
-                            [ { value = SessionConfigValueId "ask"
-                                name = "Ask"
-                                description = Some "Request permission first"
-                                _meta = None }
-                              { value = SessionConfigValueId "code"
-                                name = "Code"
-                                description = Some "Modify files directly"
-                                _meta = None } ]
+                      SessionConfigSelectOptions.Ungrouped
+                          [ { value = SessionConfigValueId "ask"
+                              name = "Ask"
+                              description = Some "Request permission first"
+                              _meta = None }
+                            { value = SessionConfigValueId "code"
+                              name = "Code"
+                              description = Some "Modify files directly"
+                              _meta = None } ]
                     _meta = None } ]
               _meta = None }
 

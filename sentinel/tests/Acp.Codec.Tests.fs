@@ -246,7 +246,8 @@ module CodecTests =
     let ``decode session list request and response correlates by id`` () =
         let state0 = Codec.CodecState.empty
 
-        let listReq = """{"jsonrpc":"2.0","id":21,"method":"session/list","params":{"cwd":"/tmp/project","cursor":"cursor-1"}}"""
+        let listReq =
+            """{"jsonrpc":"2.0","id":21,"method":"session/list","params":{"cwd":"/tmp/project","cursor":"cursor-1"}}"""
 
         let state1, msg1 =
             match Codec.decode Codec.Direction.FromClient state0 listReq with
