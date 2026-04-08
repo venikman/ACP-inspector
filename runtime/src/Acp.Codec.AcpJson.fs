@@ -253,15 +253,16 @@ module internal CodecAcpJson =
         o["embeddedContext"] <- JsonValue.Create(caps.embeddedContext)
         o
 
-    let private decodeSessionListCapabilities (nodeOpt: JsonNode option) : Result<SessionListCapabilities option, string> =
+    let private decodeSessionListCapabilities
+        (nodeOpt: JsonNode option)
+        : Result<SessionListCapabilities option, string> =
         match nodeOpt with
         | None -> Ok None
         | Some node ->
             result {
                 let! o = asObject node
 
-                let meta =
-                    tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+                let meta = tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
 
                 return Some { _meta = meta }
             }
@@ -625,8 +626,7 @@ module internal CodecAcpJson =
                 | None -> None
                 | Some n -> asString n |> Result.toOption
 
-            let meta =
-                tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+            let meta = tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
 
             return
                 { value = value
@@ -666,8 +666,7 @@ module internal CodecAcpJson =
                     | value -> decodeSessionConfigSelectOption value |> Result.toOption)
                 |> Seq.toList
 
-            let meta =
-                tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+            let meta = tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
 
             return
                 { group = group
@@ -681,7 +680,10 @@ module internal CodecAcpJson =
         o["group"] <- encodeSessionConfigGroupId group.group
         o["name"] <- JsonValue.Create(group.name)
         let options = JsonArray()
-        group.options |> List.iter (fun option' -> options.Add(encodeSessionConfigSelectOption option'))
+
+        group.options
+        |> List.iter (fun option' -> options.Add(encodeSessionConfigSelectOption option'))
+
         o["options"] <- options
 
         match group._meta with
@@ -758,8 +760,7 @@ module internal CodecAcpJson =
             let! currentValue = get "currentValue" o |> Result.bind decodeSessionConfigValueId
             let! options = get "options" o |> Result.bind decodeSessionConfigSelectOptions
 
-            let meta =
-                tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+            let meta = tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
 
             return
                 { id = id
@@ -836,8 +837,7 @@ module internal CodecAcpJson =
                 | None -> None
                 | Some n -> asString n |> Result.toOption
 
-            let meta =
-                tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+            let meta = tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
 
             return
                 { sessionId = sessionId
@@ -880,8 +880,7 @@ module internal CodecAcpJson =
                 | None -> None
                 | Some n -> asString n |> Result.toOption
 
-            let meta =
-                tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+            let meta = tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
 
             return
                 { cursor = cursor
@@ -925,8 +924,7 @@ module internal CodecAcpJson =
                 | None -> None
                 | Some n -> asString n |> Result.toOption
 
-            let meta =
-                tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+            let meta = tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
 
             return
                 { sessions = sessions
@@ -937,7 +935,10 @@ module internal CodecAcpJson =
     let private encodeListSessionsResponse (response: ListSessionsResponse) : JsonObject =
         let o = JsonObject()
         let sessions = JsonArray()
-        response.sessions |> List.iter (fun sessionInfo -> sessions.Add(encodeSessionInfo sessionInfo))
+
+        response.sessions
+        |> List.iter (fun sessionInfo -> sessions.Add(encodeSessionInfo sessionInfo))
+
         o["sessions"] <- sessions
 
         match response.nextCursor with
@@ -957,8 +958,7 @@ module internal CodecAcpJson =
             let! configId = get "configId" o |> Result.bind decodeSessionConfigId
             let! value = get "value" o |> Result.bind decodeSessionConfigValueId
 
-            let meta =
-                tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+            let meta = tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
 
             return
                 { sessionId = sessionId
@@ -990,8 +990,7 @@ module internal CodecAcpJson =
                 let! o = asObject node
                 let! configOptions = decodeConfigOptions (tryGet "configOptions" o)
 
-                let meta =
-                    tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+                let meta = tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
 
                 return
                     { sessionId = sessionId
@@ -1026,8 +1025,7 @@ module internal CodecAcpJson =
                 | None -> None
                 | Some n -> asString n |> Result.toOption
 
-            let meta =
-                tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+            let meta = tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
 
             return
                 { title = title
@@ -1057,8 +1055,7 @@ module internal CodecAcpJson =
             let! o = asObject node
             let! configOptions = decodeConfigOptions (tryGet "configOptions" o)
 
-            let meta =
-                tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+            let meta = tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
 
             return
                 { configOptions = Option.defaultValue [] configOptions
@@ -1307,8 +1304,7 @@ module internal CodecAcpJson =
             let! configOptions = decodeConfigOptions (tryGet "configOptions" o)
             let! modes = decodeModeState (tryGet "modes" o)
 
-            let meta =
-                tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+            let meta = tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
 
             return
                 { sessionId = sessionId
@@ -1352,8 +1348,7 @@ module internal CodecAcpJson =
                 let! configOptions = decodeConfigOptions (tryGet "configOptions" o)
                 let! modes = decodeModeState (tryGet "modes" o)
 
-                let meta =
-                    tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+                let meta = tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
 
                 return
                     { sessionId = sessionId
@@ -2865,9 +2860,7 @@ module internal CodecAcpJson =
                 return ClientToAgentMessage.SessionSetMode p, PendingClientRequest.SessionSetMode p
             | "session/set_config_option" ->
                 let! p = decodeSetSessionConfigOptionRequest paramsNode
-                return
-                    ClientToAgentMessage.SessionSetConfigOption p,
-                    PendingClientRequest.SessionSetConfigOption p
+                return ClientToAgentMessage.SessionSetConfigOption p, PendingClientRequest.SessionSetConfigOption p
             | "proxy/successor" ->
                 let! p = decodeProxySuccessorParams paramsNode
                 return ClientToAgentMessage.ProxySuccessorRequest p, PendingClientRequest.ProxySuccessor p.method
@@ -3016,7 +3009,9 @@ module internal CodecAcpJson =
         | PendingClientRequest.SessionList ->
             match resultNodeOpt with
             | None -> Error "missing result"
-            | Some r -> decodeListSessionsResponse r |> Result.map AgentToClientMessage.SessionListResult
+            | Some r ->
+                decodeListSessionsResponse r
+                |> Result.map AgentToClientMessage.SessionListResult
 
         | PendingClientRequest.SessionLoad req ->
             decodeLoadSessionResult req.sessionId resultNodeOpt

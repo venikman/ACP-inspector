@@ -5,7 +5,7 @@ open System.IO
 open System.Text.Json
 open FsCheck
 
-/// FsCheck runner that persists the latest failing counterexample to core/evidence/pbt/.
+/// FsCheck runner that records the latest failing counterexample for local property-based test debugging.
 /// Only writes on failure to keep noise low.
 module EvidenceRunner =
 

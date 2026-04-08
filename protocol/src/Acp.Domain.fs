@@ -91,7 +91,8 @@ module Domain =
         type SessionListCapabilities = { _meta: JsonObject option }
 
         /// Session capabilities supported by the agent.
-        type SessionCapabilities = { list: SessionListCapabilities option }
+        type SessionCapabilities =
+            { list: SessionListCapabilities option }
 
         [<RequireQualifiedAccess>]
         module SessionCapabilities =

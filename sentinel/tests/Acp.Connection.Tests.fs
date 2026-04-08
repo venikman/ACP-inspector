@@ -55,8 +55,7 @@ module ConnectionTests =
 
                             return Ok(mkInitializeResult false SessionCapabilities.empty)
                         }
-                  onNewSession =
-                    fun _ -> task { return Ok(mkNewSessionResult (SessionId "test-session")) }
+                  onNewSession = fun _ -> task { return Ok(mkNewSessionResult (SessionId "test-session")) }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
                   onPrompt =
@@ -115,8 +114,7 @@ module ConnectionTests =
             let (clientTransport, agentTransport) = Transport.DuplexTransport.CreatePair()
 
             let handlers: Connection.AgentHandlers =
-                { onInitialize =
-                    fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
+                { onInitialize = fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
                   onNewSession = fun _ -> task { return Ok(mkNewSessionResult (SessionId "new-session-123")) }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
@@ -158,8 +156,7 @@ module ConnectionTests =
             let (clientTransport, agentTransport) = Transport.DuplexTransport.CreatePair()
 
             let handlers: Connection.AgentHandlers =
-                { onInitialize =
-                    fun _ -> task { return Ok(mkInitializeResult true SessionCapabilities.empty) }
+                { onInitialize = fun _ -> task { return Ok(mkInitializeResult true SessionCapabilities.empty) }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession =
                     fun p ->
@@ -213,8 +210,7 @@ module ConnectionTests =
             let (clientTransport, agentTransport) = Transport.DuplexTransport.CreatePair()
 
             let handlers: Connection.AgentHandlers =
-                { onInitialize =
-                    fun _ -> task { return Ok(mkInitializeResult true { list = Some { _meta = None } }) }
+                { onInitialize = fun _ -> task { return Ok(mkInitializeResult true { list = Some { _meta = None } }) }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
                   onListSessions =
@@ -252,7 +248,12 @@ module ConnectionTests =
                       clientInfo = None }
                 )
 
-            let! listed = client.ListSessionsAsync({ cwd = Some "/tmp"; cursor = None; _meta = None })
+            let! listed =
+                client.ListSessionsAsync(
+                    { cwd = Some "/tmp"
+                      cursor = None
+                      _meta = None }
+                )
 
             match listed with
             | Ok r ->
@@ -269,8 +270,7 @@ module ConnectionTests =
             let (clientTransport, agentTransport) = Transport.DuplexTransport.CreatePair()
 
             let handlers: Connection.AgentHandlers =
-                { onInitialize =
-                    fun _ -> task { return Ok(mkInitializeResult true SessionCapabilities.empty) }
+                { onInitialize = fun _ -> task { return Ok(mkInitializeResult true SessionCapabilities.empty) }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
@@ -291,15 +291,15 @@ module ConnectionTests =
                                             ``type`` = "select"
                                             currentValue = SessionConfigValueId "code"
                                             options =
-                                                SessionConfigSelectOptions.Ungrouped
-                                                    [ { value = SessionConfigValueId "ask"
-                                                        name = "Ask"
-                                                        description = None
-                                                        _meta = None }
-                                                      { value = SessionConfigValueId "code"
-                                                        name = "Code"
-                                                        description = None
-                                                        _meta = None } ]
+                                              SessionConfigSelectOptions.Ungrouped
+                                                  [ { value = SessionConfigValueId "ask"
+                                                      name = "Ask"
+                                                      description = None
+                                                      _meta = None }
+                                                    { value = SessionConfigValueId "code"
+                                                      name = "Code"
+                                                      description = None
+                                                      _meta = None } ]
                                             _meta = None } ]
                                       _meta = None }
                         } }
@@ -345,8 +345,7 @@ module ConnectionTests =
             let mutable receivedPrompt: SessionPromptParams option = None
 
             let handlers: Connection.AgentHandlers =
-                { onInitialize =
-                    fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
+                { onInitialize = fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
                   onNewSession = fun _ -> task { return Ok(mkNewSessionResult (SessionId "s1")) }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
@@ -450,8 +449,7 @@ module ConnectionTests =
             let mutable cancelReceived = false
 
             let handlers: Connection.AgentHandlers =
-                { onInitialize =
-                    fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
+                { onInitialize = fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
                   onNewSession = fun _ -> task { return Error "not called" }
                   onLoadSession = fun _ -> task { return Error "not called" }
                   onListSessions = fun _ -> task { return Error "not called" }
