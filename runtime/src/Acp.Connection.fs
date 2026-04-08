@@ -34,9 +34,11 @@ module Connection =
         | ClientToAgentMessage.ProxyInitialize _ -> "proxy/initialize"
         | ClientToAgentMessage.Authenticate _ -> "authenticate"
         | ClientToAgentMessage.SessionNew _ -> "session/new"
+        | ClientToAgentMessage.SessionList _ -> "session/list"
         | ClientToAgentMessage.SessionLoad _ -> "session/load"
         | ClientToAgentMessage.SessionPrompt _ -> "session/prompt"
         | ClientToAgentMessage.SessionSetMode _ -> "session/set_mode"
+        | ClientToAgentMessage.SessionSetConfigOption _ -> "session/set_config_option"
         | ClientToAgentMessage.SessionCancel _ -> "session/cancel"
         | ClientToAgentMessage.ProxySuccessorRequest _
         | ClientToAgentMessage.ProxySuccessorNotification _
@@ -73,12 +75,16 @@ module Connection =
         | AgentToClientMessage.AuthenticateError _ -> "authenticate"
         | AgentToClientMessage.SessionNewResult _ -> "session/new"
         | AgentToClientMessage.SessionNewError _ -> "session/new"
+        | AgentToClientMessage.SessionListResult _ -> "session/list"
+        | AgentToClientMessage.SessionListError _ -> "session/list"
         | AgentToClientMessage.SessionLoadResult _ -> "session/load"
         | AgentToClientMessage.SessionLoadError _ -> "session/load"
         | AgentToClientMessage.SessionPromptResult _ -> "session/prompt"
         | AgentToClientMessage.SessionPromptError _ -> "session/prompt"
         | AgentToClientMessage.SessionSetModeResult _ -> "session/set_mode"
         | AgentToClientMessage.SessionSetModeError _ -> "session/set_mode"
+        | AgentToClientMessage.SessionSetConfigOptionResult _ -> "session/set_config_option"
+        | AgentToClientMessage.SessionSetConfigOptionError _ -> "session/set_config_option"
         | AgentToClientMessage.SessionUpdate _ -> "session/update"
         | AgentToClientMessage.ProxySuccessorRequest _
         | AgentToClientMessage.ProxySuccessorNotification _
@@ -110,9 +116,12 @@ module Connection =
     type AgentHandlers =
         { onInitialize: InitializeParams -> Task<Result<InitializeResult, string>>
           onNewSession: NewSessionParams -> Task<Result<NewSessionResult, string>>
+          onListSessions: ListSessionsRequest -> Task<Result<ListSessionsResponse, string>>
+          onLoadSession: LoadSessionParams -> Task<Result<LoadSessionResult, string>>
           onPrompt: SessionPromptParams -> Task<Result<SessionPromptResult, string>>
           onCancel: SessionCancelParams -> Task<unit>
-          onSetMode: SetSessionModeParams -> Task<Result<SetSessionModeResult, string>> }
+          onSetMode: SetSessionModeParams -> Task<Result<SetSessionModeResult, string>>
+          onSetConfigOption: SetSessionConfigOptionRequest -> Task<Result<SetSessionConfigOptionResponse, string>> }
 
     // ============================================================
     // ClientConnection
@@ -366,6 +375,32 @@ module Connection =
                 | Ok other -> return Error(ConnectionError.ProtocolError(sprintf "Unexpected response: %A" other))
             }
 
+        /// Send session/list request.
+        member _.ListSessionsAsync(params': ListSessionsRequest) : Task<Result<ListSessionsResponse, ConnectionError>> =
+            task {
+                let! result = sendRequest (ClientToAgentMessage.SessionList params')
+
+                match result with
+                | Error e -> return Error e
+                | Ok(Message.FromAgent(AgentToClientMessage.SessionListResult r)) -> return Ok r
+                | Ok(Message.FromAgent(AgentToClientMessage.SessionListError e)) ->
+                    return Error(ConnectionError.ProtocolError e.message)
+                | Ok other -> return Error(ConnectionError.ProtocolError(sprintf "Unexpected response: %A" other))
+            }
+
+        /// Send session/load request.
+        member _.LoadSessionAsync(params': LoadSessionParams) : Task<Result<LoadSessionResult, ConnectionError>> =
+            task {
+                let! result = sendRequest (ClientToAgentMessage.SessionLoad params')
+
+                match result with
+                | Error e -> return Error e
+                | Ok(Message.FromAgent(AgentToClientMessage.SessionLoadResult r)) -> return Ok r
+                | Ok(Message.FromAgent(AgentToClientMessage.SessionLoadError(_, e))) ->
+                    return Error(ConnectionError.ProtocolError e.message)
+                | Ok other -> return Error(ConnectionError.ProtocolError(sprintf "Unexpected response: %A" other))
+            }
+
         /// Send session/prompt request.
         member _.PromptAsync(params': SessionPromptParams) : Task<Result<SessionPromptResult, ConnectionError>> =
             task {
@@ -399,6 +434,21 @@ module Connection =
                 | Error e -> return Error e
                 | Ok(Message.FromAgent(AgentToClientMessage.SessionSetModeResult r)) -> return Ok r
                 | Ok(Message.FromAgent(AgentToClientMessage.SessionSetModeError(_, e))) ->
+                    return Error(ConnectionError.ProtocolError e.message)
+                | Ok other -> return Error(ConnectionError.ProtocolError(sprintf "Unexpected response: %A" other))
+            }
+
+        /// Send session/set_config_option request.
+        member _.SetConfigOptionAsync
+            (params': SetSessionConfigOptionRequest)
+            : Task<Result<SetSessionConfigOptionResponse, ConnectionError>> =
+            task {
+                let! result = sendRequest (ClientToAgentMessage.SessionSetConfigOption params')
+
+                match result with
+                | Error e -> return Error e
+                | Ok(Message.FromAgent(AgentToClientMessage.SessionSetConfigOptionResult r)) -> return Ok r
+                | Ok(Message.FromAgent(AgentToClientMessage.SessionSetConfigOptionError(_, e))) ->
                     return Error(ConnectionError.ProtocolError e.message)
                 | Ok other -> return Error(ConnectionError.ProtocolError(sprintf "Unexpected response: %A" other))
             }
@@ -749,6 +799,36 @@ module Connection =
                                           message = msg
                                           data = None })
 
+                    | ClientToAgentMessage.SessionList p, Some reqId ->
+                        let! result = handlers.onListSessions p
+
+                        match result with
+                        | Ok r -> do! sendResponse reqId (AgentToClientMessage.SessionListResult r)
+                        | Error msg ->
+                            do!
+                                sendResponse
+                                    reqId
+                                    (AgentToClientMessage.SessionListError
+                                        { code = -32603
+                                          message = msg
+                                          data = None })
+
+                    | ClientToAgentMessage.SessionLoad p, Some reqId ->
+                        let! result = handlers.onLoadSession p
+
+                        match result with
+                        | Ok r -> do! sendResponse reqId (AgentToClientMessage.SessionLoadResult r)
+                        | Error msg ->
+                            do!
+                                sendResponse
+                                    reqId
+                                    (AgentToClientMessage.SessionLoadError(
+                                        p,
+                                        { code = -32603
+                                          message = msg
+                                          data = None }
+                                    ))
+
                     | ClientToAgentMessage.SessionPrompt p, Some reqId ->
                         let! result = handlers.onPrompt p
 
@@ -775,6 +855,22 @@ module Connection =
                                 sendResponse
                                     reqId
                                     (AgentToClientMessage.SessionSetModeError(
+                                        p,
+                                        { code = -32603
+                                          message = msg
+                                          data = None }
+                                    ))
+
+                    | ClientToAgentMessage.SessionSetConfigOption p, Some reqId ->
+                        let! result = handlers.onSetConfigOption p
+
+                        match result with
+                        | Ok r -> do! sendResponse reqId (AgentToClientMessage.SessionSetConfigOptionResult r)
+                        | Error msg ->
+                            do!
+                                sendResponse
+                                    reqId
+                                    (AgentToClientMessage.SessionSetConfigOptionError(
                                         p,
                                         { code = -32603
                                           message = msg

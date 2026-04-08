@@ -114,7 +114,7 @@ module Protocol =
             let sessions' = ctx.sessions |> Map.add sid s'
             Ok { ctx with sessions = sessions' }
 
-    /// MVP Spec<Phase,Message> for ACP v0.10.5 "core slice" (see Domain.Spec.Schema).
+    /// MVP Spec<Phase,Message> for ACP v0.11.3 "core slice" (see Domain.Spec.Schema).
     /// Rules encoded:
     ///   - initialize must be first
     ///   - exactly one initialize result
@@ -192,38 +192,53 @@ module Protocol =
 
             // session/new request does not change state; result creates the session.
             | Phase.Ready ctx, Message.FromClient(ClientToAgentMessage.SessionNew _) -> Ok(Phase.Ready ctx)
+            | Phase.Ready ctx, Message.FromClient(ClientToAgentMessage.SessionList _) -> Ok(Phase.Ready ctx)
 
             | Phase.Ready ctx,
-              Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = modes }) ->
+              Message.FromAgent(
+                  AgentToClientMessage.SessionNewResult
+                      { sessionId = sid
+                        configOptions = configOptions
+                        modes = modes }
+              ) ->
                 if ctx.sessions |> Map.containsKey sid then
                     Error(ProtocolError.SessionAlreadyExists sid)
                 else
                     let s =
                         { sessionId = sid
+                          configOptions = configOptions
                           modeState = modes
                           turnState = TurnState.Idle None }
 
                     let sessions' = ctx.sessions |> Map.add sid s
                     Ok(Phase.Ready { ctx with sessions = sessions' })
 
+            | Phase.Ready ctx, Message.FromAgent(AgentToClientMessage.SessionListResult _) -> Ok(Phase.Ready ctx)
+
             // session/load request: state unchanged; result ensures the session is tracked.
             | Phase.Ready ctx, Message.FromClient(ClientToAgentMessage.SessionLoad _) -> Ok(Phase.Ready ctx)
 
             | Phase.Ready ctx,
-              Message.FromAgent(AgentToClientMessage.SessionLoadResult { sessionId = sid; modes = modes }) ->
+              Message.FromAgent(
+                  AgentToClientMessage.SessionLoadResult
+                      { sessionId = sid
+                        configOptions = configOptions
+                        modes = modes }
+              ) ->
                 let sessions' =
                     if ctx.sessions |> Map.containsKey sid then
                         let s = ctx.sessions.[sid]
 
                         let s' =
-                            match modes with
-                            | None -> s
-                            | Some _ -> { s with modeState = modes }
+                            { s with
+                                configOptions = Option.orElse configOptions s.configOptions
+                                modeState = Option.orElse modes s.modeState }
 
                         ctx.sessions |> Map.add sid s'
                     else
                         let s =
                             { sessionId = sid
+                              configOptions = configOptions
                               modeState = modes
                               turnState = TurnState.Idle None }
 
@@ -237,6 +252,11 @@ module Protocol =
                 | None -> Error(ProtocolError.UnknownSession ssm.sessionId)
                 | Some _ -> Ok(Phase.Ready ctx)
 
+            | Phase.Ready ctx, Message.FromClient(ClientToAgentMessage.SessionSetConfigOption req) ->
+                match ctx.sessions |> Map.tryFind req.sessionId with
+                | None -> Error(ProtocolError.UnknownSession req.sessionId)
+                | Some _ -> Ok(Phase.Ready ctx)
+
             | Phase.Ready ctx, Message.FromAgent(AgentToClientMessage.SessionSetModeResult r) ->
                 match ctx.sessions |> Map.tryFind r.sessionId with
                 | None -> Error(ProtocolError.UnknownSession r.sessionId)
@@ -248,6 +268,14 @@ module Protocol =
                             { s with
                                 modeState = Some { ms with currentModeId = r.modeId } }
 
+                    let sessions' = ctx.sessions |> Map.add s.sessionId s'
+                    Ok(Phase.Ready { ctx with sessions = sessions' })
+
+            | Phase.Ready ctx, Message.FromAgent(AgentToClientMessage.SessionSetConfigOptionResult r) ->
+                match ctx.sessions |> Map.tryFind r.sessionId with
+                | None -> Error(ProtocolError.UnknownSession r.sessionId)
+                | Some s ->
+                    let s' = { s with configOptions = Some r.configOptions }
                     let sessions' = ctx.sessions |> Map.add s.sessionId s'
                     Ok(Phase.Ready { ctx with sessions = sessions' })
 
@@ -329,6 +357,10 @@ module Protocol =
                                             { ms with
                                                 currentModeId = currentModeId } }
 
+                        let sessions' = ctx.sessions |> Map.add s.sessionId s'
+                        Ok(Phase.Ready { ctx with sessions = sessions' })
+                    | SessionUpdate.ConfigOptionUpdate { configOptions = configOptions } ->
+                        let s' = { s with configOptions = Some configOptions }
                         let sessions' = ctx.sessions |> Map.add s.sessionId s'
                         Ok(Phase.Ready { ctx with sessions = sessions' })
                     | _ -> Ok(Phase.Ready ctx)

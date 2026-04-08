@@ -3,7 +3,7 @@ namespace Acp
 open System
 open System.Text.Json.Nodes
 
-/// Domain model for ACP v0.10.5 (schema.json).
+/// Domain model for ACP v0.11.3 (schema.json).
 /// This is the typed, transport-agnostic meaning of ACP after JSON-RPC framing is decoded.
 module Domain =
 
@@ -14,7 +14,7 @@ module Domain =
         /// Update this when upgrading to a new ACP release.
         /// See: https://github.com/agentclientprotocol/agent-client-protocol/releases
         [<Literal>]
-        let Schema = "0.10.5"
+        let Schema = "0.11.3"
 
         /// JSON-RPC framing version used by the codec.
         [<Literal>]
@@ -87,13 +87,15 @@ module Domain =
               image: bool
               embeddedContext: bool }
 
-        /// Session capabilities supported by the agent. Currently an empty object in schema.
-        [<Struct>]
-        type SessionCapabilities = SessionCapabilities
+        /// Capability marker for `session/list`.
+        type SessionListCapabilities = { _meta: JsonObject option }
+
+        /// Session capabilities supported by the agent.
+        type SessionCapabilities = { list: SessionListCapabilities option }
 
         [<RequireQualifiedAccess>]
         module SessionCapabilities =
-            let empty = SessionCapabilities
+            let empty = { list = None }
 
         /// Capabilities advertised by the agent during initialize.
         type AgentCapabilities =
@@ -234,16 +236,108 @@ module Domain =
               cwd: string
               mcpServers: McpServer list }
 
+        /// Params for session/list (client -> agent).
+        type ListSessionsRequest =
+            { cursor: string option
+              cwd: string option
+              _meta: JsonObject option }
+
+        [<Struct>]
+        type SessionConfigGroupId = SessionConfigGroupId of string
+
+        [<RequireQualifiedAccess>]
+        module SessionConfigGroupId =
+            let value (SessionConfigGroupId s) = s
+
+        [<Struct>]
+        type SessionConfigId = SessionConfigId of string
+
+        [<RequireQualifiedAccess>]
+        module SessionConfigId =
+            let value (SessionConfigId s) = s
+
+        [<Struct>]
+        type SessionConfigValueId = SessionConfigValueId of string
+
+        [<RequireQualifiedAccess>]
+        module SessionConfigValueId =
+            let value (SessionConfigValueId s) = s
+
+        [<RequireQualifiedAccess>]
+        type SessionConfigOptionCategory =
+            | Mode
+            | Model
+            | ThoughtLevel
+            | Other of string
+
+        type SessionConfigSelectOption =
+            { value: SessionConfigValueId
+              name: string
+              description: string option
+              _meta: JsonObject option }
+
+        type SessionConfigSelectGroup =
+            { group: SessionConfigGroupId
+              name: string
+              options: SessionConfigSelectOption list
+              _meta: JsonObject option }
+
+        [<RequireQualifiedAccess>]
+        type SessionConfigSelectOptions =
+            | Ungrouped of SessionConfigSelectOption list
+            | Grouped of SessionConfigSelectGroup list
+
+        type SessionConfigSelect =
+            { currentValue: SessionConfigValueId
+              options: SessionConfigSelectOptions }
+
+        type SessionConfigOption =
+            { id: SessionConfigId
+              name: string
+              description: string option
+              category: SessionConfigOptionCategory option
+              ``type``: string
+              currentValue: SessionConfigValueId
+              options: SessionConfigSelectOptions
+              _meta: JsonObject option }
+
+        type SetSessionConfigOptionRequest =
+            { sessionId: SessionId
+              configId: SessionConfigId
+              value: SessionConfigValueId
+              _meta: JsonObject option }
+
+        type SetSessionConfigOptionResponse =
+            { sessionId: SessionId
+              configOptions: SessionConfigOption list
+              _meta: JsonObject option }
+
+        type SessionInfo =
+            { sessionId: SessionId
+              cwd: string
+              title: string option
+              updatedAt: string option
+              _meta: JsonObject option }
+
+        type ListSessionsResponse =
+            { sessions: SessionInfo list
+              nextCursor: string option
+              _meta: JsonObject option }
+
         /// Result for session/new (agent -> client).
         type NewSessionResult =
             { sessionId: SessionId
-              modes: SessionModeState option }
+              configOptions: SessionConfigOption list option
+              modes: SessionModeState option
+              _meta: JsonObject option }
 
         /// Domain-level result for session/load (agent -> client).
         /// Wire result does not include a session id; we reattach it from the request.
         type LoadSessionResult =
             { sessionId: SessionId
-              modes: SessionModeState option }
+              configOptions: SessionConfigOption list option
+              modes: SessionModeState option
+              _meta: JsonObject option }
 
     // -------------
     // Session context (runtime helper)
@@ -258,6 +352,7 @@ module Domain =
         /// Per-session state container; the turnState is protocol-specific.
         type SessionState<'turnState> =
             { sessionId: SessionId
+              configOptions: SessionSetup.SessionConfigOption list option
               modeState: SessionModeState option
               turnState: 'turnState }
 
@@ -493,6 +588,15 @@ module Domain =
         type AvailableCommandsUpdate =
             { availableCommands: AvailableCommand list }
 
+        type SessionInfoUpdate =
+            { title: string option
+              updatedAt: string option
+              _meta: JsonObject option }
+
+        type ConfigOptionUpdate =
+            { configOptions: SessionConfigOption list
+              _meta: JsonObject option }
+
         // ---- Tool calls ----
 
         type Diff =
@@ -588,6 +692,8 @@ module Domain =
             | ToolCall of ToolCall
             | ToolCallUpdate of ToolCallUpdate
             | Plan of Plan
+            | SessionInfoUpdate of SessionInfoUpdate
+            | ConfigOptionUpdate of ConfigOptionUpdate
             | AvailableCommandsUpdate of AvailableCommandsUpdate
             | CurrentModeUpdate of CurrentModeUpdate
             /// Unknown update payload preserved for forward compatibility.
@@ -707,9 +813,11 @@ module Domain =
             | ProxyInitialize of InitializeParams
             | Authenticate of AuthenticateParams
             | SessionNew of NewSessionParams
+            | SessionList of ListSessionsRequest
             | SessionLoad of LoadSessionParams
             | SessionPrompt of SessionPromptParams
             | SessionSetMode of SetSessionModeParams
+            | SessionSetConfigOption of SetSessionConfigOptionRequest
             | ProxySuccessorRequest of ProxySuccessorParams
             | ExtRequest of methodName: string * parameters: JsonNode option
             // Notifications (client -> agent)
@@ -746,18 +854,22 @@ module Domain =
             | ProxyInitializeResult of InitializeResult
             | AuthenticateResult of AuthenticateResult
             | SessionNewResult of NewSessionResult
+            | SessionListResult of ListSessionsResponse
             | SessionLoadResult of LoadSessionResult
             | SessionPromptResult of SessionPromptResult
             | SessionSetModeResult of SetSessionModeResult
+            | SessionSetConfigOptionResult of SetSessionConfigOptionResponse
             | ExtResponse of methodName: string * result: JsonNode option
             | ProxySuccessorResponse of methodName: string * result: JsonNode option
             | InitializeError of error: Error
             | ProxyInitializeError of error: Error
             | AuthenticateError of error: Error
             | SessionNewError of error: Error
+            | SessionListError of error: Error
             | SessionLoadError of request: LoadSessionParams * error: Error
             | SessionPromptError of request: SessionPromptParams * error: Error
             | SessionSetModeError of request: SetSessionModeParams * error: Error
+            | SessionSetConfigOptionError of request: SetSessionConfigOptionRequest * error: Error
             | ExtError of methodName: string * error: Error
             | ProxySuccessorError of methodName: string * error: Error
             // Notifications (agent -> client)

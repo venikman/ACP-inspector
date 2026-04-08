@@ -5,6 +5,7 @@ open System.Text.Json.Nodes
 open Acp.Domain
 open Acp.Domain.PrimitivesAndParties
 open Acp.Domain.Prompting
+open Acp.Domain.SessionSetup
 open Acp.Domain.SessionModes
 
 /// Session state accumulator for merging session notifications into snapshots.
@@ -32,7 +33,9 @@ module SessionState =
     type SessionSnapshot =
         { sessionId: SessionId
           title: string option
+          updatedAt: string option
           meta: JsonObject option
+          configOptions: SessionConfigOption list
           usageUpdates: JsonObject list
           toolCalls: Map<string, ToolCallView>
           planEntries: PlanEntry list
@@ -60,11 +63,13 @@ module SessionState =
         let mutable toolCalls: Map<string, MutableToolCallState> = Map.empty
         let mutable planEntries: PlanEntry list = []
         let mutable currentModeId: SessionModeId option = None
+        let mutable configOptions: SessionConfigOption list = []
         let mutable availableCommands: AvailableCommand list = []
         let mutable userMessages: ContentChunk list = []
         let mutable agentMessages: ContentChunk list = []
         let mutable agentThoughts: ContentChunk list = []
         let mutable sessionTitle: string option = None
+        let mutable sessionUpdatedAt: string option = None
         let mutable sessionMeta: JsonObject option = None
         let mutable usageUpdates: JsonObject list = []
 
@@ -85,11 +90,13 @@ module SessionState =
                     toolCalls <- Map.empty
                     planEntries <- []
                     currentModeId <- None
+                    configOptions <- []
                     availableCommands <- []
                     userMessages <- []
                     agentMessages <- []
                     agentThoughts <- []
                     sessionTitle <- None
+                    sessionUpdatedAt <- None
                     sessionMeta <- None
                     usageUpdates <- []
                     sessionId <- Some notificationSessionId
@@ -189,6 +196,7 @@ module SessionState =
 
         let applySessionInfoUpdate (payload: JsonObject) =
             tryGetString payload "title" |> Option.iter (fun t -> sessionTitle <- Some t)
+            tryGetString payload "updatedAt" |> Option.iter (fun updatedAt -> sessionUpdatedAt <- Some updatedAt)
 
             match tryGetObject payload "_meta" with
             | None -> ()
@@ -196,6 +204,13 @@ module SessionState =
 
         let applyUsageUpdate (payload: JsonObject) =
             usageUpdates <- cloneObject payload :: usageUpdates
+
+        let applyTypedSessionInfoUpdate (update: SessionInfoUpdate) =
+            update.title |> Option.iter (fun title -> sessionTitle <- Some title)
+            update.updatedAt |> Option.iter (fun updatedAt -> sessionUpdatedAt <- Some updatedAt)
+            match update._meta with
+            | None -> ()
+            | Some meta -> sessionMeta <- mergeMeta sessionMeta meta
 
         let applyUpdate (update: SessionUpdate) =
             match update with
@@ -205,6 +220,8 @@ module SessionState =
             | SessionUpdate.ToolCall tc -> applyToolCall tc
             | SessionUpdate.ToolCallUpdate update -> applyToolCallUpdate update
             | SessionUpdate.Plan plan -> planEntries <- plan.entries
+            | SessionUpdate.SessionInfoUpdate update -> applyTypedSessionInfoUpdate update
+            | SessionUpdate.ConfigOptionUpdate update -> configOptions <- update.configOptions
             | SessionUpdate.AvailableCommandsUpdate update -> availableCommands <- update.availableCommands
             | SessionUpdate.CurrentModeUpdate update -> currentModeId <- Some update.currentModeId
             | SessionUpdate.Ext(tag, payload) ->
@@ -234,7 +251,9 @@ module SessionState =
 
                 { sessionId = sid
                   title = sessionTitle
+                  updatedAt = sessionUpdatedAt
                   meta = sessionMeta |> Option.map cloneObject
+                  configOptions = List.map id configOptions
                   usageUpdates = usageUpdates |> List.rev |> List.map cloneObject
                   toolCalls = toolCallViews
                   planEntries = List.map id planEntries
@@ -264,10 +283,15 @@ module SessionState =
             toolCalls <- Map.empty
             planEntries <- []
             currentModeId <- None
+            configOptions <- []
             availableCommands <- []
             userMessages <- []
             agentMessages <- []
             agentThoughts <- []
+            sessionTitle <- None
+            sessionUpdatedAt <- None
+            sessionMeta <- None
+            usageUpdates <- []
 
         /// Subscribe to snapshot updates. Returns unsubscribe function.
         member _.Subscribe(callback: SessionSnapshot -> SessionUpdateNotification -> unit) : unit -> unit =

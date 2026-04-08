@@ -12,8 +12,8 @@
     <Description>F# protocol core for ACP: typed domain model and protocol state machine.</Description>
     <PackageTags>acp;agent-client-protocol;protocol;fsharp</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/venikman/acp-protocol-fsharp</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/venikman/acp-protocol-fsharp</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/venikman/ACP-inspector</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/venikman/ACP-inspector</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
 

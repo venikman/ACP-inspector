@@ -11,8 +11,8 @@
     <Description>F# runtime SDK for ACP: transports, codec, connections, contrib helpers, and observability tags.</Description>
     <PackageTags>acp;agent-client-protocol;runtime;sdk;fsharp</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/venikman/acp-runtime-fsharp</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/venikman/acp-runtime-fsharp</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/venikman/ACP-inspector</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/venikman/ACP-inspector</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
 

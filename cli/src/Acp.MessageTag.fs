@@ -16,6 +16,8 @@ module MessageTag =
         | SessionUpdate.Plan _ -> "plan"
         | SessionUpdate.AvailableCommandsUpdate _ -> "available_commands_update"
         | SessionUpdate.CurrentModeUpdate _ -> "current_mode_update"
+        | SessionUpdate.SessionInfoUpdate _ -> "session_info_update"
+        | SessionUpdate.ConfigOptionUpdate _ -> "config_option_update"
         | SessionUpdate.Ext(tag, _) -> $"ext:{tag}"
 
     let render (msg: Message) =
@@ -26,9 +28,11 @@ module MessageTag =
             | ClientToAgentMessage.ProxyInitialize p -> $"proxy/initialize pv={p.protocolVersion}"
             | ClientToAgentMessage.Authenticate _ -> "authenticate"
             | ClientToAgentMessage.SessionNew _ -> "session/new"
+            | ClientToAgentMessage.SessionList _ -> "session/list"
             | ClientToAgentMessage.SessionLoad _ -> "session/load"
             | ClientToAgentMessage.SessionPrompt _ -> "session/prompt"
             | ClientToAgentMessage.SessionSetMode _ -> "session/set_mode"
+            | ClientToAgentMessage.SessionSetConfigOption _ -> "session/set_config_option"
             | ClientToAgentMessage.SessionCancel _ -> "session/cancel"
             | ClientToAgentMessage.ProxySuccessorRequest p -> $"proxy/successor inner={p.method}"
             | ClientToAgentMessage.ProxySuccessorNotification p -> $"proxy/successor inner={p.method}"
@@ -61,9 +65,11 @@ module MessageTag =
             | AgentToClientMessage.ProxyInitializeResult r -> $"proxy/initialize (result) pv={r.protocolVersion}"
             | AgentToClientMessage.AuthenticateResult _ -> "authenticate (result)"
             | AgentToClientMessage.SessionNewResult _ -> "session/new (result)"
+            | AgentToClientMessage.SessionListResult _ -> "session/list (result)"
             | AgentToClientMessage.SessionLoadResult _ -> "session/load (result)"
             | AgentToClientMessage.SessionPromptResult _ -> "session/prompt (result)"
             | AgentToClientMessage.SessionSetModeResult _ -> "session/set_mode (result)"
+            | AgentToClientMessage.SessionSetConfigOptionResult _ -> "session/set_config_option (result)"
             | AgentToClientMessage.ExtResponse(methodName, _) -> methodName
             | AgentToClientMessage.ProxySuccessorResponse(methodName, _) ->
                 $"proxy/successor (result) inner={methodName}"
@@ -71,9 +77,11 @@ module MessageTag =
             | AgentToClientMessage.ProxyInitializeError _ -> "proxy/initialize (error)"
             | AgentToClientMessage.AuthenticateError _ -> "authenticate (error)"
             | AgentToClientMessage.SessionNewError _ -> "session/new (error)"
+            | AgentToClientMessage.SessionListError _ -> "session/list (error)"
             | AgentToClientMessage.SessionLoadError _ -> "session/load (error)"
             | AgentToClientMessage.SessionPromptError _ -> "session/prompt (error)"
             | AgentToClientMessage.SessionSetModeError _ -> "session/set_mode (error)"
+            | AgentToClientMessage.SessionSetConfigOptionError _ -> "session/set_config_option (error)"
             | AgentToClientMessage.ExtError(methodName, _) -> methodName
             | AgentToClientMessage.ProxySuccessorError(methodName, _) -> $"proxy/successor (error) inner={methodName}"
             | AgentToClientMessage.SessionUpdate u -> $"session/update ({sessionUpdateTag u.update})"

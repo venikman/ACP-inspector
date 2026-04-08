@@ -42,9 +42,11 @@ module CodecTypes =
         | ProxyInitialize
         | Authenticate
         | SessionNew
+        | SessionList
         | SessionLoad of request: LoadSessionParams
         | SessionPrompt of request: SessionPromptParams
         | SessionSetMode of request: SetSessionModeParams
+        | SessionSetConfigOption of request: SetSessionConfigOptionRequest
         | ProxySuccessor of methodName: string
         | ExtRequest of methodName: string
 

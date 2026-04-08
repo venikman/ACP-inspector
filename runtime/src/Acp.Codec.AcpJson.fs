@@ -253,6 +253,50 @@ module internal CodecAcpJson =
         o["embeddedContext"] <- JsonValue.Create(caps.embeddedContext)
         o
 
+    let private decodeSessionListCapabilities (nodeOpt: JsonNode option) : Result<SessionListCapabilities option, string> =
+        match nodeOpt with
+        | None -> Ok None
+        | Some node ->
+            result {
+                let! o = asObject node
+
+                let meta =
+                    tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+
+                return Some { _meta = meta }
+            }
+
+    let private encodeSessionListCapabilities (capsOpt: SessionListCapabilities option) : JsonNode option =
+        match capsOpt with
+        | None -> None
+        | Some caps ->
+            let o = JsonObject()
+
+            match caps._meta with
+            | None -> ()
+            | Some meta -> o["_meta"] <- meta.DeepClone()
+
+            Some(o :> JsonNode)
+
+    let private decodeSessionCapabilities (nodeOpt: JsonNode option) : Result<SessionCapabilities, string> =
+        match nodeOpt with
+        | None -> Ok SessionCapabilities.empty
+        | Some node ->
+            result {
+                let! o = asObject node
+                let! list = decodeSessionListCapabilities (tryGet "list" o)
+                return { list = list }
+            }
+
+    let private encodeSessionCapabilities (caps: SessionCapabilities) : JsonObject =
+        let o = JsonObject()
+
+        match encodeSessionListCapabilities caps.list with
+        | None -> ()
+        | Some listCaps -> o["list"] <- listCaps
+
+        o
+
     let private decodeAgentCaps (nodeOpt: JsonNode option) : Result<AgentCapabilities, string> =
         match nodeOpt with
         | None ->
@@ -276,8 +320,7 @@ module internal CodecAcpJson =
                 let! mcp = decodeMcpCaps (tryGet "mcpCapabilities" o)
                 let! prompt = decodePromptCaps (tryGet "promptCapabilities" o)
 
-                // sessionCapabilities is an object today; treat missing as empty.
-                let sessionCaps = SessionCapabilities.empty
+                let! sessionCaps = decodeSessionCapabilities (tryGet "sessionCapabilities" o)
 
                 return
                     { loadSession = load
@@ -291,7 +334,7 @@ module internal CodecAcpJson =
         o["loadSession"] <- JsonValue.Create(caps.loadSession)
         o["mcpCapabilities"] <- encodeMcpCaps caps.mcpCapabilities
         o["promptCapabilities"] <- encodePromptCaps caps.promptCapabilities
-        o["sessionCapabilities"] <- JsonObject()
+        o["sessionCapabilities"] <- encodeSessionCapabilities caps.sessionCapabilities
         o
 
     // ---- Authentication ----
@@ -521,6 +564,515 @@ module internal CodecAcpJson =
         o["modeId"] <- encodeModeId p.modeId
         o
 
+    let private decodeSessionConfigId (node: JsonNode) : Result<SessionConfigId, string> =
+        asString node |> Result.map SessionConfigId
+
+    let private encodeSessionConfigId (id: SessionConfigId) : JsonNode =
+        JsonValue.Create(SessionConfigId.value id)
+
+    let private decodeSessionConfigValueId (node: JsonNode) : Result<SessionConfigValueId, string> =
+        asString node |> Result.map SessionConfigValueId
+
+    let private encodeSessionConfigValueId (id: SessionConfigValueId) : JsonNode =
+        JsonValue.Create(SessionConfigValueId.value id)
+
+    let private decodeSessionConfigGroupId (node: JsonNode) : Result<SessionConfigGroupId, string> =
+        asString node |> Result.map SessionConfigGroupId
+
+    let private encodeSessionConfigGroupId (id: SessionConfigGroupId) : JsonNode =
+        JsonValue.Create(SessionConfigGroupId.value id)
+
+    let private decodeSessionConfigOptionCategory
+        (nodeOpt: JsonNode option)
+        : Result<SessionConfigOptionCategory option, string> =
+        match nodeOpt with
+        | None -> Ok None
+        | Some node ->
+            result {
+                let! raw = asString node
+
+                return
+                    Some(
+                        match raw with
+                        | "mode" -> SessionConfigOptionCategory.Mode
+                        | "model" -> SessionConfigOptionCategory.Model
+                        | "thought_level" -> SessionConfigOptionCategory.ThoughtLevel
+                        | other -> SessionConfigOptionCategory.Other other
+                    )
+            }
+
+    let private encodeSessionConfigOptionCategory (categoryOpt: SessionConfigOptionCategory option) : JsonNode option =
+        categoryOpt
+        |> Option.map (function
+            | SessionConfigOptionCategory.Mode -> JsonValue.Create("mode") :> JsonNode
+            | SessionConfigOptionCategory.Model -> JsonValue.Create("model") :> JsonNode
+            | SessionConfigOptionCategory.ThoughtLevel -> JsonValue.Create("thought_level") :> JsonNode
+            | SessionConfigOptionCategory.Other value -> JsonValue.Create(value) :> JsonNode)
+
+    let private decodeSessionConfigSelectOption (node: JsonNode) : Result<SessionConfigSelectOption, string> =
+        result {
+            let! o = asObject node
+            let! value = get "value" o |> Result.bind decodeSessionConfigValueId
+            let! name = get "name" o |> Result.bind asString
+
+            let description =
+                match tryGet "description" o with
+                | None -> None
+                | Some n -> asString n |> Result.toOption
+
+            let meta =
+                tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+
+            return
+                { value = value
+                  name = name
+                  description = description
+                  _meta = meta }
+        }
+
+    let private encodeSessionConfigSelectOption (option': SessionConfigSelectOption) : JsonObject =
+        let o = JsonObject()
+        o["value"] <- encodeSessionConfigValueId option'.value
+        o["name"] <- JsonValue.Create(option'.name)
+
+        match option'.description with
+        | None -> ()
+        | Some description -> o["description"] <- JsonValue.Create(description)
+
+        match option'._meta with
+        | None -> ()
+        | Some meta -> o["_meta"] <- meta.DeepClone()
+
+        o
+
+    let private decodeSessionConfigSelectGroup (node: JsonNode) : Result<SessionConfigSelectGroup, string> =
+        result {
+            let! o = asObject node
+            let! group = get "group" o |> Result.bind decodeSessionConfigGroupId
+            let! name = get "name" o |> Result.bind asString
+            let! optionsNode = get "options" o
+            let! arr = asArray optionsNode
+
+            let options =
+                arr
+                |> Seq.choose (fun n ->
+                    match n with
+                    | null -> None
+                    | value -> decodeSessionConfigSelectOption value |> Result.toOption)
+                |> Seq.toList
+
+            let meta =
+                tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+
+            return
+                { group = group
+                  name = name
+                  options = options
+                  _meta = meta }
+        }
+
+    let private encodeSessionConfigSelectGroup (group: SessionConfigSelectGroup) : JsonObject =
+        let o = JsonObject()
+        o["group"] <- encodeSessionConfigGroupId group.group
+        o["name"] <- JsonValue.Create(group.name)
+        let options = JsonArray()
+        group.options |> List.iter (fun option' -> options.Add(encodeSessionConfigSelectOption option'))
+        o["options"] <- options
+
+        match group._meta with
+        | None -> ()
+        | Some meta -> o["_meta"] <- meta.DeepClone()
+
+        o
+
+    let private decodeSessionConfigSelectOptions (node: JsonNode) : Result<SessionConfigSelectOptions, string> =
+        result {
+            let! arr = asArray node
+
+            let firstObjectOpt =
+                arr
+                |> Seq.tryPick (fun n ->
+                    match n with
+                    | :? JsonObject as o -> Some o
+                    | _ -> None)
+
+            let isGrouped =
+                firstObjectOpt
+                |> Option.exists (fun o ->
+                    let mutable value: JsonNode | null = null
+                    o.TryGetPropertyValue("group", &value))
+
+            if isGrouped then
+                let groups =
+                    arr
+                    |> Seq.choose (fun n ->
+                        match n with
+                        | null -> None
+                        | value -> decodeSessionConfigSelectGroup value |> Result.toOption)
+                    |> Seq.toList
+
+                return SessionConfigSelectOptions.Grouped groups
+            else
+                let options =
+                    arr
+                    |> Seq.choose (fun n ->
+                        match n with
+                        | null -> None
+                        | value -> decodeSessionConfigSelectOption value |> Result.toOption)
+                    |> Seq.toList
+
+                return SessionConfigSelectOptions.Ungrouped options
+        }
+
+    let private encodeSessionConfigSelectOptions (options: SessionConfigSelectOptions) : JsonArray =
+        let arr = JsonArray()
+
+        match options with
+        | SessionConfigSelectOptions.Ungrouped optionList ->
+            optionList
+            |> List.iter (fun option' -> arr.Add(encodeSessionConfigSelectOption option'))
+        | SessionConfigSelectOptions.Grouped groupList ->
+            groupList
+            |> List.iter (fun group -> arr.Add(encodeSessionConfigSelectGroup group))
+
+        arr
+
+    let private decodeSessionConfigOption (node: JsonNode) : Result<SessionConfigOption, string> =
+        result {
+            let! o = asObject node
+            let! id = get "id" o |> Result.bind decodeSessionConfigId
+            let! name = get "name" o |> Result.bind asString
+            let! typeName = get "type" o |> Result.bind asString
+
+            let description =
+                match tryGet "description" o with
+                | None -> None
+                | Some n -> asString n |> Result.toOption
+
+            let! category = decodeSessionConfigOptionCategory (tryGet "category" o)
+            let! currentValue = get "currentValue" o |> Result.bind decodeSessionConfigValueId
+            let! options = get "options" o |> Result.bind decodeSessionConfigSelectOptions
+
+            let meta =
+                tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+
+            return
+                { id = id
+                  name = name
+                  description = description
+                  category = category
+                  ``type`` = typeName
+                  currentValue = currentValue
+                  options = options
+                  _meta = meta }
+        }
+
+    let private encodeSessionConfigOption (option': SessionConfigOption) : JsonObject =
+        let o = JsonObject()
+        o["id"] <- encodeSessionConfigId option'.id
+        o["name"] <- JsonValue.Create(option'.name)
+        o["type"] <- JsonValue.Create(option'.``type``)
+        o["currentValue"] <- encodeSessionConfigValueId option'.currentValue
+        o["options"] <- encodeSessionConfigSelectOptions option'.options
+
+        match option'.description with
+        | None -> ()
+        | Some description -> o["description"] <- JsonValue.Create(description)
+
+        match encodeSessionConfigOptionCategory option'.category with
+        | None -> ()
+        | Some category -> o["category"] <- category
+
+        match option'._meta with
+        | None -> ()
+        | Some meta -> o["_meta"] <- meta.DeepClone()
+
+        o
+
+    let private decodeConfigOptions (nodeOpt: JsonNode option) : Result<SessionConfigOption list option, string> =
+        match nodeOpt with
+        | None -> Ok None
+        | Some node ->
+            result {
+                let! arr = asArray node
+
+                let options =
+                    arr
+                    |> Seq.choose (fun n ->
+                        match n with
+                        | null -> None
+                        | value -> decodeSessionConfigOption value |> Result.toOption)
+                    |> Seq.toList
+
+                return Some options
+            }
+
+    let private encodeConfigOptions (optionsOpt: SessionConfigOption list option) : JsonNode option =
+        match optionsOpt with
+        | None -> None
+        | Some options ->
+            let arr = JsonArray()
+            options |> List.iter (fun option' -> arr.Add(encodeSessionConfigOption option'))
+            Some(arr :> JsonNode)
+
+    let private decodeSessionInfo (node: JsonNode) : Result<SessionInfo, string> =
+        result {
+            let! o = asObject node
+            let! sessionId = get "sessionId" o |> Result.bind decodeSessionId
+            let! cwd = get "cwd" o |> Result.bind asString
+
+            let title =
+                match tryGet "title" o with
+                | None -> None
+                | Some n -> asString n |> Result.toOption
+
+            let updatedAt =
+                match tryGet "updatedAt" o with
+                | None -> None
+                | Some n -> asString n |> Result.toOption
+
+            let meta =
+                tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+
+            return
+                { sessionId = sessionId
+                  cwd = cwd
+                  title = title
+                  updatedAt = updatedAt
+                  _meta = meta }
+        }
+
+    let private encodeSessionInfo (info: SessionInfo) : JsonObject =
+        let o = JsonObject()
+        o["sessionId"] <- encodeSessionId info.sessionId
+        o["cwd"] <- JsonValue.Create(info.cwd)
+
+        match info.title with
+        | None -> ()
+        | Some title -> o["title"] <- JsonValue.Create(title)
+
+        match info.updatedAt with
+        | None -> ()
+        | Some updatedAt -> o["updatedAt"] <- JsonValue.Create(updatedAt)
+
+        match info._meta with
+        | None -> ()
+        | Some meta -> o["_meta"] <- meta.DeepClone()
+
+        o
+
+    let private decodeListSessionsRequest (node: JsonNode) : Result<ListSessionsRequest, string> =
+        result {
+            let! o = asObject node
+
+            let cursor =
+                match tryGet "cursor" o with
+                | None -> None
+                | Some n -> asString n |> Result.toOption
+
+            let cwd =
+                match tryGet "cwd" o with
+                | None -> None
+                | Some n -> asString n |> Result.toOption
+
+            let meta =
+                tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+
+            return
+                { cursor = cursor
+                  cwd = cwd
+                  _meta = meta }
+        }
+
+    let private encodeListSessionsRequest (request: ListSessionsRequest) : JsonObject =
+        let o = JsonObject()
+
+        match request.cursor with
+        | None -> ()
+        | Some cursor -> o["cursor"] <- JsonValue.Create(cursor)
+
+        match request.cwd with
+        | None -> ()
+        | Some cwd -> o["cwd"] <- JsonValue.Create(cwd)
+
+        match request._meta with
+        | None -> ()
+        | Some meta -> o["_meta"] <- meta.DeepClone()
+
+        o
+
+    let private decodeListSessionsResponse (node: JsonNode) : Result<ListSessionsResponse, string> =
+        result {
+            let! o = asObject node
+            let! sessionsNode = get "sessions" o
+            let! arr = asArray sessionsNode
+
+            let sessions =
+                arr
+                |> Seq.choose (fun n ->
+                    match n with
+                    | null -> None
+                    | value -> decodeSessionInfo value |> Result.toOption)
+                |> Seq.toList
+
+            let nextCursor =
+                match tryGet "nextCursor" o with
+                | None -> None
+                | Some n -> asString n |> Result.toOption
+
+            let meta =
+                tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+
+            return
+                { sessions = sessions
+                  nextCursor = nextCursor
+                  _meta = meta }
+        }
+
+    let private encodeListSessionsResponse (response: ListSessionsResponse) : JsonObject =
+        let o = JsonObject()
+        let sessions = JsonArray()
+        response.sessions |> List.iter (fun sessionInfo -> sessions.Add(encodeSessionInfo sessionInfo))
+        o["sessions"] <- sessions
+
+        match response.nextCursor with
+        | None -> ()
+        | Some nextCursor -> o["nextCursor"] <- JsonValue.Create(nextCursor)
+
+        match response._meta with
+        | None -> ()
+        | Some meta -> o["_meta"] <- meta.DeepClone()
+
+        o
+
+    let private decodeSetSessionConfigOptionRequest (node: JsonNode) : Result<SetSessionConfigOptionRequest, string> =
+        result {
+            let! o = asObject node
+            let! sessionId = get "sessionId" o |> Result.bind decodeSessionId
+            let! configId = get "configId" o |> Result.bind decodeSessionConfigId
+            let! value = get "value" o |> Result.bind decodeSessionConfigValueId
+
+            let meta =
+                tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+
+            return
+                { sessionId = sessionId
+                  configId = configId
+                  value = value
+                  _meta = meta }
+        }
+
+    let private encodeSetSessionConfigOptionRequest (request: SetSessionConfigOptionRequest) : JsonObject =
+        let o = JsonObject()
+        o["sessionId"] <- encodeSessionId request.sessionId
+        o["configId"] <- encodeSessionConfigId request.configId
+        o["value"] <- encodeSessionConfigValueId request.value
+
+        match request._meta with
+        | None -> ()
+        | Some meta -> o["_meta"] <- meta.DeepClone()
+
+        o
+
+    let private decodeSetSessionConfigOptionResponse
+        (sessionId: SessionId)
+        (nodeOpt: JsonNode option)
+        : Result<SetSessionConfigOptionResponse, string> =
+        match nodeOpt with
+        | None -> Error "missing result"
+        | Some node ->
+            result {
+                let! o = asObject node
+                let! configOptions = decodeConfigOptions (tryGet "configOptions" o)
+
+                let meta =
+                    tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+
+                return
+                    { sessionId = sessionId
+                      configOptions = Option.defaultValue [] configOptions
+                      _meta = meta }
+            }
+
+    let private encodeSetSessionConfigOptionResponse (response: SetSessionConfigOptionResponse) : JsonObject =
+        let o = JsonObject()
+
+        match encodeConfigOptions (Some response.configOptions) with
+        | None -> ()
+        | Some configOptions -> o["configOptions"] <- configOptions
+
+        match response._meta with
+        | None -> ()
+        | Some meta -> o["_meta"] <- meta.DeepClone()
+
+        o
+
+    let private decodeSessionInfoUpdate (node: JsonNode) : Result<SessionInfoUpdate, string> =
+        result {
+            let! o = asObject node
+
+            let title =
+                match tryGet "title" o with
+                | None -> None
+                | Some n -> asString n |> Result.toOption
+
+            let updatedAt =
+                match tryGet "updatedAt" o with
+                | None -> None
+                | Some n -> asString n |> Result.toOption
+
+            let meta =
+                tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+
+            return
+                { title = title
+                  updatedAt = updatedAt
+                  _meta = meta }
+        }
+
+    let private encodeSessionInfoUpdate (update: SessionInfoUpdate) : JsonObject =
+        let o = JsonObject()
+
+        match update.title with
+        | None -> ()
+        | Some title -> o["title"] <- JsonValue.Create(title)
+
+        match update.updatedAt with
+        | None -> ()
+        | Some updatedAt -> o["updatedAt"] <- JsonValue.Create(updatedAt)
+
+        match update._meta with
+        | None -> ()
+        | Some meta -> o["_meta"] <- meta.DeepClone()
+
+        o
+
+    let private decodeConfigOptionUpdate (node: JsonNode) : Result<ConfigOptionUpdate, string> =
+        result {
+            let! o = asObject node
+            let! configOptions = decodeConfigOptions (tryGet "configOptions" o)
+
+            let meta =
+                tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+
+            return
+                { configOptions = Option.defaultValue [] configOptions
+                  _meta = meta }
+        }
+
+    let private encodeConfigOptionUpdate (update: ConfigOptionUpdate) : JsonObject =
+        let o = JsonObject()
+
+        match encodeConfigOptions (Some update.configOptions) with
+        | None -> ()
+        | Some configOptions -> o["configOptions"] <- configOptions
+
+        match update._meta with
+        | None -> ()
+        | Some meta -> o["_meta"] <- meta.DeepClone()
+
+        o
+
     // ---- Session setup (mcp servers) ----
 
     let private decodeEnvVar (node: JsonNode) : Result<EnvVariable, string> =
@@ -747,28 +1299,80 @@ module internal CodecAcpJson =
             let! o = asObject node
             let! sidNode = get "sessionId" o
             let! sessionId = decodeSessionId sidNode
+            let! configOptions = decodeConfigOptions (tryGet "configOptions" o)
             let! modes = decodeModeState (tryGet "modes" o)
-            return { sessionId = sessionId; modes = modes }
+
+            let meta =
+                tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+
+            return
+                { sessionId = sessionId
+                  configOptions = configOptions
+                  modes = modes
+                  _meta = meta }
         }
 
     let private encodeNewSessionResult (r: NewSessionResult) : JsonObject =
         let o = JsonObject()
         o["sessionId"] <- encodeSessionId r.sessionId
 
+        match encodeConfigOptions r.configOptions with
+        | None -> ()
+        | Some configOptions -> o["configOptions"] <- configOptions
+
         match encodeModeState r.modes with
         | None -> ()
         | Some ms -> o["modes"] <- ms
 
+        match r._meta with
+        | None -> ()
+        | Some meta -> o["_meta"] <- meta.DeepClone()
+
         o
 
-    let private decodeLoadSessionResponseModes (nodeOpt: JsonNode option) : Result<SessionModeState option, string> =
+    let private decodeLoadSessionResult
+        (sessionId: SessionId)
+        (nodeOpt: JsonNode option)
+        : Result<LoadSessionResult, string> =
         match nodeOpt with
-        | None -> Ok None
+        | None ->
+            Ok
+                { sessionId = sessionId
+                  configOptions = None
+                  modes = None
+                  _meta = None }
         | Some node ->
             result {
                 let! o = asObject node
-                return! decodeModeState (tryGet "modes" o)
+                let! configOptions = decodeConfigOptions (tryGet "configOptions" o)
+                let! modes = decodeModeState (tryGet "modes" o)
+
+                let meta =
+                    tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+
+                return
+                    { sessionId = sessionId
+                      configOptions = configOptions
+                      modes = modes
+                      _meta = meta }
             }
+
+    let private encodeLoadSessionResult (r: LoadSessionResult) : JsonObject =
+        let o = JsonObject()
+
+        match encodeConfigOptions r.configOptions with
+        | None -> ()
+        | Some configOptions -> o["configOptions"] <- configOptions
+
+        match encodeModeState r.modes with
+        | None -> ()
+        | Some ms -> o["modes"] <- ms
+
+        match r._meta with
+        | None -> ()
+        | Some meta -> o["_meta"] <- meta.DeepClone()
+
+        o
 
     // ---- Prompting: content ----
 
@@ -1748,6 +2352,12 @@ module internal CodecAcpJson =
             | "plan" ->
                 let! p = decodePlan node
                 return SessionUpdate.Plan p
+            | "session_info_update" ->
+                let! u = decodeSessionInfoUpdate node
+                return SessionUpdate.SessionInfoUpdate u
+            | "config_option_update" ->
+                let! u = decodeConfigOptionUpdate node
+                return SessionUpdate.ConfigOptionUpdate u
             | "available_commands_update" ->
                 let! u = decodeAvailableCommandsUpdate node
                 return SessionUpdate.AvailableCommandsUpdate u
@@ -1788,6 +2398,14 @@ module internal CodecAcpJson =
         | SessionUpdate.Plan p ->
             let o = encodePlan p
             o["sessionUpdate"] <- JsonValue.Create("plan")
+            o
+        | SessionUpdate.SessionInfoUpdate u ->
+            let o = encodeSessionInfoUpdate u
+            o["sessionUpdate"] <- JsonValue.Create("session_info_update")
+            o
+        | SessionUpdate.ConfigOptionUpdate u ->
+            let o = encodeConfigOptionUpdate u
+            o["sessionUpdate"] <- JsonValue.Create("config_option_update")
             o
         | SessionUpdate.AvailableCommandsUpdate u ->
             let o = encodeAvailableCommandsUpdate u
@@ -2182,9 +2800,11 @@ module internal CodecAcpJson =
         | PendingClientRequest.ProxyInitialize -> "proxy/initialize"
         | PendingClientRequest.Authenticate -> "authenticate"
         | PendingClientRequest.SessionNew -> "session/new"
+        | PendingClientRequest.SessionList -> "session/list"
         | PendingClientRequest.SessionLoad _ -> "session/load"
         | PendingClientRequest.SessionPrompt _ -> "session/prompt"
         | PendingClientRequest.SessionSetMode _ -> "session/set_mode"
+        | PendingClientRequest.SessionSetConfigOption _ -> "session/set_config_option"
         | PendingClientRequest.ProxySuccessor _ -> "proxy/successor"
         | PendingClientRequest.ExtRequest m -> m
 
@@ -2226,6 +2846,9 @@ module internal CodecAcpJson =
             | "session/new" ->
                 let! p = decodeNewSessionParams paramsNode
                 return ClientToAgentMessage.SessionNew p, PendingClientRequest.SessionNew
+            | "session/list" ->
+                let! p = decodeListSessionsRequest paramsNode
+                return ClientToAgentMessage.SessionList p, PendingClientRequest.SessionList
             | "session/load" ->
                 let! p = decodeLoadSessionParams paramsNode
                 return ClientToAgentMessage.SessionLoad p, PendingClientRequest.SessionLoad p
@@ -2235,6 +2858,11 @@ module internal CodecAcpJson =
             | "session/set_mode" ->
                 let! p = decodeSetSessionModeParams paramsNode
                 return ClientToAgentMessage.SessionSetMode p, PendingClientRequest.SessionSetMode p
+            | "session/set_config_option" ->
+                let! p = decodeSetSessionConfigOptionRequest paramsNode
+                return
+                    ClientToAgentMessage.SessionSetConfigOption p,
+                    PendingClientRequest.SessionSetConfigOption p
             | "proxy/successor" ->
                 let! p = decodeProxySuccessorParams paramsNode
                 return ClientToAgentMessage.ProxySuccessorRequest p, PendingClientRequest.ProxySuccessor p.method
@@ -2320,9 +2948,11 @@ module internal CodecAcpJson =
             | "initialize"
             | "authenticate"
             | "session/new"
+            | "session/list"
             | "session/load"
             | "session/prompt"
             | "session/set_mode"
+            | "session/set_config_option"
             | "session/cancel"
             | "session/update" -> return! Error "method is not an agent->client request"
             | other ->
@@ -2378,23 +3008,14 @@ module internal CodecAcpJson =
             | None -> Error "missing result"
             | Some r -> decodeNewSessionResult r |> Result.map AgentToClientMessage.SessionNewResult
 
-        | PendingClientRequest.SessionLoad req ->
+        | PendingClientRequest.SessionList ->
             match resultNodeOpt with
-            | None ->
-                Ok(
-                    AgentToClientMessage.SessionLoadResult
-                        { sessionId = req.sessionId
-                          modes = None }
-                )
-            | Some r ->
-                result {
-                    let! modes = decodeLoadSessionResponseModes (Some r)
+            | None -> Error "missing result"
+            | Some r -> decodeListSessionsResponse r |> Result.map AgentToClientMessage.SessionListResult
 
-                    return
-                        AgentToClientMessage.SessionLoadResult
-                            { sessionId = req.sessionId
-                              modes = modes }
-                }
+        | PendingClientRequest.SessionLoad req ->
+            decodeLoadSessionResult req.sessionId resultNodeOpt
+            |> Result.map AgentToClientMessage.SessionLoadResult
 
         | PendingClientRequest.SessionPrompt req ->
             match resultNodeOpt with
@@ -2415,6 +3036,10 @@ module internal CodecAcpJson =
                       modeId = req.modeId }
             )
 
+        | PendingClientRequest.SessionSetConfigOption req ->
+            decodeSetSessionConfigOptionResponse req.sessionId resultNodeOpt
+            |> Result.map AgentToClientMessage.SessionSetConfigOptionResult
+
         | PendingClientRequest.ProxySuccessor methodName ->
             Ok(AgentToClientMessage.ProxySuccessorResponse(methodName, resultNodeOpt))
 
@@ -2426,9 +3051,11 @@ module internal CodecAcpJson =
         | PendingClientRequest.ProxyInitialize -> AgentToClientMessage.ProxyInitializeError err
         | PendingClientRequest.Authenticate -> AgentToClientMessage.AuthenticateError err
         | PendingClientRequest.SessionNew -> AgentToClientMessage.SessionNewError err
+        | PendingClientRequest.SessionList -> AgentToClientMessage.SessionListError err
         | PendingClientRequest.SessionLoad req -> AgentToClientMessage.SessionLoadError(req, err)
         | PendingClientRequest.SessionPrompt req -> AgentToClientMessage.SessionPromptError(req, err)
         | PendingClientRequest.SessionSetMode req -> AgentToClientMessage.SessionSetModeError(req, err)
+        | PendingClientRequest.SessionSetConfigOption req -> AgentToClientMessage.SessionSetConfigOptionError(req, err)
         | PendingClientRequest.ProxySuccessor methodName -> AgentToClientMessage.ProxySuccessorError(methodName, err)
         | PendingClientRequest.ExtRequest methodName -> AgentToClientMessage.ExtError(methodName, err)
 
@@ -2541,6 +3168,14 @@ module internal CodecAcpJson =
                 o["method"] <- JsonValue.Create("session/new")
                 o["params"] <- encodeNewSessionParams p
                 Ok o
+        | ClientToAgentMessage.SessionList p ->
+            match idOpt with
+            | None -> Error EncodeError.MissingRequestId
+            | Some id ->
+                o["id"] <- encodeRequestId id
+                o["method"] <- JsonValue.Create("session/list")
+                o["params"] <- encodeListSessionsRequest p
+                Ok o
         | ClientToAgentMessage.SessionLoad p ->
             match idOpt with
             | None -> Error EncodeError.MissingRequestId
@@ -2564,6 +3199,14 @@ module internal CodecAcpJson =
                 o["id"] <- encodeRequestId id
                 o["method"] <- JsonValue.Create("session/set_mode")
                 o["params"] <- encodeSetSessionModeParams p
+                Ok o
+        | ClientToAgentMessage.SessionSetConfigOption p ->
+            match idOpt with
+            | None -> Error EncodeError.MissingRequestId
+            | Some id ->
+                o["id"] <- encodeRequestId id
+                o["method"] <- JsonValue.Create("session/set_config_option")
+                o["params"] <- encodeSetSessionConfigOptionRequest p
                 Ok o
         | ClientToAgentMessage.ProxySuccessorRequest p ->
             match idOpt with
@@ -2756,18 +3399,20 @@ module internal CodecAcpJson =
                 o["result"] <- encodeNewSessionResult r
                 Ok o
 
+        | AgentToClientMessage.SessionListResult r ->
+            match idOpt with
+            | None -> Error EncodeError.MissingRequestId
+            | Some id ->
+                o["id"] <- encodeRequestId id
+                o["result"] <- encodeListSessionsResponse r
+                Ok o
+
         | AgentToClientMessage.SessionLoadResult r ->
             match idOpt with
             | None -> Error EncodeError.MissingRequestId
             | Some id ->
                 o["id"] <- encodeRequestId id
-                let res = JsonObject()
-
-                match encodeModeState r.modes with
-                | None -> ()
-                | Some ms -> res["modes"] <- ms
-
-                o["result"] <- res
+                o["result"] <- encodeLoadSessionResult r
                 Ok o
 
         | AgentToClientMessage.SessionPromptResult r ->
@@ -2803,6 +3448,14 @@ module internal CodecAcpJson =
                 o["result"] <- encodeEmptyObject ()
                 Ok o
 
+        | AgentToClientMessage.SessionSetConfigOptionResult r ->
+            match idOpt with
+            | None -> Error EncodeError.MissingRequestId
+            | Some id ->
+                o["id"] <- encodeRequestId id
+                o["result"] <- encodeSetSessionConfigOptionResponse r
+                Ok o
+
         | AgentToClientMessage.ExtResponse(_, resultNodeOpt) ->
             match idOpt with
             | None -> Error EncodeError.MissingRequestId
@@ -2830,7 +3483,8 @@ module internal CodecAcpJson =
         | AgentToClientMessage.InitializeError err
         | AgentToClientMessage.ProxyInitializeError err
         | AgentToClientMessage.AuthenticateError err
-        | AgentToClientMessage.SessionNewError err ->
+        | AgentToClientMessage.SessionNewError err
+        | AgentToClientMessage.SessionListError err ->
             match idOpt with
             | None -> Error EncodeError.MissingRequestId
             | Some id ->
@@ -2841,6 +3495,7 @@ module internal CodecAcpJson =
         | AgentToClientMessage.SessionLoadError(_, err)
         | AgentToClientMessage.SessionPromptError(_, err)
         | AgentToClientMessage.SessionSetModeError(_, err)
+        | AgentToClientMessage.SessionSetConfigOptionError(_, err)
         | AgentToClientMessage.ExtError(_, err)
         | AgentToClientMessage.ProxySuccessorError(_, err) ->
             match idOpt with
