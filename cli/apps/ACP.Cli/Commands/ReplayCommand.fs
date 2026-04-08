@@ -83,6 +83,7 @@ let run (args: ParseResults<ReplayArgs>) : int =
                         // Interactive pause
                         if interactive && not shouldQuit then
                             Console.Write("\n[Enter=next, q=quit] ")
+
                             match Console.ReadLine() with
                             | null -> ()
                             | input when input.Trim().Equals("q", StringComparison.OrdinalIgnoreCase) ->
