@@ -64,6 +64,7 @@ These three rules apply to **every task in this plan**. A task that violates the
 ## Task 0: Pre-flight and Worktree Setup
 
 **Files:**
+
 - Create: `/tmp/housekeeping-2026-04-07/snapshot-before.txt`
 - Create: `/tmp/housekeeping-2026-04-07/diff-before.sha`
 - Create: `/tmp/housekeeping-2026-04-07/bucket-b.initial.txt`
@@ -255,6 +256,7 @@ Expected: status block printed. Do NOT commit yet — Task 0 produces no commits
 ## Task 1: Commit #1 — Baseline Verification Report (classified gate)
 
 **Files:**
+
 - Create: `docs/reports/housekeeping-2026-04-07/baseline.md` (in worktree)
 
 **All commands run inside the worktree** (`/Users/stas-studio/Developer/ACP-inspector-housekeeping/`).
@@ -458,6 +460,7 @@ Expected: commit succeeds, log shows `chore(housekeeping): baseline verification
 ## Task 2: Commit #2 — Audit-001 Delta Report
 
 **Files:**
+
 - Create: `docs/reports/housekeeping-2026-04-07/audit-001-delta.md`
 - Read: `docs/reports/audit-001-cleanup.md` (the prior audit)
 
@@ -566,6 +569,7 @@ Expected: 2 commits in worktree now (baseline + delta).
 ## Task 3: Commit #3 — Fantomas Sweep (non-bucket-B only)
 
 **Files:**
+
 - Modify: 0..N `.fs`/`.fsi` files (scope from `fantomas-eligible.txt`)
 
 - [ ] **Step 1: Source helpers, confirm worktree, recompute bucket-B live**
@@ -686,6 +690,7 @@ Expected: 3 commits in worktree. If the eligible list was empty (Step 3 exit), t
 ## Task 4: Commit #4 — Remove Dead `core/` References
 
 **Files:**
+
 - Modify: `.gitmodules`
 - Modify: `.gitignore`
 - Modify: `sentinel/tests/Pbt/EvidenceRunner.fs`
@@ -718,9 +723,9 @@ Expected output:
 
 ```
 [submodule "core/roadmap/sub-ACP"]
-	path = core/roadmap/sub-ACP
-	url = https://github.com/agentclientprotocol/agent-client-protocol
-	branch = main
+ path = core/roadmap/sub-ACP
+ url = https://github.com/agentclientprotocol/agent-client-protocol
+ branch = main
 ```
 
 If `.gitmodules` has different content, STOP and investigate — the spec assumes this exact block.
@@ -880,6 +885,7 @@ Expected: 4 commits in worktree (or 3 if Task 3 was a no-op).
 ## Task 5: Commit #5 — Delete Merged Origin Branches (§10.A)
 
 **Files:**
+
 - Create: `docs/reports/housekeeping-2026-04-07/merged-branches-deleted.md`
 
 **Branches to process** (from spec §10.A — verify still merged before deleting):
@@ -1047,6 +1053,7 @@ Expected: 5 commits in worktree (or 4 if Task 3 was a no-op).
 ## Task 6: Commit #6 — Stale-Branch Disposition Report (§10.B)
 
 **Files:**
+
 - Create: `docs/reports/housekeeping-2026-04-07/branch-disposition.md`
 
 **This task ENDS at commit time. Task 7 cannot start until the user has signed off on at least one branch in the report.**
@@ -1207,6 +1214,7 @@ Expected: clear stop signal printed. Do not proceed to Task 7 until the user has
 **Pre-condition:** The user has explicitly said the sign-off is complete AND the boxes in `docs/reports/housekeeping-2026-04-07/branch-disposition.md` reflect their decisions.
 
 **Files:**
+
 - Modify: `docs/reports/housekeeping-2026-04-07/branch-disposition.md` (update with executed marks)
 - Possibly create: `docs/planning/linear-migration.md` (only if EXTRACT box is checked)
 
@@ -1369,6 +1377,7 @@ Expected: a commit advancing the rollup. If EXTRACT was applied, this is one com
 ## Task 8: Commit #N — Close Session Log + Section-2 Invariant Check
 
 **Files:**
+
 - Create: `docs/reports/housekeeping-2026-04-07/session-log.md`
 
 - [ ] **Step 1: Source helpers, confirm worktree position**
@@ -1696,24 +1705,31 @@ The only cross-task dependency that isn't strictly sequential is **Task 7** wait
 ## Recovery Procedures
 
 **If Task 0 fails** (worktree creation, fetch, snapshot):
+
 - No state has been committed. Just retry after fixing the cause.
 
 **If Task 1 STOP-class fails** (build error, test failure):
+
 - Worktree exists but has no commits yet. Investigate the underlying cause in the worktree. Once fixed, drop the worktree (`git worktree remove --force ../ACP-inspector-housekeeping`) and start over from Task 0. This is rare and indicates the master branch is broken — fix that first.
 
 **If Task 3 fails** (Fantomas breaks build):
+
 - `git checkout -- .` in the worktree to revert. Investigate which file Fantomas mangled. File a Fantomas bug if reproducible. Skip Task 3 and proceed to Task 4 — record the skip in `session-log.md`.
 
 **If Task 5 partially fails** (some branches archived but not deleted, or vice versa):
+
 - Re-run Step 3 (the loop) — it idempotently checks `git ls-remote --exit-code` before acting on each branch.
 
 **If Task 6's STOP gets ignored and Task 7 runs prematurely**:
+
 - Task 7's Step 1 reads the disposition file. If no boxes are checked, Task 7 is a no-op. No harm done.
 
 **If Task 8's invariant check fails**:
+
 - The worktree commits are intact but the rollup CANNOT be merged as-is — it would violate the user's expectation that their primary copy is untouched. Investigate the drift in the primary copy. If the user intentionally edited primary-copy files during the session, the resolution is to either (a) take a new snapshot and re-verify, or (b) abandon the rollup. **Default: abandon and surface the drift to the user**, because silent invariant violations are how trust gets broken.
 
 **If Task 9's `gh pr create` fails**:
+
 - Check `gh auth status`. If auth is fine, the branch may already have a PR (idempotency check: `gh pr list --head chore/housekeeping-2026-04-07`). If a PR exists, update its body with `gh pr edit`.
 
 ---
@@ -1724,9 +1740,11 @@ After the PR is merged (manually by the user, not by this plan):
 
 1. The user runs `git pull --rebase` in the primary working copy. This advances HEAD to include the rollup. The bucket-B working tree state is preserved by the rebase.
 2. The user (or this plan's recovery procedure) removes the worktree:
+
    ```bash
    git worktree remove /Users/stas-studio/Developer/ACP-inspector-housekeeping
    ```
+
 3. The local `chore/housekeeping-2026-04-07` branch is deleted automatically by the worktree removal.
 4. The scratch directory `/tmp/housekeeping-2026-04-07/` can be deleted (`rm -rf`) or left for `/tmp` cleanup.
 

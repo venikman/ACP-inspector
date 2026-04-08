@@ -83,26 +83,26 @@ jobs:
 
           BODY_FILE="$(mktemp)"
           cat > "$BODY_FILE" <<BODY
-## ACP Upstream Update Detected
+          ## ACP Upstream Update Detected
 
-**Current pinned version**: \`$PINNED\`
-**Latest available version**: \`$LATEST\`
+          **Current pinned version**: \`$PINNED\`
+          **Latest available version**: \`$LATEST\`
 
-### Action Required
+          ### Action Required
 
-1. Review the [ACP release notes](https://github.com/agentclientprotocol/agent-client-protocol/releases/tag/v$LATEST)
-2. Update \`protocol/src/Acp.Domain.fs\` schema pin if compatible
-3. Update \`docs/ACP-RFD-TRACKER.md\` with any new features
-4. Run tests to verify compatibility
+          1. Review the [ACP release notes](https://github.com/agentclientprotocol/agent-client-protocol/releases/tag/v$LATEST)
+          2. Update \`protocol/src/Acp.Domain.fs\` schema pin if compatible
+          3. Update \`docs/ACP-RFD-TRACKER.md\` with any new features
+          4. Run tests to verify compatibility
 
-### Links
+          ### Links
 
-- [ACP Releases](https://github.com/agentclientprotocol/agent-client-protocol/releases)
-- [ACP Spec](https://agentclientprotocol.com/overview/introduction)
+          - [ACP Releases](https://github.com/agentclientprotocol/agent-client-protocol/releases)
+          - [ACP Spec](https://agentclientprotocol.com/overview/introduction)
 
----
-*This issue was automatically created by the ACP Upstream Watch workflow.*
-BODY
+          ---
+          *This issue was automatically created by the ACP Upstream Watch workflow.*
+          BODY
 
           gh issue create \
             --title "ACP spec update available: v$LATEST" \
@@ -190,19 +190,19 @@ BODY
 
           BODY_FILE="$(mktemp)"
           cat > "$BODY_FILE" <<BODY
-## ACP RFD Update Detected
+          ## ACP RFD Update Detected
 
-**Previous hash**: \`$PREVIOUS\`
-**Current hash**: \`$CURRENT\`
+          **Previous hash**: \`$PREVIOUS\`
+          **Current hash**: \`$CURRENT\`
 
-### Action Required
+          ### Action Required
 
-1. Review https://agentclientprotocol.com/rfds for changes
-2. Update \`docs/ACP-RFD-TRACKER.md\` if new RFDs or amendments are present
+          1. Review https://agentclientprotocol.com/rfds for changes
+          2. Update \`docs/ACP-RFD-TRACKER.md\` if new RFDs or amendments are present
 
----
-*This issue was automatically created by the ACP Upstream Watch workflow.*
-BODY
+          ---
+          *This issue was automatically created by the ACP Upstream Watch workflow.*
+          BODY
 
           gh issue create \
             --title "ACP RFD update detected" \

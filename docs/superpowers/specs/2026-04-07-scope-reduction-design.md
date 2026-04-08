@@ -9,8 +9,6 @@ target-branch: chore/scope-reduction-2026-04-07
 target-pr: "chore(scope): remove cli/ subsystem"
 ---
 
-# Scope Reduction — Remove cli/ Subsystem
-
 ## 1. Context
 
 Earlier on 2026-04-07 a repo-wide housekeeping pass was scoped, designed,

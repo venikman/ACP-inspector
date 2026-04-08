@@ -10,8 +10,6 @@ target-branch: chore/housekeeping-2026-04-07
 target-pr: "chore: repo-wide housekeeping and non-codec revivals"
 ---
 
-# Repo-Wide Housekeeping — Mega-Rollup Design
-
 ## 1. Context
 
 The `ACP-inspector` working copy has three distinct bodies of state at the time
@@ -462,6 +460,7 @@ git push origin archive/<branch-name>
 
 Tag name matches the original branch name (with slashes preserved — tags
 support `archive/feature/foo`). The tag message includes:
+
 - Archival date (absolute, not relative)
 - Original remote ref at the time of archival
 - Reason (one-line classification from the disposition report)
@@ -566,8 +565,8 @@ recommendation to ARCHIVE-AND-ABANDON → RE-APPLY or similar during PR review.
 Deferred: commit #4 (dead `core/` refs) is the only commit that currently
 edits markdown, and only as a side-effect. If commit #1's baseline report
 reveals many `markdownlint` warnings on non-bucket-B docs, we can add a
-dedicated `chore(housekeeping): markdownlint auto-fix` commit between #4 and
-#5, but only if `markdownlint-cli2 --fix` output diff is small and reviewable.
+dedicated `chore(housekeeping): markdownlint auto-fix` commit between `#4` and
+`#5`, but only if `markdownlint-cli2 --fix` output diff is small and reviewable.
 Assessment happens at step 6 (baseline gate), not now.
 
 ### Open question: lychee broken-link remediation
