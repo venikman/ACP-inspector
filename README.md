@@ -6,7 +6,8 @@
 
 ![ACP Inspector overview](docs/assets/acp-inspector-overview.jpg)
 
-> **Note:** This project targets [Zed's Agent Client Protocol](https://agentclientprotocol.com/) — the JSON-RPC 2.0 standard for IDE↔AI-agent integration backed by Zed, JetBrains, Google, GitHub, and Anthropic. It is **not** related to IBM's now-archived "Agent Communication Protocol" (also abbreviated ACP).
+> [!NOTE]
+> This project targets [Zed's Agent Client Protocol](https://agentclientprotocol.com/) — the JSON-RPC 2.0 standard for IDE↔AI-agent integration backed by Zed Industries and JetBrains. It is **not** related to IBM's now-archived "Agent Communication Protocol" (also abbreviated ACP).
 
 ACP Inspector is an F# implementation of the Agent Client Protocol (ACP) plus a validation / sentinel layer.
 
