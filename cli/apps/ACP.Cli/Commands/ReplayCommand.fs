@@ -83,11 +83,12 @@ let run (args: ParseResults<ReplayArgs>) : int =
                         // Interactive pause
                         if interactive && not shouldQuit then
                             Console.Write("\n[Enter=next, q=quit] ")
-                            let input = Console.ReadLine()
-
-                            if not (isNull input) && input.Trim().ToLower() = "q" then
+                            match Console.ReadLine() with
+                            | null -> ()
+                            | input when input.Trim().Equals("q", StringComparison.OrdinalIgnoreCase) ->
                                 shouldQuit <- true
                                 Output.printInfo "Replay stopped by user"
+                            | _ -> ()
 
             Console.WriteLine()
             Output.printSuccess $"Replayed {frameNum} frames"

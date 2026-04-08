@@ -11,10 +11,9 @@ let private getVersion () =
     let assembly = Assembly.GetExecutingAssembly()
     let version = assembly.GetName().Version
 
-    if version <> null then
-        $"{version.Major}.{version.Minor}.{version.Build}"
-    else
-        "0.1.1"
+    match version with
+    | null -> "0.1.1"
+    | version -> $"{version.Major}.{version.Minor}.{version.Build}"
 
 [<RequireQualifiedAccess>]
 type Command =

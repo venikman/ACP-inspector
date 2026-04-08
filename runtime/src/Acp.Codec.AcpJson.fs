@@ -564,23 +564,28 @@ module internal CodecAcpJson =
         o["modeId"] <- encodeModeId p.modeId
         o
 
+    let private encodeRequiredJsonString (value: string) : JsonNode =
+        match JsonValue.Create(value) with
+        | null -> failwith "expected non-null JSON string"
+        | node -> node :> JsonNode
+
     let private decodeSessionConfigId (node: JsonNode) : Result<SessionConfigId, string> =
         asString node |> Result.map SessionConfigId
 
     let private encodeSessionConfigId (id: SessionConfigId) : JsonNode =
-        JsonValue.Create(SessionConfigId.value id)
+        encodeRequiredJsonString (SessionConfigId.value id)
 
     let private decodeSessionConfigValueId (node: JsonNode) : Result<SessionConfigValueId, string> =
         asString node |> Result.map SessionConfigValueId
 
     let private encodeSessionConfigValueId (id: SessionConfigValueId) : JsonNode =
-        JsonValue.Create(SessionConfigValueId.value id)
+        encodeRequiredJsonString (SessionConfigValueId.value id)
 
     let private decodeSessionConfigGroupId (node: JsonNode) : Result<SessionConfigGroupId, string> =
         asString node |> Result.map SessionConfigGroupId
 
     let private encodeSessionConfigGroupId (id: SessionConfigGroupId) : JsonNode =
-        JsonValue.Create(SessionConfigGroupId.value id)
+        encodeRequiredJsonString (SessionConfigGroupId.value id)
 
     let private decodeSessionConfigOptionCategory
         (nodeOpt: JsonNode option)
@@ -604,10 +609,10 @@ module internal CodecAcpJson =
     let private encodeSessionConfigOptionCategory (categoryOpt: SessionConfigOptionCategory option) : JsonNode option =
         categoryOpt
         |> Option.map (function
-            | SessionConfigOptionCategory.Mode -> JsonValue.Create("mode") :> JsonNode
-            | SessionConfigOptionCategory.Model -> JsonValue.Create("model") :> JsonNode
-            | SessionConfigOptionCategory.ThoughtLevel -> JsonValue.Create("thought_level") :> JsonNode
-            | SessionConfigOptionCategory.Other value -> JsonValue.Create(value) :> JsonNode)
+            | SessionConfigOptionCategory.Mode -> encodeRequiredJsonString "mode"
+            | SessionConfigOptionCategory.Model -> encodeRequiredJsonString "model"
+            | SessionConfigOptionCategory.ThoughtLevel -> encodeRequiredJsonString "thought_level"
+            | SessionConfigOptionCategory.Other value -> encodeRequiredJsonString value)
 
     let private decodeSessionConfigSelectOption (node: JsonNode) : Result<SessionConfigSelectOption, string> =
         result {

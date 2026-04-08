@@ -73,24 +73,27 @@ let run (args: ParseResults<ValidateArgs>) : int =
             let mutable shouldContinue = true
 
             while line <> null && shouldContinue do
-                lineNum <- lineNum + 1
+                match line with
+                | null -> ()
+                | currentLine ->
+                    lineNum <- lineNum + 1
 
-                if not (String.IsNullOrWhiteSpace(line)) then
-                    match Codec.decode direction state line with
-                    | Error e ->
-                        Output.printError $"Line {lineNum}: Decode error"
-                        eprintfn "  %A" e
-                        decodeErrors <- decodeErrors + 1
+                    if not (String.IsNullOrWhiteSpace(currentLine)) then
+                        match Codec.decode direction state currentLine with
+                        | Error e ->
+                            Output.printError $"Line {lineNum}: Decode error"
+                            eprintfn "  %A" e
+                            decodeErrors <- decodeErrors + 1
 
-                        if stopOnError then
-                            Output.printError "Stopping on first decode error"
-                            shouldContinue <- false
-                    | Ok(newState, msg) ->
-                        state <- newState
-                        messages.Add(msg)
+                            if stopOnError then
+                                Output.printError "Stopping on first decode error"
+                                shouldContinue <- false
+                        | Ok(newState, msg) ->
+                            state <- newState
+                            messages.Add(msg)
 
-                        if verbose then
-                            Output.printSuccess $"Line {lineNum}: Valid message"
+                            if verbose then
+                                Output.printSuccess $"Line {lineNum}: Valid message"
 
                 if shouldContinue then
                     line <- Console.In.ReadLine()
