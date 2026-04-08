@@ -101,7 +101,9 @@ let private runRoundtrip () =
         let responseMsg =
             Messaging.AgentToClientMessage.SessionNewResult
                 { sessionId = PrimitivesAndParties.SessionId "sess-benchmark"
-                  modes = None }
+                  configOptions = None
+                  modes = None
+                  _meta = None }
 
         let encodeResult =
             Codec.encode (Some(JsonRpc.RequestId.Number 1L)) (Messaging.Message.FromAgent responseMsg)
@@ -181,7 +183,9 @@ let private runCodec (count: int) =
         let responseMsg =
             Messaging.AgentToClientMessage.SessionNewResult
                 { sessionId = PrimitivesAndParties.SessionId "sess-bench"
-                  modes = None }
+                  configOptions = None
+                  modes = None
+                  _meta = None }
 
         match Codec.encode (Some(JsonRpc.RequestId.Number(int64 i))) (Messaging.Message.FromAgent responseMsg) with
         | Ok _ -> ops <- ops + 1

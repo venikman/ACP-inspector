@@ -16,6 +16,25 @@ open Acp.Domain.SessionModes
 
 module ConnectionTests =
 
+    let private mkInitializeResult (loadSession: bool) (sessionCapabilities: SessionCapabilities) : InitializeResult =
+        { protocolVersion = ProtocolVersion.current
+          agentCapabilities =
+            { loadSession = loadSession
+              mcpCapabilities = { http = false; sse = false }
+              promptCapabilities =
+                { audio = false
+                  image = false
+                  embeddedContext = false }
+              sessionCapabilities = sessionCapabilities }
+          agentInfo = None
+          authMethods = [] }
+
+    let private mkNewSessionResult (sessionId: SessionId) : NewSessionResult =
+        { sessionId = sessionId
+          configOptions = None
+          modes = None
+          _meta = None }
+
     // ============================================================
     // Integration test using duplex transport with both sides
     // ============================================================
@@ -34,28 +53,12 @@ module ConnectionTests =
                         task {
                             receivedInit <- Some p
 
-                            return
-                                Ok
-                                    { protocolVersion = ProtocolVersion.current
-                                      agentCapabilities =
-                                        { loadSession = false
-                                          mcpCapabilities = { http = false; sse = false }
-                                          promptCapabilities =
-                                            { audio = false
-                                              image = false
-                                              embeddedContext = false }
-                                          sessionCapabilities = SessionCapabilities.empty }
-                                      agentInfo = None
-                                      authMethods = [] }
+                            return Ok(mkInitializeResult false SessionCapabilities.empty)
                         }
                   onNewSession =
-                    fun p ->
-                        task {
-                            return
-                                Ok
-                                    { sessionId = SessionId "test-session"
-                                      modes = None }
-                        }
+                    fun _ -> task { return Ok(mkNewSessionResult (SessionId "test-session")) }
+                  onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onListSessions = fun _ -> task { return Error "not implemented" }
                   onPrompt =
                     fun p ->
                         task {
@@ -74,7 +77,8 @@ module ConnectionTests =
                                 Ok
                                     { sessionId = p.sessionId
                                       modeId = p.modeId }
-                        } }
+                        }
+                  onSetConfigOption = fun _ -> task { return Error "not implemented" } }
 
             let agent = Connection.AgentConnection(agentTransport, handlers)
             let client = Connection.ClientConnection(clientTransport)
@@ -112,33 +116,14 @@ module ConnectionTests =
 
             let handlers: Connection.AgentHandlers =
                 { onInitialize =
-                    fun _ ->
-                        task {
-                            return
-                                Ok
-                                    { protocolVersion = ProtocolVersion.current
-                                      agentCapabilities =
-                                        { loadSession = false
-                                          mcpCapabilities = { http = false; sse = false }
-                                          promptCapabilities =
-                                            { audio = false
-                                              image = false
-                                              embeddedContext = false }
-                                          sessionCapabilities = SessionCapabilities.empty }
-                                      agentInfo = None
-                                      authMethods = [] }
-                        }
-                  onNewSession =
-                    fun _ ->
-                        task {
-                            return
-                                Ok
-                                    { sessionId = SessionId "new-session-123"
-                                      modes = None }
-                        }
+                    fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
+                  onNewSession = fun _ -> task { return Ok(mkNewSessionResult (SessionId "new-session-123")) }
+                  onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onListSessions = fun _ -> task { return Error "not implemented" }
                   onPrompt = fun _ -> task { return Error "not implemented" }
                   onCancel = fun _ -> task { () }
-                  onSetMode = fun _ -> task { return Error "not implemented" } }
+                  onSetMode = fun _ -> task { return Error "not implemented" }
+                  onSetConfigOption = fun _ -> task { return Error "not implemented" } }
 
             let agent = Connection.AgentConnection(agentTransport, handlers)
             let client = Connection.ClientConnection(clientTransport)
@@ -168,6 +153,191 @@ module ConnectionTests =
         }
 
     [<Fact>]
+    let ``Client can load session after initialization`` () =
+        task {
+            let (clientTransport, agentTransport) = Transport.DuplexTransport.CreatePair()
+
+            let handlers: Connection.AgentHandlers =
+                { onInitialize =
+                    fun _ -> task { return Ok(mkInitializeResult true SessionCapabilities.empty) }
+                  onNewSession = fun _ -> task { return Error "not implemented" }
+                  onLoadSession =
+                    fun p ->
+                        task {
+                            return
+                                Ok
+                                    { sessionId = p.sessionId
+                                      configOptions = None
+                                      modes = None
+                                      _meta = None }
+                        }
+                  onListSessions = fun _ -> task { return Error "not implemented" }
+                  onPrompt = fun _ -> task { return Error "not implemented" }
+                  onCancel = fun _ -> task { () }
+                  onSetMode = fun _ -> task { return Error "not implemented" }
+                  onSetConfigOption = fun _ -> task { return Error "not implemented" } }
+
+            let agent = Connection.AgentConnection(agentTransport, handlers)
+            let client = Connection.ClientConnection(clientTransport)
+
+            let _ = agent.StartListening()
+
+            let! _ =
+                client.InitializeAsync(
+                    { protocolVersion = ProtocolVersion.current
+                      clientCapabilities =
+                        { fs =
+                            { readTextFile = true
+                              writeTextFile = true }
+                          terminal = true }
+                      clientInfo = None }
+                )
+
+            let! loaded =
+                client.LoadSessionAsync(
+                    { sessionId = SessionId "load-me"
+                      cwd = "/tmp"
+                      mcpServers = [] }
+                )
+
+            match loaded with
+            | Ok r -> Assert.Equal("load-me", SessionId.value r.sessionId)
+            | Error e -> failwithf "LoadSession failed: %A" e
+
+            do! agent.StopAsync()
+        }
+
+    [<Fact>]
+    let ``Client can list sessions after initialization`` () =
+        task {
+            let (clientTransport, agentTransport) = Transport.DuplexTransport.CreatePair()
+
+            let handlers: Connection.AgentHandlers =
+                { onInitialize =
+                    fun _ -> task { return Ok(mkInitializeResult true { list = Some { _meta = None } }) }
+                  onNewSession = fun _ -> task { return Error "not implemented" }
+                  onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onListSessions =
+                    fun _ ->
+                        task {
+                            return
+                                Ok
+                                    { sessions =
+                                        [ { sessionId = SessionId "sess-1"
+                                            cwd = "/tmp"
+                                            title = Some "Roadmap"
+                                            updatedAt = Some "2026-03-19T12:00:00Z"
+                                            _meta = None } ]
+                                      nextCursor = None
+                                      _meta = None }
+                        }
+                  onPrompt = fun _ -> task { return Error "not implemented" }
+                  onCancel = fun _ -> task { () }
+                  onSetMode = fun _ -> task { return Error "not implemented" }
+                  onSetConfigOption = fun _ -> task { return Error "not implemented" } }
+
+            let agent = Connection.AgentConnection(agentTransport, handlers)
+            let client = Connection.ClientConnection(clientTransport)
+
+            let _ = agent.StartListening()
+
+            let! _ =
+                client.InitializeAsync(
+                    { protocolVersion = ProtocolVersion.current
+                      clientCapabilities =
+                        { fs =
+                            { readTextFile = true
+                              writeTextFile = true }
+                          terminal = true }
+                      clientInfo = None }
+                )
+
+            let! listed = client.ListSessionsAsync({ cwd = Some "/tmp"; cursor = None; _meta = None })
+
+            match listed with
+            | Ok r ->
+                Assert.Single(r.sessions) |> ignore
+                Assert.Equal("sess-1", SessionId.value r.sessions.[0].sessionId)
+            | Error e -> failwithf "ListSessions failed: %A" e
+
+            do! agent.StopAsync()
+        }
+
+    [<Fact>]
+    let ``Client can set config option and receive updated config state`` () =
+        task {
+            let (clientTransport, agentTransport) = Transport.DuplexTransport.CreatePair()
+
+            let handlers: Connection.AgentHandlers =
+                { onInitialize =
+                    fun _ -> task { return Ok(mkInitializeResult true SessionCapabilities.empty) }
+                  onNewSession = fun _ -> task { return Error "not implemented" }
+                  onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onListSessions = fun _ -> task { return Error "not implemented" }
+                  onPrompt = fun _ -> task { return Error "not implemented" }
+                  onCancel = fun _ -> task { () }
+                  onSetMode = fun _ -> task { return Error "not implemented" }
+                  onSetConfigOption =
+                    fun _ ->
+                        task {
+                            return
+                                Ok
+                                    { sessionId = SessionId "sess-1"
+                                      configOptions =
+                                        [ { id = SessionConfigId "mode"
+                                            name = "Session Mode"
+                                            description = None
+                                            category = Some SessionConfigOptionCategory.Mode
+                                            ``type`` = "select"
+                                            currentValue = SessionConfigValueId "code"
+                                            options =
+                                                SessionConfigSelectOptions.Ungrouped
+                                                    [ { value = SessionConfigValueId "ask"
+                                                        name = "Ask"
+                                                        description = None
+                                                        _meta = None }
+                                                      { value = SessionConfigValueId "code"
+                                                        name = "Code"
+                                                        description = None
+                                                        _meta = None } ]
+                                            _meta = None } ]
+                                      _meta = None }
+                        } }
+
+            let agent = Connection.AgentConnection(agentTransport, handlers)
+            let client = Connection.ClientConnection(clientTransport)
+
+            let _ = agent.StartListening()
+
+            let! _ =
+                client.InitializeAsync(
+                    { protocolVersion = ProtocolVersion.current
+                      clientCapabilities =
+                        { fs =
+                            { readTextFile = true
+                              writeTextFile = true }
+                          terminal = true }
+                      clientInfo = None }
+                )
+
+            let! updated =
+                client.SetConfigOptionAsync(
+                    { sessionId = SessionId "sess-1"
+                      configId = SessionConfigId "mode"
+                      value = SessionConfigValueId "code"
+                      _meta = None }
+                )
+
+            match updated with
+            | Ok r ->
+                Assert.Single(r.configOptions) |> ignore
+                Assert.Equal("code", SessionConfigValueId.value r.configOptions.[0].currentValue)
+            | Error e -> failwithf "SetConfigOption failed: %A" e
+
+            do! agent.StopAsync()
+        }
+
+    [<Fact>]
     let ``Client can send prompt and receive response`` () =
         task {
             let (clientTransport, agentTransport) = Transport.DuplexTransport.CreatePair()
@@ -176,30 +346,10 @@ module ConnectionTests =
 
             let handlers: Connection.AgentHandlers =
                 { onInitialize =
-                    fun _ ->
-                        task {
-                            return
-                                Ok
-                                    { protocolVersion = ProtocolVersion.current
-                                      agentCapabilities =
-                                        { loadSession = false
-                                          mcpCapabilities = { http = false; sse = false }
-                                          promptCapabilities =
-                                            { audio = false
-                                              image = false
-                                              embeddedContext = false }
-                                          sessionCapabilities = SessionCapabilities.empty }
-                                      agentInfo = None
-                                      authMethods = [] }
-                        }
-                  onNewSession =
-                    fun _ ->
-                        task {
-                            return
-                                Ok
-                                    { sessionId = SessionId "s1"
-                                      modes = None }
-                        }
+                    fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
+                  onNewSession = fun _ -> task { return Ok(mkNewSessionResult (SessionId "s1")) }
+                  onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onListSessions = fun _ -> task { return Error "not implemented" }
                   onPrompt =
                     fun p ->
                         task {
@@ -213,7 +363,8 @@ module ConnectionTests =
                                       _meta = None }
                         }
                   onCancel = fun _ -> task { () }
-                  onSetMode = fun _ -> task { return Error "not implemented" } }
+                  onSetMode = fun _ -> task { return Error "not implemented" }
+                  onSetConfigOption = fun _ -> task { return Error "not implemented" } }
 
             let agent = Connection.AgentConnection(agentTransport, handlers)
             let client = Connection.ClientConnection(clientTransport)
@@ -264,9 +415,12 @@ module ConnectionTests =
             let handlers: Connection.AgentHandlers =
                 { onInitialize = fun _ -> task { return Error "not called" }
                   onNewSession = fun _ -> task { return Error "not called" }
+                  onLoadSession = fun _ -> task { return Error "not called" }
+                  onListSessions = fun _ -> task { return Error "not called" }
                   onPrompt = fun _ -> task { return Error "not called" }
                   onCancel = fun _ -> task { () }
-                  onSetMode = fun _ -> task { return Error "not called" } }
+                  onSetMode = fun _ -> task { return Error "not called" }
+                  onSetConfigOption = fun _ -> task { return Error "not called" } }
 
             let agent = Connection.AgentConnection(agentTransport, handlers)
 
@@ -297,23 +451,10 @@ module ConnectionTests =
 
             let handlers: Connection.AgentHandlers =
                 { onInitialize =
-                    fun _ ->
-                        task {
-                            return
-                                Ok
-                                    { protocolVersion = ProtocolVersion.current
-                                      agentCapabilities =
-                                        { loadSession = false
-                                          mcpCapabilities = { http = false; sse = false }
-                                          promptCapabilities =
-                                            { audio = false
-                                              image = false
-                                              embeddedContext = false }
-                                          sessionCapabilities = SessionCapabilities.empty }
-                                      agentInfo = None
-                                      authMethods = [] }
-                        }
+                    fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
                   onNewSession = fun _ -> task { return Error "not called" }
+                  onLoadSession = fun _ -> task { return Error "not called" }
+                  onListSessions = fun _ -> task { return Error "not called" }
                   onPrompt = fun _ -> task { return Error "not called" }
                   onCancel =
                     fun p ->
@@ -321,7 +462,8 @@ module ConnectionTests =
                             cancelReceived <- true
                             Assert.Equal("s1", SessionId.value p.sessionId)
                         }
-                  onSetMode = fun _ -> task { return Error "not called" } }
+                  onSetMode = fun _ -> task { return Error "not called" }
+                  onSetConfigOption = fun _ -> task { return Error "not called" } }
 
             let agent = Connection.AgentConnection(agentTransport, handlers)
             let client = Connection.ClientConnection(clientTransport)

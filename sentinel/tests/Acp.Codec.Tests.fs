@@ -243,6 +243,123 @@ module CodecTests =
         Assert.True(state2.pendingClientRequests.IsEmpty)
 
     [<Fact>]
+    let ``decode session list request and response correlates by id`` () =
+        let state0 = Codec.CodecState.empty
+
+        let listReq = """{"jsonrpc":"2.0","id":21,"method":"session/list","params":{"cwd":"/tmp/project","cursor":"cursor-1"}}"""
+
+        let state1, msg1 =
+            match Codec.decode Codec.Direction.FromClient state0 listReq with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg1 with
+        | Message.FromClient(ClientToAgentMessage.SessionList p) ->
+            Assert.Equal(Some "/tmp/project", p.cwd)
+            Assert.Equal(Some "cursor-1", p.cursor)
+        | other -> failwithf "unexpected message %A" other
+
+        let listRes =
+            """{"jsonrpc":"2.0","id":21,"result":{"sessions":[{"sessionId":"sess-1","cwd":"/tmp/project","title":"Investigate parity","updatedAt":"2026-03-19T10:00:00Z","_meta":{"messageCount":3}}],"nextCursor":"cursor-2"}}"""
+
+        let state2, msg2 =
+            match Codec.decode Codec.Direction.FromAgent state1 listRes with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg2 with
+        | Message.FromAgent(AgentToClientMessage.SessionListResult r) ->
+            Assert.Single(r.sessions) |> ignore
+            Assert.Equal(Some "cursor-2", r.nextCursor)
+            Assert.Equal("sess-1", SessionId.value r.sessions.[0].sessionId)
+            Assert.Equal("/tmp/project", r.sessions.[0].cwd)
+            Assert.Equal(Some "Investigate parity", r.sessions.[0].title)
+            Assert.True(r.sessions.[0]._meta.IsSome)
+        | other -> failwithf "unexpected message %A" other
+
+        Assert.True(state2.pendingClientRequests.IsEmpty)
+
+    [<Fact>]
+    let ``decode set session config option request and response preserves config state`` () =
+        let state0 = Codec.CodecState.empty
+
+        let configReq =
+            """{"jsonrpc":"2.0","id":22,"method":"session/set_config_option","params":{"sessionId":"sess-1","configId":"mode","value":"code"}}"""
+
+        let state1, msg1 =
+            match Codec.decode Codec.Direction.FromClient state0 configReq with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg1 with
+        | Message.FromClient(ClientToAgentMessage.SessionSetConfigOption p) ->
+            Assert.Equal("sess-1", SessionId.value p.sessionId)
+            Assert.Equal("mode", SessionConfigId.value p.configId)
+            Assert.Equal("code", SessionConfigValueId.value p.value)
+        | other -> failwithf "unexpected message %A" other
+
+        let configRes =
+            """{"jsonrpc":"2.0","id":22,"result":{"configOptions":[{"id":"mode","name":"Session Mode","description":"Controls how the agent works","category":"mode","type":"select","currentValue":"code","options":[{"value":"ask","name":"Ask","description":"Request permission first"},{"value":"code","name":"Code","description":"Modify code directly"}]}]}}"""
+
+        let state2, msg2 =
+            match Codec.decode Codec.Direction.FromAgent state1 configRes with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg2 with
+        | Message.FromAgent(AgentToClientMessage.SessionSetConfigOptionResult r) ->
+            Assert.Single(r.configOptions) |> ignore
+            Assert.Equal("mode", SessionConfigId.value r.configOptions.[0].id)
+            Assert.Equal("code", SessionConfigValueId.value r.configOptions.[0].currentValue)
+            Assert.Equal(Some SessionConfigOptionCategory.Mode, r.configOptions.[0].category)
+        | other -> failwithf "unexpected message %A" other
+
+        Assert.True(state2.pendingClientRequests.IsEmpty)
+
+    [<Fact>]
+    let ``decode typed session info update notification`` () =
+        let state0 = Codec.CodecState.empty
+
+        let raw =
+            """{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess-1","update":{"sessionUpdate":"session_info_update","title":"Parity roadmap","updatedAt":"2026-03-19T12:00:00Z","_meta":{"tags":["roadmap"]}}}}"""
+
+        let _, msg =
+            match Codec.decode Codec.Direction.FromAgent state0 raw with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg with
+        | Message.FromAgent(AgentToClientMessage.SessionUpdate notification) ->
+            match notification.update with
+            | Acp.Domain.Prompting.SessionUpdate.SessionInfoUpdate update ->
+                Assert.Equal(Some "Parity roadmap", update.title)
+                Assert.Equal(Some "2026-03-19T12:00:00Z", update.updatedAt)
+                Assert.True(update._meta.IsSome)
+            | other -> failwithf "unexpected session update %A" other
+        | other -> failwithf "unexpected message %A" other
+
+    [<Fact>]
+    let ``decode typed config option update notification`` () =
+        let state0 = Codec.CodecState.empty
+
+        let raw =
+            """{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess-1","update":{"sessionUpdate":"config_option_update","configOptions":[{"id":"mode","name":"Session Mode","category":"mode","type":"select","currentValue":"ask","options":[{"value":"ask","name":"Ask"},{"value":"code","name":"Code"}]}]}}}"""
+
+        let _, msg =
+            match Codec.decode Codec.Direction.FromAgent state0 raw with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg with
+        | Message.FromAgent(AgentToClientMessage.SessionUpdate notification) ->
+            match notification.update with
+            | Acp.Domain.Prompting.SessionUpdate.ConfigOptionUpdate update ->
+                Assert.Single(update.configOptions) |> ignore
+                Assert.Equal("mode", SessionConfigId.value update.configOptions.[0].id)
+            | other -> failwithf "unexpected session update %A" other
+        | other -> failwithf "unexpected message %A" other
+
+    [<Fact>]
     let ``direction mismatch surfaces a codec error`` () =
         let state0 = Codec.CodecState.empty
 
@@ -257,7 +374,7 @@ module CodecTests =
         | Error other -> failwithf "unexpected error %A" other
 
     [<Fact>]
-    let ``decode unknown session update preserves payload`` () =
+    let ``decode session info update uses typed payload`` () =
         let state0 = Codec.CodecState.empty
 
         let update =
@@ -271,14 +388,10 @@ module CodecTests =
         match msg with
         | Message.FromAgent(AgentToClientMessage.SessionUpdate u) ->
             match u.update with
-            | SessionUpdate.Ext(tag, payload) ->
-                Assert.Equal("session_info_update", tag)
-
-                match payload["title"] with
-                | null -> failwith "expected title in ext payload"
-                | titleNode ->
-                    let title = (titleNode :?> JsonValue).GetValue<string>()
-                    Assert.Equal("New Title", title)
+            | Acp.Domain.Prompting.SessionUpdate.SessionInfoUpdate info ->
+                Assert.Equal(Some "New Title", info.title)
+                Assert.Equal(None, info.updatedAt)
+                Assert.Equal(None, info._meta)
             | other -> failwithf "unexpected update payload %A" other
         | other -> failwithf "unexpected message %A" other
 

@@ -21,6 +21,18 @@ module ProtocolStateMachine =
 
     module G = FsCheck.FSharp.Gen
 
+    let private mkNewSessionResult (sid: SessionId) : NewSessionResult =
+        { sessionId = sid
+          configOptions = None
+          modes = None
+          _meta = None }
+
+    let private mkLoadSessionResult (sid: SessionId) : LoadSessionResult =
+        { sessionId = sid
+          configOptions = None
+          modes = None
+          _meta = None }
+
     type Model =
         | AwaitingInitialize
         | WaitingForInitializeResult
@@ -76,7 +88,7 @@ module ProtocolStateMachine =
             | m -> m)
             (fun (actual, model) ->
                 let msg =
-                    Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
+                    Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid))
 
                 let ok = apply actual msg
 
@@ -109,7 +121,7 @@ module ProtocolStateMachine =
             | m -> m)
             (fun (actual, model) ->
                 let msg =
-                    Message.FromAgent(AgentToClientMessage.SessionLoadResult { sessionId = sid; modes = None })
+                    Message.FromAgent(AgentToClientMessage.SessionLoadResult(mkLoadSessionResult sid))
 
                 let ok = apply actual msg
 

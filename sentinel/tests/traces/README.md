@@ -18,9 +18,11 @@ Example line:
 {"ts":"2025-01-01T00:00:00.0000000+00:00","direction":"fromClient","json":"{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":1}}"}
 ```
 
-## Recording
+## Recording and Replay
 
-Use the inspector to record and then replay:
+The legacy standalone inspector CLI has been removed. Trace fixtures should be created by whatever harness or runner is exercising ACP and then validated with the unified CLI:
 
-- Record: `dotnet run --project cli/apps/ACP.Inspector/ACP.Inspector.fsproj -- proxy-stdio --client-cmd "<client>" --agent-cmd "<agent>" --record sentinel/tests/traces/my-trace.jsonl`
-- Replay locally: `dotnet run --project cli/apps/ACP.Inspector/ACP.Inspector.fsproj -- replay --trace sentinel/tests/traces/my-trace.jsonl`
+- Validate and normalize a trace: `dotnet run --project cli/apps/ACP.Cli -- inspect sentinel/tests/traces/my-trace.jsonl --record sentinel/tests/traces/normalized.jsonl`
+- Replay locally: `dotnet run --project cli/apps/ACP.Cli -- replay sentinel/tests/traces/normalized.jsonl`
+
+Each line still needs the canonical JSONL shape documented above: `ts`, `direction`, and `json`.

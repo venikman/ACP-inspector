@@ -51,6 +51,12 @@ module SessionProperties =
         [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
           Message.FromAgent(AgentToClientMessage.InitializeResult initResult) ]
 
+    let private mkNewSessionResult (sid: SessionId) : NewSessionResult =
+        { sessionId = sid
+          configOptions = None
+          modes = None
+          _meta = None }
+
     let private hasSessionFailure code (findings: ValidationFinding list) =
         findings
         |> List.exists (fun f ->
@@ -84,7 +90,7 @@ module SessionProperties =
             P.forAll Generators.arbSessionId (fun sid ->
                 let msgs =
                     handshake
-                    @ [ Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
+                    @ [ Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid))
                         Message.FromClient(
                             ClientToAgentMessage.SessionPrompt
                                 { sessionId = sid
@@ -115,7 +121,7 @@ module SessionProperties =
                 (fun (sid, sr) ->
                     let msgs =
                         handshake
-                        @ [ Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
+                        @ [ Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid))
                             Message.FromClient(
                                 ClientToAgentMessage.SessionPrompt
                                     { sessionId = sid

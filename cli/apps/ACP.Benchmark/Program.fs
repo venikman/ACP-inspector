@@ -15,7 +15,7 @@ let sessionNewRequest =
     """{"jsonrpc":"2.0","method":"session/new","params":{"cwd":"/tmp","mcpServers":[]},"id":1}"""
 
 let sessionUpdateNotification =
-    """{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess-001","update":{"type":"agentMessage","message":{"type":"text","text":"Hello, this is a test message for codec benchmarking."}}}}"""
+    """{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess-001","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"Hello, this is a test message for codec benchmarking."}}}}"""
 
 let promptRequest =
     """{"jsonrpc":"2.0","method":"session/prompt","params":{"sessionId":"sess-001","prompt":[{"type":"text","text":"What is 2+2?"}]},"id":2}"""
@@ -65,7 +65,9 @@ let runRoundtrip () =
         let responseMsg =
             Domain.Messaging.AgentToClientMessage.SessionNewResult
                 { sessionId = Domain.PrimitivesAndParties.SessionId "sess-benchmark"
-                  modes = None }
+                  configOptions = None
+                  modes = None
+                  _meta = None }
 
         let encodeResult =
             Codec.encode (Some(Domain.JsonRpc.RequestId.Number 1L)) (Domain.Messaging.Message.FromAgent responseMsg)
@@ -146,7 +148,9 @@ let runCodec (count: int) =
         let responseMsg =
             Domain.Messaging.AgentToClientMessage.SessionNewResult
                 { sessionId = Domain.PrimitivesAndParties.SessionId "sess-bench"
-                  modes = None }
+                  configOptions = None
+                  modes = None
+                  _meta = None }
 
         match
             Codec.encode

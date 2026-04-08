@@ -73,6 +73,12 @@ module ValidationTests =
           usage = None
           _meta = None }
 
+    let private mkNewSessionResult (sid: SessionId) (modes: SessionModeState option) : NewSessionResult =
+        { sessionId = sid
+          configOptions = None
+          modes = modes
+          _meta = None }
+
     let private mkSessionUpdate (sid: SessionId) (update: SessionUpdate) : SessionUpdateNotification =
         { sessionId = sid
           update = update
@@ -96,7 +102,7 @@ module ValidationTests =
         [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
           Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
           Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
-          Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
+          Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
           Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "hi" ]))
           Message.FromAgent(AgentToClientMessage.SessionPromptResult(mkPromptResult sid StopReason.EndTurn)) ]
 
@@ -104,7 +110,7 @@ module ValidationTests =
         [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
           Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
           Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
-          Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
+          Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
           Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "hi" ]))
           Message.FromClient(ClientToAgentMessage.SessionCancel { sessionId = sid })
           Message.FromAgent(AgentToClientMessage.SessionPromptResult(mkPromptResult sid StopReason.Cancelled)) ]
@@ -113,7 +119,7 @@ module ValidationTests =
         [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
           Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
           Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
-          Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
+          Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
           Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "hi" ]))
           Message.FromClient(ClientToAgentMessage.SessionCancel { sessionId = sid })
           Message.FromAgent(AgentToClientMessage.SessionPromptResult(mkPromptResult sid StopReason.EndTurn)) ]
@@ -122,7 +128,7 @@ module ValidationTests =
         [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
           Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
           Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
-          Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
+          Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
           Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "p1" ]))
           Message.FromAgent(AgentToClientMessage.SessionPromptResult(mkPromptResult sid StopReason.EndTurn))
           Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "p2" ]))
@@ -132,7 +138,7 @@ module ValidationTests =
         [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
           Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
           Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
-          Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
+          Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
           Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "p1" ]))
           Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "p2" ]))
           Message.FromAgent(AgentToClientMessage.SessionPromptResult(mkPromptResult sid StopReason.EndTurn)) ]
@@ -141,7 +147,7 @@ module ValidationTests =
         [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
           Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
           Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
-          Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
+          Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
           Message.FromAgent(AgentToClientMessage.SessionPromptResult(mkPromptResult sid StopReason.EndTurn)) ]
 
     [<Fact>]
@@ -180,7 +186,7 @@ module ValidationTests =
             [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
               Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
               Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
-              Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
+              Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
               Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "hi" ]))
               Message.FromClient(ClientToAgentMessage.SessionCancel { sessionId = sid })
               Message.FromAgent(AgentToClientMessage.SessionPromptResult(mkPromptResult sid StopReason.Cancelled)) ]
@@ -341,7 +347,7 @@ module ValidationTests =
             [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
               Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
               Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
-              Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = Some modes }) ]
+              Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid (Some modes))) ]
 
         let result = runWithValidation sid spec trace true None None
 
@@ -361,7 +367,7 @@ module ValidationTests =
             [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
               Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
               Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
-              Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = Some modes })
+              Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid (Some modes)))
               Message.FromAgent(
                   AgentToClientMessage.SessionUpdate(
                       mkSessionUpdate sid (SessionUpdate.CurrentModeUpdate { currentModeId = next })
@@ -389,7 +395,7 @@ module ValidationTests =
             [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
               Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
               Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
-              Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = Some modes })
+              Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid (Some modes)))
               Message.FromClient(ClientToAgentMessage.SessionSetMode { sessionId = sid; modeId = badModeId }) ]
 
         let result = runWithValidation sid spec trace true None None

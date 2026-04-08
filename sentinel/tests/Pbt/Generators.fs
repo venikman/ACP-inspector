@@ -109,6 +109,18 @@ module Generators =
           title = None
           version = "0.0.0-test" }
 
+    let private mkNewSessionResult (sid: SessionId) : NewSessionResult =
+        { sessionId = sid
+          configOptions = None
+          modes = None
+          _meta = None }
+
+    let private mkLoadSessionResult (sid: SessionId) : LoadSessionResult =
+        { sessionId = sid
+          configOptions = None
+          modes = None
+          _meta = None }
+
     let genInitializeParams: Gen<InitializeParams> =
         G.constant
             { protocolVersion = ProtocolVersion.current
@@ -204,11 +216,9 @@ module Generators =
         G.frequency
             [ 2, genInitializeResult |> G.map AgentToClientMessage.InitializeResult
               2,
-              genSessionId
-              |> G.map (fun sid -> AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None })
+              genSessionId |> G.map (mkNewSessionResult >> AgentToClientMessage.SessionNewResult)
               2,
-              genSessionId
-              |> G.map (fun sid -> AgentToClientMessage.SessionLoadResult { sessionId = sid; modes = None })
+              genSessionId |> G.map (mkLoadSessionResult >> AgentToClientMessage.SessionLoadResult)
               3,
               genSessionId
               |> G.bind genSessionPromptResult
@@ -268,7 +278,7 @@ module Generators =
                 genSessionId
                 |> G.where (fun sid -> not (sessions |> Map.containsKey sid))
                 |> G.map (fun sid ->
-                    Message.FromAgent(AgentToClientMessage.SessionNewResult { sessionId = sid; modes = None }),
+                    Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid)),
                     Ready(sessions |> Map.add sid false))
 
             let genSessionLoadReq =
@@ -285,7 +295,7 @@ module Generators =
                         else
                             sessions |> Map.add sid false
 
-                    Message.FromAgent(AgentToClientMessage.SessionLoadResult { sessionId = sid; modes = None }),
+                    Message.FromAgent(AgentToClientMessage.SessionLoadResult(mkLoadSessionResult sid)),
                     Ready sessions')
 
             let genPromptReq =

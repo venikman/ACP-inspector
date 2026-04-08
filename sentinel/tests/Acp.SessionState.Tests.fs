@@ -6,6 +6,7 @@ open Acp
 open Acp.Domain
 open Acp.Domain.PrimitivesAndParties
 open Acp.Domain.Prompting
+open Acp.Domain.SessionSetup
 open Acp.Domain.SessionModes
 open Acp.Contrib
 open System.Text.Json.Nodes
@@ -107,39 +108,41 @@ module SessionStateTests =
         Assert.Equal(ToolCallStatus.InProgress, tc.status)
 
     [<Fact>]
-    let ``Apply merges session_info_update title and meta`` () =
+    let ``Apply merges typed session info update title and meta`` () =
         let acc = SessionState.SessionAccumulator()
 
-        let payload1 = JsonObject()
-        payload1["sessionUpdate"] <- JsonValue.Create("session_info_update")
-        payload1["title"] <- JsonValue.Create("First Title")
         let meta1 = JsonObject()
         meta1["traceparent"] <- JsonValue.Create("00-abc-123-01")
-        payload1["_meta"] <- meta1
 
         let notify1 =
             { sessionId = SessionId "s1"
-              update = SessionUpdate.Ext("session_info_update", payload1)
+              update =
+                SessionUpdate.SessionInfoUpdate
+                    { title = Some "First Title"
+                      updatedAt = None
+                      _meta = Some meta1 }
               _meta = None }
 
         let snapshot1 = acc.Apply(notify1)
         Assert.Equal(Some "First Title", snapshot1.title)
+        Assert.Equal(None, snapshot1.updatedAt)
         Assert.True(snapshot1.meta.IsSome)
 
-        let payload2 = JsonObject()
-        payload2["sessionUpdate"] <- JsonValue.Create("session_info_update")
-        payload2["title"] <- JsonValue.Create("Second Title")
         let meta2 = JsonObject()
         meta2["baggage"] <- JsonValue.Create("k=v")
-        payload2["_meta"] <- meta2
 
         let notify2 =
             { sessionId = SessionId "s1"
-              update = SessionUpdate.Ext("session_info_update", payload2)
+              update =
+                SessionUpdate.SessionInfoUpdate
+                    { title = Some "Second Title"
+                      updatedAt = Some "2026-03-19T12:00:00Z"
+                      _meta = Some meta2 }
               _meta = None }
 
         let snapshot2 = acc.Apply(notify2)
         Assert.Equal(Some "Second Title", snapshot2.title)
+        Assert.Equal(Some "2026-03-19T12:00:00Z", snapshot2.updatedAt)
 
         match snapshot2.meta with
         | None -> failwith "expected _meta to be set"
@@ -148,6 +151,42 @@ module SessionStateTests =
             let baggage = (meta["baggage"] :?> JsonValue).GetValue<string>()
             Assert.Equal("00-abc-123-01", traceparent)
             Assert.Equal("k=v", baggage)
+
+    [<Fact>]
+    let ``Apply tracks typed config option updates`` () =
+        let acc = SessionState.SessionAccumulator()
+
+        let optionUpdate: ConfigOptionUpdate =
+            { configOptions =
+                [ { id = SessionConfigId "mode"
+                    name = "Session Mode"
+                    description = Some "Controls how the agent works"
+                    category = Some SessionConfigOptionCategory.Mode
+                    ``type`` = "select"
+                    currentValue = SessionConfigValueId "code"
+                    options =
+                        SessionConfigSelectOptions.Ungrouped
+                            [ { value = SessionConfigValueId "ask"
+                                name = "Ask"
+                                description = Some "Request permission first"
+                                _meta = None }
+                              { value = SessionConfigValueId "code"
+                                name = "Code"
+                                description = Some "Modify files directly"
+                                _meta = None } ]
+                    _meta = None } ]
+              _meta = None }
+
+        let notify: SessionUpdateNotification =
+            { sessionId = SessionId "s1"
+              update = SessionUpdate.ConfigOptionUpdate optionUpdate
+              _meta = None }
+
+        let snapshot = acc.Apply(notify)
+
+        Assert.Single(snapshot.configOptions) |> ignore
+        Assert.Equal("mode", SessionConfigId.value snapshot.configOptions.[0].id)
+        Assert.Equal("code", SessionConfigValueId.value snapshot.configOptions.[0].currentValue)
 
     [<Fact>]
     let ``Apply tracks usage_update payloads`` () =
