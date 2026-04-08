@@ -2,7 +2,6 @@
   <Folder Name="/cli/">
     <Project Path="cli/apps/ACP.Cli/ACP.Cli.fsproj" />
     <Project Path="cli/apps/ACP.Benchmark/ACP.Benchmark.fsproj" />
-    <Project Path="cli/apps/ACP.Inspector/ACP.Inspector.fsproj" />
   </Folder>
   <Folder Name="/protocol/">
     <Project Path="protocol/src/ACP.fsproj" />

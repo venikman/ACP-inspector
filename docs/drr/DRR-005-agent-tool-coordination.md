@@ -1,208 +1,114 @@
 # DRR-005: Agent Tool Coordination
 
 **Status**: Proposed  
-**Date**: 2026-01-06  
-**Authors**: Human + Warp Agent  
-**FPF Grounding**: C.24 (Agent-Tools-CAL), C.5 (Resrc-CAL), C.19 (E/E-LOG), B.3 (Trust Calculus)
+**Date**: 2026-03-19  
+**Authors**: ACP Inspector maintainers  
+**FPF Grounding**: `C.24`, `A.6`, `E.17`, `A.16`
 
 ## Context
 
-ACP agents execute tool calls during prompt turns to interact with external systems (filesystem, terminal, MCP servers). Tool calls are coordinated through a request-response cycle where the agent plans which tools to invoke and in what sequence.
+ACP agents already coordinate tool use through protocol-native surfaces:
 
-The current state:
+- `plan` updates
+- slash commands / available commands
+- tool-call traces and tool-call updates
 
-- Tool calls are opaque to validation—no declared plan or budget
-- Sequencing logic is internal to agent—no protocol-level coordination primitives
-- No resource awareness—agent doesn't declare compute/time/cost constraints
-- No exploration-exploitation policy—all tool choices are "exploit" (greedy)
-- Tool call failures produce error messages but no structured retry/fallback strategy
+The January draft of this DRR proposed a custom `ToolCallPlan` object as a new primary coordination structure. That direction now conflicts with the stronger March 2026 FPF reading of boundary discipline and publication discipline.
 
-## Problem Statement
+## Problem
 
-**Deutsch Framing**: Current explanations for "why did the agent choose this tool sequence" are *easy to vary*. "The model thought it was best" or "that's what the prompt said" can account for any tool selection without predicting future behavior. These explanations have no *reach*—they don't constrain what tool sequences are rational given resource limits.
+We need agent-tool coordination that is:
 
-**FPF Diagnosis**: Tool execution lacks the discipline of FPF C.24 (Agent-Tools-CAL):
+- inspectable
+- auditable
+- compatible with ACP stable behavior
+- extensible for policy metadata
 
-- **No Call-Planning**: Tool calls are emitted one-by-one without declared multi-step plan
-- **No Budget Constraints**: No compute budget, time budget, or cost budget tracked
-- **No Policy Integration**: No explore-exploit policy (C.19 E/E-LOG) governing tool choice
-- **No Scale-Awareness**: No scaling-law lens (C.18.1 SLL) for tool selection under resource pressure
-- **No BLP Compliance**: No bitter-lesson preference (C.19.1 BLP) favoring general methods over tricks
+without inventing a second planning protocol that competes with ACP itself.
 
-The current approach resembles "greedy local search" without the scaffolding that FPF C.24 provides for principled tool orchestration.
+## Decision
 
-## Forces
+ACP-native coordination surfaces are canonical. ACP Inspector will model and validate tool coordination around:
 
-- **Agent autonomy**: Agents need freedom to explore without micromanagement
-- **Resource limits**: Compute, time, and cost are finite—unbounded tool use is unacceptable
-- **Observability**: Clients/sentinels need visibility into tool choice rationale
-- **Protocol overhead**: Adding planning metadata increases message size
-- **Backward compatibility**: Existing agents don't emit tool plans
-- **Policy diversity**: Different agents may have different E/E strategies
+- typed `plan` updates
+- slash-command availability and updates
+- tool-call events and tool-call updates
+- trace consistency between declared plans and observed work-effects
 
-## Decision Drivers
+Optional policy metadata such as budget hints, retry strategy, exploration heuristics, or ranking policy may exist as local overlays, but they are secondary and must not replace ACP-native coordination semantics.
 
-1. Principled tool coordination requires *declared constraints* (budget, policy)
-2. Tool sequences should be *auditable*—why this tool, why now?
-3. Resource management should be *explicit*, not implicit
-4. Exploration policy should be *configurable*, not hardcoded
-5. Scale-aware tool selection should favor *general methods* under resource pressure (BLP)
+## A.6.B Boundary Routing
 
-## Proposed Direction
+### Laws / invariants
 
-Introduce **Tool Call Planning** with **Resource Budgets** and **E/E Policy**:
+- protocol/runtime ordering of tool-call and plan events must be preserved
+- trace/state validation must not infer impossible tool histories
+- a view must not invent tool outcomes that are absent from the trace
 
-### 1. ToolCallPlan Structure
+### Admissibility
 
-```text
-ToolCallPlan := {
-  planId: UUID                          // Unique plan identifier
-  planningContext: {
-    goal: string                        // What agent is trying to accomplish
-    constraints: ResourceBudget         // Compute/time/cost limits
-    policy: ExploitExplorePolicy        // E/E-LOG strategy
-  }
-  plannedSequence: ToolCallIntent[]     // What agent intends to do
-  executionState: Planned | InProgress | Complete | Failed
-}
+- a tool call is admissible only when the protocol/session state allows it
+- a plan update is admissible only in the states where ACP permits it
+- slash-command availability is admissible only when exposed by the agent surface
 
-ResourceBudget := {
-  maxToolCalls?: number                 // Call count limit
-  maxLatency?: Duration                 // Time budget
-  maxCost?: ResourceUnits               // Cost budget (arbitrary units)
-  scaleFactor?: float                   // SLL scale probe (1.0 = baseline)
-}
+### Commitments / deontics
 
-ExploitExplorePolicy := {
-  strategy: Greedy | EpsilonGreedy | UCB | ThompsonSampling
-  explorationRate?: float               // For epsilon-greedy
-  temperature?: float                   // For softmax-based
-  preferGeneralMethods: boolean         // BLP flag
-}
+- the agent must expose the coordination state through ACP-native surfaces when it claims to support them
+- the client must not treat local overlays as protocol law
+- the sentinel must report mismatches as findings rather than rewriting the protocol contract
 
-ToolCallIntent := {
-  toolName: string
-  rationale: string                     // Why this tool now?
-  expectedOutcome?: string              // What agent expects to learn
-  fallbackOnFailure?: ToolCallIntent    // Contingency plan
-}
-```
+### Evidence / work-effects
 
-### 2. Protocol Extension (Optional)
+- tool-call requests and updates
+- retries, failures, and cancellations
+- plan updates
+- slash-command availability updates
+- trace records and validation findings
 
-Agents MAY include `toolCallPlan` in `SessionPromptResult` or `SessionUpdate`:
+## E.17 Constraint
 
-```text
-AgentToClient: SessionUpdate {
-  ...existing fields...
-  toolCallPlan?: ToolCallPlan           // Declared tool coordination plan
-}
-```
+CLI summaries, replay output, dashboards, and reports are projections over the same canonical trace and protocol artifacts. They may explain coordination, but they may not define a second planning semantics.
 
-### 3. Sentinel Validation
+## A.16 Note
 
-Sentinel can validate:
-
-- **Budget adherence**: Tool call count ≤ declared maxToolCalls
-- **Plan-execution alignment**: Executed tools match declared sequence (or rationale for deviation)
-- **Policy compliance**: Tool choices respect declared E/E strategy
-- **BLP violations**: Flag domain-specific tricks when general methods available
-
-Validation findings:
-
-```text
-ValidationFinding.BudgetExceeded(planId, exceeded: ResourceBudget)
-ValidationFinding.PlanDeviation(planId, expected: ToolCallIntent, actual: ToolCall)
-ValidationFinding.BLPViolation(planId, trick: string, generalAlternative: string)
-```
+Experimental planning policies, budget schemes, exploration heuristics, and fallback strategies are draft-language-state material unless and until ACP or the repo promotes them explicitly. Draft policy overlays may be published, but they must remain clearly marked as draft or profile-scoped.
 
 ## Consequences
 
-**Positive**:
+### Positive
 
-- Makes tool coordination *auditable*—plans are explicit, not opaque
-- Enables *resource management*—budgets prevent runaway tool use
-- Supports *policy experimentation*—agents can try different E/E strategies
-- Aligns with *FPF C.24*—proper agentic tool orchestration
-- Creates foundation for *multi-agent coordination*—agents can share plans
+- Aligns the repo with ACP stable surfaces already in use
+- Avoids a shadow planning protocol
+- Makes validation and CLI output traceable back to protocol evidence
+- Leaves room for policy experimentation without hard-coding it into the contract
 
-**Negative**:
+### Negative
 
-- Protocol complexity increase (optional field, backward compatible)
-- Agents must implement planning layer (or emit trivial plans)
-- Risk of "planning theater"—plans that don't reflect actual decision-making
-- Budget enforcement requires runtime tracking infrastructure
-
-## Rationale
-
-**Deutsch**: A good explanation is *hard to vary*. By requiring agents to declare a tool plan with resource budgets, we constrain what tool sequences are admissible. An agent cannot simply invoke arbitrary tools—it must justify each call within a declared budget and policy. The plan either predicts the observed tool calls or it doesn't—no room for easy variation.
-
-**FPF**: This implements C.24 (Agent-Tools-CAL) properly:
-
-- **Call-planning discipline**: ToolCallPlan with declared sequence
-- **Budget-aware sequencing**: ResourceBudget constrains tool use
-- **Policy integration**: ExploitExplorePolicy (E/E-LOG) governs choice
-- **Scale-awareness**: SLL scale factor + BLP preferGeneralMethods
-- **Resource tracking**: C.5 (Resrc-CAL) for cost accounting
-
-The structure follows FPF's transdisciplinary approach: tool coordination isn't an ad-hoc protocol feature, it's a first-class architectural concern with proper formalization.
+- Some richer planning ideas move out of the protocol core and into optional overlays
+- Budget/exploration metadata becomes advisory unless a higher-level profile defines stronger rules
+- Existing January wording that centered `ToolCallPlan` is no longer authoritative
 
 ## Alternatives Considered
 
-1. **No planning layer**: Current state. Tool calls are uncoordinated black boxes. Easy to vary, no reach.
+### 1. Keep the custom `ToolCallPlan` as primary
 
-2. **Hard resource limits only**: Set maxToolCalls=10 globally. Doesn't explain *why* 10, or *which* 10 tools. Parochial.
+Rejected. It duplicates ACP-native coordination and turns repo-local documentation into a shadow protocol.
 
-3. **Post-hoc budget tracking**: Count tool calls after the fact. Reactive, not preventive. Closes barn door after horse escapes.
+### 2. Ignore coordination entirely and validate only raw tool calls
 
-4. **Client-side planning**: Client dictates tool sequence. Defeats agent autonomy. Micromanagement.
+Rejected. It leaves plan/slash-command surfaces underused and weakens auditability.
 
-5. **Implicit E/E via temperature**: Use LLM sampling temperature as exploration knob. Domain-specific trick, not general method. BLP violation.
+### 3. Make policy metadata mandatory at the protocol boundary
 
-## Open Questions
+Rejected. ACP stable does not require that today, and forcing it locally would overstep the boundary.
 
-- Should `ToolCallPlan` be mandatory or optional? (Proposal: optional for backward compat, encouraged for L2 assurance)
-- How to represent fallback strategies compactly? (Proposal: tree structure, but keep simple for MVP)
-- What ResourceBudget units make sense across heterogeneous agents? (Proposal: dimensionless "resource units", agent-defined)
-- Should Sentinel enforce budgets or just report violations? (Proposal: report only, enforcement is agent responsibility)
-- How to handle dynamic replanning mid-turn? (Proposal: emit new plan via SessionUpdate, link to original)
+## Implementation Notes
 
-## Dependencies
+If accepted, implementation work should prioritize:
 
-- **Builds on**:
-  - DRR-001 (Assurance Envelope provides framework for evidence)
-  - DRR-003 (Capability verification ensures agents *can* execute tools)
-  - ACP tool call protocol (existing SessionPrompt/SessionUpdate)
+1. typed plan updates in protocol/runtime/validation
+2. slash-command availability and rendering
+3. trace validation for plan/tool-call consistency
+4. optional policy metadata layered on top as repo-local profiles, not as a second protocol
 
-- **Enables**:
-  - Multi-agent tool coordination (agents share plans)
-  - Resource-aware scheduling (sentinel routes to agents with budget)
-  - Policy experimentation (compare E/E strategies empirically)
-
-- **FPF Patterns**: C.24, C.5, C.18.1, C.19, C.19.1, B.3, G.5, G.9
-
-## References
-
-- Deutsch, D. (2011). *The Beginning of Infinity*, Ch. 1-2 (Good Explanations, Reach)
-- FPF Spec: C.24 Agent-Tools-CAL
-- FPF Spec: C.19 E/E-LOG (Explore-Exploit Governor)
-- FPF Spec: C.19.1 BLP (Bitter-Lesson Preference)
-- FPF Spec: C.18.1 SLL (Scaling-Law Lens)
-- FPF Spec: C.5 Resrc-CAL (Resource tracking)
-- Sutton, R. (2019). "The Bitter Lesson" (general methods > domain tricks)
-- ACP Spec: Tool Call Protocol
-
----
-
-## Implementation Notes (Non-Normative)
-
-If this DRR is accepted, implementation would proceed as:
-
-1. **Phase 1**: Define `ToolCallPlan` types in `Acp.Domain.fs` (optional extension)
-2. **Phase 2**: Add `ValidationFinding` variants for budget/policy violations
-3. **Phase 3**: Implement sentinel validation in `Acp.Validation.fs`
-4. **Phase 4**: Add examples to `sentinel/examples/tool-planning/` demonstrating E/E policies
-
-Estimated effort: Medium (3-5 days for full implementation + tests)
-
-FPF alignment impact: Closes C.24 gap, improves overall alignment from ~92% → ~95%.
+Heuristics such as epsilon-greedy, UCB, Thompson sampling, or bespoke budget models may still be useful, but they belong in policy profiles and experiments, not in the canonical protocol contract.

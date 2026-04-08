@@ -9,6 +9,8 @@ Naming: Product = ACP Inspector, repo = `ACP-inspector`, CLI tool = `acp-inspect
 ## Quick Links
 
 - [ACP RFD Tracker](ACP-RFD-TRACKER.md) - Draft RFD implementation status and spec tracking
+- [Review Batches (2026-03-19)](reports/review-batches-20260319.md) - Mixed-audience handoff for the current milestone set
+- [Architecture Diagram Set](architecture/diagram-set-20260319.md) - Generated architecture, module, and flow diagrams
 - [API Reference](#building-docs) - Generated API documentation (output: `docs/_site/reference/index.html`)
 
 ## Modules

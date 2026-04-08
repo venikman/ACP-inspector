@@ -1,156 +1,93 @@
 # ACP RFD Tracker
 
-**Last Updated**: 2026-01-07
-**Current ACP Schema Target**: `0.10.5` (pinned)
+**Last Updated**: 2026-03-19
+**Current ACP Schema Target**: `0.11.3` (pinned in code)
 **Protocol Version**: `1`
+**Current Upstream Stable ACP Release**: `0.11.3` (2026-03-18)
 
 ## Overview
 
-This document tracks ACP (Agent Client Protocol) specification versions, Draft RFDs (Requests for Dialog), and their implementation status in ACP Inspector.
+This document tracks ACP (Agent Client Protocol) stable releases, active parity gaps, and selected unstable features in ACP Inspector.
 
 For the upstream ACP specification:
 
 - Spec source of truth (GitHub): <https://github.com/agentclientprotocol/agent-client-protocol>
-- Overview/intro (website): <https://agentclientprotocol.com/overview/introduction>
-- RFDs (website): <https://agentclientprotocol.com/rfds>
+- Overview/intro (website): <https://agentclientprotocol.com/get-started/introduction>
+- RFD process (website): <https://agentclientprotocol.com/rfds/about>
+- Stable schema/docs: <https://agentclientprotocol.com/protocol/schema>
+- Upstream changelog: <https://raw.githubusercontent.com/agentclientprotocol/agent-client-protocol/main/CHANGELOG.md>
 
 ## Implementation Strategy
 
-We follow **Option 2: Stable + Parse Draft** — accept and display Draft messages without relying on them. This is optimal for an inspector tool:
+ACP Inspector follows **stable-first + gated unstable**:
 
 1. **Stable ACP** is the contract (mandatory support)
-2. **Draft RFDs** are parsed and displayed behind an unstable feature gate
+2. **Unstable ACP** is accepted only when it is behind a clear compatibility gate or preserved as an opaque extension payload
 3. **Unknown variants** render as raw JSON (forward-compatible, no crashes)
 
-## Current Stable ACP Support
+## Stable ACP Snapshot
 
-| Feature                | Status         | Notes                                               |
-| ---------------------- | -------------- | --------------------------------------------------- |
-| Initialize handshake   | ✅ Implemented | `clientInfo` in params, `agentInfo` in result       |
-| Session lifecycle      | ✅ Implemented | `session/new`, `session/load`, `session/cancel`     |
-| Session prompts        | ✅ Implemented | Streaming `session/update`, `session/prompt` result |
-| Session modes          | ✅ Implemented | `session/set_mode`, mode state tracking             |
-| File system tools      | ✅ Implemented | `fs/read_text_file`, `fs/write_text_file`           |
-| Terminal tools         | ✅ Implemented | `terminal/create`, `terminal/output`, etc.          |
-| Permission requests    | ✅ Implemented | `session/request_permission`                        |
-| Protocol state machine | ✅ Implemented | Full `Phase` tracking in `Acp.Protocol.fs`          |
+| Feature | Status | Notes |
+| ------- | ------ | ----- |
+| Initialize handshake | ✅ Implemented | `clientInfo` / `agentInfo`, `protocolVersion = 1` |
+| Session lifecycle | ✅ Implemented | `session/new`, `session/list`, `session/load`, `session/cancel` |
+| Prompt turns | ✅ Implemented | `session/prompt`, streaming `session/update`, usage field |
+| File system and terminal tools | ✅ Implemented | Request/response flow in runtime + codec |
+| Permission requests | ✅ Implemented | `session/request_permission` |
+| Agent plans | ✅ Implemented | `plan` session update modeled as first-class type |
+| Slash commands | ✅ Implemented | `available_commands_update` modeled as first-class type |
+| Session config options | ✅ Implemented | Typed `configOptions`, `session/set_config_option`, `config_option_update` |
+| Session info updates | ✅ Implemented | Typed `session_info_update` through codec, protocol, runtime, and session snapshots |
+| Session modes | ✅ Implemented | Supported for backward compatibility alongside config options |
+| Protocol state machine | ✅ Implemented | Full `Phase` tracking in `Acp.Protocol.fs` |
 
-### Recent Schema Notes (v0.10.x)
+## Current Stable Parity Gaps
 
-- **v0.10.1**: Restored `title` field, added unstable `$/cancel_request` draft
-- **v0.10.2**: Added unstable `session/resume` and `session/fork` fields
+No known stable parity gaps are open against ACP `0.11.3` in the currently implemented surface.
 
-## Draft RFD Inventory
+Areas to keep watching:
 
-These are Draft-stage RFDs from <https://agentclientprotocol.com/rfds> as of 2026-01-06:
+- If upstream adds new stable session metadata fields, extend `Acp.Domain`, codec mappings, and session snapshots together.
+- Keep `modes` compatibility tests alongside `configOptions` tests until ACP formally removes legacy interoperability expectations.
 
-| RFD                                          | Status | Priority | Inspector Support |
-| -------------------------------------------- | ------ | -------- | ----------------- |
-| Session List                                 | Draft  | P2       | ❌ Not started    |
-| Session Config Options                       | Draft  | P2       | ❌ Not started    |
-| Forking of existing sessions                 | Draft  | P2       | ❌ Not started    |
-| Request Cancellation Mechanism               | Draft  | P1       | ❌ Not started    |
-| Resuming of existing sessions                | Draft  | P2       | ❌ Not started    |
-| Meta Field Propagation Conventions           | Draft  | P1       | ✅ Implemented    |
-| Session Info Update                          | Draft  | P1       | ✅ Implemented    |
-| Agent Telemetry Export                       | Draft  | P2       | ✅ Implemented    |
-| Proxy Chains: Composable Agent Architectures | Draft  | P2       | ✅ Implemented    |
-| Session Usage and Context Status             | Draft  | P1       | ✅ Implemented    |
-| ACP Agent Registry                           | Draft  | P2       | ✅ Implemented    |
+## Selected Unstable Support
 
-### Priority Legend
+| Feature | Status | Current handling |
+| ------- | ------ | ---------------- |
+| Proxy chains | Unstable | Implemented as first-class protocol extensions |
+| Usage updates | Unstable | Preserved through extension payload handling |
+| Telemetry export guidance | Unstable | Documented and surfaced in inspector output |
+| Registry support | RFD completed upstream, integration remains product-specific | Optional tooling/docs support |
+| Streamable HTTP transport | Still unstable upstream | Not implemented |
+| New auth/logout/elicitation shapes | Unstable upstream | Not implemented |
 
-- **P0**: Rebase/catch-up on stable ACP schema
-- **P1**: High-priority Draft features (inspector-relevant, safe to ship)
-- **P2**: Lower-priority Draft features (behavior-changing, require unstable gate)
+## Changelog Notes That Matter for This Repo
 
-## Planned Implementation Phases
+- **`0.10.8`** stabilized Session Config Options.
+- **`0.11.1`** stabilized `session/list` and `session_info_update`.
+- **`0.11.3`** is the current stable upstream release as of 2026-03-19.
 
-### P0: Rebase on Current Stable ACP
+## Near-Term Implementation Order
 
-- [x] Verify `clientInfo` in `initialize` params
-- [x] Verify `agentInfo` in `initialize` result
-- [x] Confirm `session/cancel` support
-- [x] Confirm streaming `session/update` support
-- [x] Check schema pin for v0.10.1/v0.10.2 unstable fields (pinned 0.10.5)
+1. Maintain the schema pin at the current upstream stable release.
+2. Keep typed support for `session/list`, session config options, and typed session info updates covered by regression tests.
+3. Preserve `modes` backward compatibility while preferring `configOptions` in docs and examples.
+4. Re-check upstream stable ACP on each release and update this tracker when the contract changes.
 
-### P1: Unstable Feature Gate
+## Testing Focus
 
-- [x] Add `--acp-unstable=on` CLI flag (Inspector)
-- [x] Add runtime config option for unstable features (Inspector config)
-- [x] Unknown `sessionUpdate` variants → render as "Unknown/Ext" JSON
-- [x] Unknown methods → render as "ExtRequest/ExtNotification"
-
-### P2: Session Info Update (`session_info_update`)
-
-- [x] Parse `session/update` where `sessionUpdate == "session_info_update"`
-- [x] Update session title and metadata in session snapshot
-- [x] Implement merge semantics for `_meta` field
-- [x] Mark as "Draft" in inspector UI/output
-
-### P3: Meta Field Propagation (`_meta`)
-
-- [x] Add `_meta` field to domain types as `JsonObject option`
-- [x] Reserve root keys: `traceparent`, `tracestate`, `baggage` (W3C Trace Context)
-- [x] Display these 3 keys prominently in inspector output
-- [x] Passthrough preservation when proxying/forwarding
-
-### P4: Session Usage Parsing
-
-- [x] Add `usage_update` variant to `SessionUpdate` (parsed as draft Ext)
-- [x] Add `usage` field to `SessionPromptResult`
-- [x] Display per-turn usage deltas in inspector
-- [x] Show context headroom (remaining context window)
-- [x] Add warning threshold for low context (<10% remaining)
-- [x] Schema-drift tolerance: don't hard-fail on extra fields
-
-### P5: Proxy Chains Support (Parse-Only)
-
-Status: Implemented (draft; gated by --acp-unstable)
-
-- [x] Parse `proxy/successor` method
-- [x] Parse `proxy/initialize` method
-- [x] Display proxy chain events in inspector
-- [x] Recognize MCP-over-ACP "acp" transport (experimental)
-
-### P6: Telemetry Export Alignment
-
-Status: Implemented (draft; gated by --acp-unstable)
-
-- [x] Add "Telemetry" panel/section to inspector output
-- [x] Surface recommended OpenTelemetry export configuration
-- [x] Connect trace context from `_meta` (P3)
-- [x] Document knobs for OTLP export
-
-### P7: Agent Registry Readiness
-
-Status: Implemented (draft; gated by --acp-unstable)
-
-- [x] (If inspector as agent) Generate `<id>/agent.json` manifest
-- [x] (If inspector as client) Optional ingestion of `registry.json`
-- [x] Render searchable agent list from registry
-- [x] Security: pinning, signature verification, user consent
-
-## Testing Strategy
-
-### Golden Transcript Tests
-
-1. **Session Info Update**: Feed recorded JSON-RPC log with `session_info_update` → assert title changed
-2. **Meta Passthrough**: `_meta.traceparent` unchanged across forwarding
-3. **Usage Update**: Accept even with extra fields (schema drift tolerance)
-4. **Proxy Chain**: Methods appear as first-class events, not "unknown method"
-
-### Negative Tests
-
-- Unknown `sessionUpdate` strings → render as raw JSON, no error
-- Unknown methods → graceful handling
-- Malformed `_meta` → warning, not crash
+1. Codec roundtrips for newly stabilized ACP request/result/update shapes.
+2. Connection-layer request handling for list/config-option flows.
+3. Session-state accumulation for typed session info and config-option updates.
+4. Compatibility tests proving legacy `modes` still work alongside `configOptions`.
 
 ## Risks & Mitigations
 
 | Risk                                      | Mitigation                                                        |
 | ----------------------------------------- | ----------------------------------------------------------------- |
-| Draft RFDs can change                     | Treat as non-exhaustive; ship behind "unstable" toggle            |
+| Upstream stable ACP continues to move     | Pin explicitly and track the changelog in CI                      |
+| Unstable ACP features can still change    | Keep them gated or opaque unless promoted to stable               |
+| Legacy `modes` and `configOptions` diverge | Keep both in sync when both are emitted and test coexistence      |
 | Registry ingestion is supply-chain vector | Pinning (hash/tag), signature verification, explicit user consent |
 | Schema drift in usage fields              | Accept extra fields, don't hard-fail on missing expected fields   |
 
@@ -159,11 +96,17 @@ Status: Implemented (draft; gated by --acp-unstable)
 - [x] Add CI job that alerts on ACP release/tag changes
 - [x] Add CI job that alerts on RFD updates (scrape agentclientprotocol.com/rfds)
 - [x] Pin schema version in `protocol/src/Acp.Domain.fs`
+- [x] Upgrade the pinned schema from `0.10.5` to current stable ACP (`0.11.3`)
 
 ## References
 
 - ACP Spec: <https://github.com/agentclientprotocol/agent-client-protocol>
-- ACP Website: <https://agentclientprotocol.com>
-- ACP RFDs: <https://agentclientprotocol.com/rfds>
+- ACP Intro: <https://agentclientprotocol.com/get-started/introduction>
+- ACP Schema: <https://agentclientprotocol.com/protocol/schema>
+- ACP Session List: <https://agentclientprotocol.com/protocol/session-list>
+- ACP Session Config Options: <https://agentclientprotocol.com/protocol/session-config-options>
+- ACP Slash Commands: <https://agentclientprotocol.com/protocol/slash-commands>
+- ACP RFD process: <https://agentclientprotocol.com/rfds/about>
+- ACP Changelog: <https://raw.githubusercontent.com/agentclientprotocol/agent-client-protocol/main/CHANGELOG.md>
 - W3C Trace Context: <https://www.w3.org/TR/trace-context/>
 - OpenTelemetry: <https://opentelemetry.io/>

@@ -22,11 +22,11 @@ Pin the current ACP schema version explicitly and add CI jobs to detect upstream
 
 ### Schema Pin (`protocol/src/Acp.Domain.fs`)
 
-Updated from wildcard `0.10.x` to explicit `0.10.5`:
+Updated from wildcard `0.10.x` to explicit `0.11.3`:
 
 ```fsharp
 [<Literal>]
-let Schema = "0.10.5"
+let Schema = "0.11.3"
 ```
 
 ### CI Workflow (`.github/workflows/acp-upstream-watch.yml`)
@@ -44,7 +44,7 @@ Two jobs run daily at 06:00 UTC:
 
 ### Documentation Updates
 
-- Updated `docs/ACP-RFD-TRACKER.md` to show pinned version `0.10.5`
+- Updated `docs/ACP-RFD-TRACKER.md` to show pinned version `0.11.3`
 
 ## Deliverables
 

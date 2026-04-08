@@ -22,7 +22,7 @@
 ## Primary sources (authoritative)
 
 - README.md (CLI commands)
-- cli/apps/ACP.Cli/ and cli/apps/ACP.Inspector/
+- cli/apps/ACP.Cli/
 - cli/apps/ACP.Benchmark/ and cli/examples/cli-demo/
 
 ## Key terms (seed list)

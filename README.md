@@ -13,11 +13,11 @@ It aims to give you:
 Normative behavior follows the published ACP spec and schema:
 
 - Spec source of truth (GitHub): <https://github.com/agentclientprotocol/agent-client-protocol>
-- Overview/intro (website): <https://agentclientprotocol.com/overview/introduction>
+- Overview/intro (website): <https://agentclientprotocol.com/get-started/introduction>
 
 Implementation targets:
 
-- ACP schema: `Acp.Domain.Spec.Schema` (currently `0.10.5`)
+- ACP schema: `Acp.Domain.Spec.Schema`
 - Negotiated major `protocolVersion`: `Acp.Domain.PrimitivesAndParties.ProtocolVersion.current` (currently `1`)
 
 This repo adds an architecture-first view on assurance and observability.
@@ -146,6 +146,8 @@ bash cli/scripts/cli-smoke.sh
 
 - Tooling (paths, build/run commands): [docs/tooling/acp-inspector.md](docs/tooling/acp-inspector.md)
 - FPF (external): <https://github.com/ailev/FPF> — **Note**: FPF is fetched daily to `/tmp/FPF-YYYYMMDD` for evaluation. No local copy is maintained in this repo.
+- Review handoff: [docs/reports/review-batches-20260319.md](docs/reports/review-batches-20260319.md)
+- Architecture diagrams: [docs/architecture/diagram-set-20260319.md](docs/architecture/diagram-set-20260319.md)
 - FPF Alignment: [docs/reports/fpf-alignment-evaluation-20260106.md](docs/reports/fpf-alignment-evaluation-20260106.md)
 - SDK docs entrypoint: [docs/index.md](docs/index.md)
 - SDK comparison: [docs/SDK-COMPARISON.md](docs/SDK-COMPARISON.md)
@@ -378,7 +380,7 @@ See the `cli/examples/` directory for complete integration demos:
 - **Treat the ACP spec as normative.**
   If this repo and the published spec disagree, the spec wins; open an issue and tag the discrepancy.
   - Spec source of truth (GitHub): <https://github.com/agentclientprotocol/agent-client-protocol>
-  - Overview/intro (website): <https://agentclientprotocol.com/overview/introduction>
+  - Overview/intro (website): <https://agentclientprotocol.com/get-started/introduction>
 
 - **Keep holons separate.**
   Avoid mixing protocol types, runtime IO concerns, and sentinel rules in the same module.

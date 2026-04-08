@@ -24,19 +24,39 @@ This bounded context defines the semantic frame for reasoning about **protocol e
 - Verifying implementation conformance to editions
 - Managing deprecation and sunset of old editions
 
+## Language-State Policy
+
+This context is the repo owner for `A.16` language-state discipline over ACP features and local evolution documents.
+
+### Language-state ladder
+
+- `draft/unstable`: supported experimentally, not yet safe to include in stable parity claims
+- `stable`: part of the declared compatibility contract
+- `deprecated`: still recognized, but carries explicit migration guidance and a sunset trajectory
+- `retired`: no longer part of the active contract; retained only through lineage records and historical publication surfaces
+
+### Lawful moves
+
+- `draft/unstable -> stable`: requires cited evidence, rationale, and an explicit publication update
+- `stable -> deprecated`: requires notice plus migration path
+- `deprecated -> retired`: requires prior notice and lineage continuity
+- `draft/unstable <-> reopened/respecified`: allowed only with explicit lineage and stated reason for the reopen/backoff/respecification
+
+Stable and unstable ACP features may coexist in the repo, but parity reporting must not silently mix them. Unstable support is permitted only as draft-language-state publication.
+
 ## Vocabulary (Local Glossary)
 
 ### Core Terms
 
 | Term | Local Definition | FPF Mapping | Notes |
 | ---- | ---------------- | ----------- | ----- |
-| **Edition** | An immutable snapshot of the protocol specification | (local term) | Beyond simple version |
+| **Edition** | An immutable publication snapshot of the protocol specification | (local term) | Beyond simple version; publication lineage matters |
 | **EditionId** | Content-addressable identifier for an edition | (local term) | UUID or hash |
 | **ChangeKind** | Classification of change impact: Patch/Minor/Major | SemVer-aligned | Determines compatibility |
 | **BreakingChange** | Change that violates backward compatibility | (local term) | Enumerated |
 | **DRR** | Design-Rationale Record documenting change justification | E.9 DRR | Required for all changes |
 | **ConformanceLevel** | Degree of implementation fidelity: Declared/Tested/Certified | Maps to L0/L1/L2 | Progressive assurance |
-| **CompatibilityMatrix** | Declared compatibility relationships between editions | (local term) | Protocol artifact |
+| **CompatibilityMatrix** | Publication view over declared compatibility relationships between editions | (local term) | Not a shadow protocol |
 | **SchemaHash** | Content-addressable hash of edition schema | (local term) | SHA256 |
 | **SemanticDelta** | Meaning change without schema change | (local term) | Hardest to detect |
 
@@ -44,7 +64,7 @@ This bounded context defines the semantic frame for reasoning about **protocol e
 
 | Term | Definition | Derivation |
 | ---- | ---------- | ---------- |
-| **EditionLineage** | Directed graph of edition → parentEdition | Tree of editions |
+| **EditionLineage** | Directed graph of publication lineage between editions | Tree of editions |
 | **BreakingPath** | Sequence of editions where at least one is breaking | Path with Major change |
 | **ConformanceGap** | Difference between claimed and observed conformance | Evidence of drift |
 | **EvolutionVelocity** | Rate of edition change over time | Editions per time unit |
@@ -136,6 +156,8 @@ Slots:
 Invariant: editionId ∉ backwardCompatibleWith ∪ forwardCompatibleWith ∪ breakingFrom
 Invariant: breakingFrom ∩ backwardCompatibleWith = ∅
 ```
+
+`Edition`, `EditionLineage`, and `CompatibilityMatrix` are publication-lineage artifacts. They explain how editions evolve and how compatibility is reported; they are not themselves additions to ACP unless ACP publishes a native surface for them.
 
 ### ConformanceReport
 
@@ -347,14 +369,27 @@ let classifyChange (oldSchema: Schema) (newSchema: Schema) : ChangeKind =
     | false, false -> Patch
 ```
 
-## Protocol Extensions
+## E.17 Publication Views
 
-### Edition Claim in Initialize
+This context publishes several views over the same edition artifacts:
+
+- changelogs
+- compatibility matrices
+- parity trackers
+- conformance reports
+
+These are publication faces over edition lineage and conformance evidence. They may summarize or reorganize the same underlying artifacts, but they must not become independent sources of truth with extra protocol semantics.
+
+## Local Evolution Surfaces
+
+The repo may publish local evolution artifacts and local reporting surfaces, but it should not imply that ACP itself defines them unless the ACP spec actually does so.
+
+### Example: local edition claim metadata
 
 ```typescript
 interface InitializeParams {
   protocolVersion: number;  // Existing
-  editionClaim?: EditionClaim;  // New
+  editionClaim?: EditionClaim;  // Local metadata example, not ACP-native today
   // ...
 }
 
@@ -365,10 +400,10 @@ interface EditionClaim {
 }
 ```
 
-### Edition Registry Query
+### Example: local edition registry surface
 
 ```typescript
-// Query available editions
+// Local view over edition metadata; not an ACP-native method unless ACP defines it
 interface QueryEditionsRequest {
   type: "query_editions";
   params: {
@@ -397,6 +432,8 @@ interface EditionSummary {
   };
 }
 ```
+
+These examples are local evolution-context artifacts. They are valid as documentation of how ACP Inspector might publish edition lineage, but they must not be described as part of ACP unless ACP itself standardizes them.
 
 ## Sentinel Validation Rules
 
@@ -506,7 +543,7 @@ module EvolutionValidation =
 {
   "type": "conformance_report",
   "result": {
-    "implementationId": "acp-inspector-fsharp",
+    "implementationId": "acp-inspector",
     "claimedEdition": "550e8400-e29b-41d4-a716-446655440000",
     "observedConformance": "declared",
     "deviations": [

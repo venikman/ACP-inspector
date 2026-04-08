@@ -22,6 +22,38 @@ This bounded context defines the semantic frame for reasoning about **trust and 
 - Structuring evidence that supports claims
 - Computing trust across protocol boundaries
 
+## A.6 Boundary Routing
+
+This context now treats assurance-facing statements as boundary claims that must be routed explicitly instead of blended into one prose surface.
+
+### Laws / invariants
+
+- weakest-link propagation across evidence paths
+- formality consistency constraints
+- L2 grounding requirement
+
+### Admissibility gates
+
+- non-empty scope requirements
+- freshness gates for evidence-backed claims
+- any rule that blocks an assurance classification when prerequisites are absent
+
+### Commitments / deontics
+
+- what the agent, client, or sentinel must publish when asserting assurance
+- when a report must cite `PathId`, `GroundingRef`, or freshness windows
+- when a summary must disclose that a judgement is heuristic or draft
+
+### Evidence / work-effects
+
+- emitted traces
+- `PathId` references
+- `GroundingRef` anchors
+- freshness observations
+- validation findings and assurance reports
+
+This routing follows the March 2026 FPF reading of `A.6.B`: laws, admissibility, commitments, and work-effects should be separable and should not silently depend upward on each other.
+
 ## Vocabulary (Local Glossary)
 
 ### Core Terms
@@ -42,10 +74,12 @@ This bounded context defines the semantic frame for reasoning about **trust and 
 
 | Term | Definition | Derivation |
 | ---- | ---------- | ---------- |
-| **AssuranceEnvelope** | Protocol container for F-G-R metadata | Composite of Formality + ClaimScope + Reliability |
+| **AssuranceEnvelope** | Publication-facing description of F-G-R metadata carried with or beside a message | Composite of Formality + ClaimScope + Reliability |
 | **TrustScore** | Computed tuple ⟨F, G, R⟩ for a message | Aggregation of per-claim assurance |
 | **EvidenceAnchor** | URI pointing to grounding artifact | Reference into EvidenceGraph |
 | **FreshnessWindow** | ISO8601 duration for evidence validity | Decay + timestamp |
+
+`AssuranceEnvelope` is a publication surface, not the evidence/work object itself. It describes an assurance state so it can cross protocol or report boundaries without turning the carrier into the underlying evidence graph.
 
 ## Kind Signatures
 
@@ -103,6 +137,8 @@ Slots:
 Invariant: acyclic(edges)
 Invariant: weakestLink = min(edge.level for edge in edges)
 ```
+
+`EvidencePath` is the assurance context's description of an evidence route. Trace files, CLI summaries, and reports may cite it, but those publication faces do not become the path itself.
 
 ## Invariants
 
@@ -239,6 +275,21 @@ module AssuranceValidation =
             Some (StaleEvidence evidence.id)
         else None
 ```
+
+## E.17 Multi-View Discipline
+
+Assurance output already appears in several publication faces:
+
+- trace analyses
+- CLI inspect / replay / analyze summaries
+- validation findings
+- assurance reports
+
+These are all views over the same underlying assurance artifacts. They may summarize, classify, or project the assurance state, but they must not add new normative meaning that is absent from the underlying claim, evidence, and rule surfaces.
+
+## A.16 Draft Heuristics Note
+
+Some assurance judgements are still heuristic, especially when derived from unstable ACP features or incomplete evidence surfaces. Those heuristics should be treated as draft language-state material until they are promoted into stable invariants or stable admissibility checks. Draft heuristics may be published, but they must be labeled as draft and must not be presented as canonical assurance law.
 
 ## Usage Examples
 
