@@ -66,7 +66,8 @@ This document defines the four-holon architecture for the ACP ecosystem with tes
 
 **Test Harness**:
 
-- Current: `sentinel/tests/SDK.Harness/`
+- Planned: `sentinel/tests/Runtime.Harness/` (split from `sentinel/tests/ACP.Tests.fsproj`)
+- Current: topical files in `sentinel/tests/ACP.Tests.fsproj` (`Acp.Transport.Tests.fs`, `Acp.Connection.Tests.fs`, `Acp.Codec.Tests.fs`, `Acp.ToolCalls.Tests.fs`, `Acp.Permissions.Tests.fs`, `Acp.Observability.Tests.fs`, `Acp.SessionState.Tests.fs`)
 
 ---
 
@@ -102,7 +103,8 @@ This document defines the four-holon architecture for the ACP ecosystem with tes
 
 **Test Harness**:
 
-- Current: `sentinel/tests/Validation.Harness/` and `sentinel/tests/Epistemology.Harness/`
+- Planned: `sentinel/tests/Sentinel.Harness/` (split from `sentinel/tests/ACP.Tests.fsproj`)
+- Current: topical files in `sentinel/tests/ACP.Tests.fsproj` (`Acp.Validation.Tests.fs`, `Acp.AssuranceTests.fs`, `Acp.SemanticTests.fs`, `Acp.EvolutionTests.fs`, `Acp.EvidenceGraphTests.fs`, `Acp.Eval.Tests.fs`, `Acp.RuntimeAdapter.Tests.fs`, `Acp.DomainModel.Tests.fs`)
 
 ---
 
@@ -152,6 +154,8 @@ Observability tags are duplicated in ACP.Runtime and ACP.Inspector to avoid a ru
 
 ## Test Harness Architecture
 
+> **Current state (as of 2026-04-08):** all four harnesses below are future-planned. All tests currently live in `sentinel/tests/ACP.Tests.fsproj`, topically organized by concern. The `SDK.Harness`, `Validation.Harness`, and `Epistemology.Harness` scaffold projects that existed between 2026-02-07 and 2026-04-08 were consolidated into `ACP.Tests` because they were placeholder stubs with no real test content; their intended coverage lives in the topical files listed under each holon above.
+
 ### 1. Protocol.Harness (planned)
 
 **Tests**:
@@ -166,7 +170,7 @@ Observability tags are duplicated in ACP.Runtime and ACP.Inspector to avoid a ru
 
 ---
 
-### 2. Runtime.Harness (current: `sentinel/tests/SDK.Harness/`)
+### 2. Runtime.Harness (planned)
 
 **Tests**:
 
@@ -182,7 +186,7 @@ Observability tags are duplicated in ACP.Runtime and ACP.Inspector to avoid a ru
 
 ---
 
-### 3. Sentinel.Harness (current: `sentinel/tests/Validation.Harness/` + `sentinel/tests/Epistemology.Harness/`)
+### 3. Sentinel.Harness (planned)
 
 **Tests**:
 

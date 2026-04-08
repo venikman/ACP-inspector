@@ -12,8 +12,5 @@
   <Folder Name="/sentinel/">
     <Project Path="sentinel/src/ACP.fsproj" />
     <Project Path="sentinel/tests/ACP.Tests.fsproj" />
-    <Project Path="sentinel/tests/Epistemology.Harness/Epistemology.Harness.fsproj" />
-    <Project Path="sentinel/tests/SDK.Harness/SDK.Harness.fsproj" />
-    <Project Path="sentinel/tests/Validation.Harness/Validation.Harness.fsproj" />
   </Folder>
 </Solution>

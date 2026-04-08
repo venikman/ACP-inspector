@@ -10,23 +10,6 @@ Items identified during TASK-001 audit requiring human decision or significant r
 
 ## Medium Priority
 
-### TD-002: Epistemology.Harness Stub Tests
-
-**Files**:
-
-- `sentinel/tests/Epistemology.Harness/EvalTests.fs`
-- `sentinel/tests/Epistemology.Harness/ValidationTaxonomyTests.fs`
-
-**Options**:
-
-1. Implement actual tests
-2. Remove stubs and archive project
-3. Leave as placeholder for future work
-
-**Decision Needed**: What is the purpose of Epistemology.Harness?
-
----
-
 ### TD-003: Documentation Coverage
 
 **Current**: ~29% (290 doc comments / 996 functions)  
@@ -85,7 +68,17 @@ Files approaching refactoring threshold (>500 lines):
   - All 314 tests passing
 - [x] Format new BC modules (fantomas) - 2026-01-06
 - [x] Audit report generated - 2026-01-06
+- [x] **TD-002: Epistemology.Harness Stub Tests** - 2026-04-08
+  - Removed all three scaffold harness projects (`SDK.Harness`,
+    `Validation.Harness`, `Epistemology.Harness`) — 13 placeholder
+    `Assert.True(true)` stubs with no real content.
+  - Moved the 3 real tests from `Epistemology.Harness/DomainModelTests.fs`
+    into `sentinel/tests/Acp.DomainModel.Tests.fs` in the main test suite.
+  - Updated `ACP-inspector.slnx`, `.github/workflows/ci.yml`,
+    `.pre-commit-config.yaml`, and architecture docs.
+  - Net result: 412 total tests → 399 total tests, 0 skipped, 0 stubs.
+    The "missing" 13 were always no-ops.
 
 ---
 
-Last Updated: 2026-01-06
+Last Updated: 2026-04-08

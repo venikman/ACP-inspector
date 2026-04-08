@@ -239,11 +239,23 @@ cli/apps/                   # CLI entrypoints
 
 ```text
 sentinel/tests/
-├── ACP.Tests.fsproj         # Main test suite
-├── SDK.Harness/             # Runtime/SDK tests
-├── Validation.Harness/      # Validation lanes + findings
-└── Epistemology.Harness/    # Assurance/evidence tests
+├── ACP.Tests.fsproj         # Main (and currently only) test suite.
+│                            # Topically organized: Acp.Transport.Tests.fs,
+│                            # Acp.Codec.Tests.fs, Acp.Permissions.Tests.fs,
+│                            # Acp.Validation.Tests.fs, Acp.SemanticTests.fs,
+│                            # Acp.EvolutionTests.fs, Acp.EvidenceGraphTests.fs,
+│                            # Acp.DomainModel.Tests.fs, and others.
+└── Pbt/                     # Property-based tests (FsCheck) co-located
+                             # inside ACP.Tests.fsproj via explicit Compile
+                             # Include entries.
 ```
+
+> The scaffold harness projects (`SDK.Harness`, `Validation.Harness`,
+> `Epistemology.Harness`) were removed on 2026-04-08 — they were placeholder
+> stubs with `Assert.True(true)` bodies. Their intended coverage lives in
+> topical files inside `ACP.Tests.fsproj`. See
+> `docs/architecture/product-structure.md` for the long-term plan to split
+> into per-holon harnesses when the repo structure is extracted.
 
 ## Tools
 
