@@ -1657,16 +1657,20 @@ module internal CodecAcpJson =
             let! sidNode = get "sessionId" o
             let! sessionId = decodeSessionId sidNode
             let! cwd = get "cwd" o |> Result.bind asString
-            let! msNode = get "mcpServers" o
-            let! arr = asArray msNode
 
             let servers =
-                arr
-                |> Seq.choose (fun n ->
-                    match n with
-                    | null -> None
-                    | n -> decodeMcpServer n |> Result.toOption)
-                |> Seq.toList
+                match tryGet "mcpServers" o with
+                | None -> []
+                | Some msNode ->
+                    match asArray msNode with
+                    | Error _ -> []
+                    | Ok arr ->
+                        arr
+                        |> Seq.choose (fun n ->
+                            match n with
+                            | null -> None
+                            | n -> decodeMcpServer n |> Result.toOption)
+                        |> Seq.toList
 
             let additionalDirectories =
                 match tryGet "additionalDirectories" o with

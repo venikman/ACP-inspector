@@ -778,3 +778,23 @@ module CodecTests =
             Assert.True(r.agentCapabilities.sessionCapabilities.resume.IsSome)
             Assert.True(r.agentCapabilities.sessionCapabilities.additionalDirectories.IsSome)
         | other -> failwithf "unexpected message %A" other
+
+    [<Fact>]
+    let ``decode session resume without mcpServers succeeds with empty lists`` () =
+        let state0 = Codec.CodecState.empty
+
+        let resumeReq =
+            """{"jsonrpc":"2.0","id":"r2","method":"session/resume","params":{"sessionId":"s-1","cwd":"/tmp"}}"""
+
+        let state1, msg1 =
+            match Codec.decode Codec.Direction.FromClient state0 resumeReq with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg1 with
+        | Message.FromClient(ClientToAgentMessage.SessionResume p) ->
+            Assert.Equal<McpServer list>([], p.mcpServers)
+            Assert.Equal<string list>([], p.additionalDirectories)
+        | other -> failwithf "unexpected message %A" other
+
+        Assert.True(state1.pendingClientRequests |> Map.containsKey (RequestId.String "r2"))
