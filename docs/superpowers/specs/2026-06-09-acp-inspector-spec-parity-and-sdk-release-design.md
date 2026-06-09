@@ -1,7 +1,8 @@
 ---
 title: ACP Inspector — Spec Parity (0.13.6) & SDK Release (Program Phase 1)
 date: 2026-06-09
-status: draft (awaiting spec review)
+status: draft (revised after PR #42 review)
+revised: 2026-06-09 — corrected A3 session/resume shape, A6 usage_update shape (used/size/cost), §5.4 schema path (schema/schema.json, not v1), §8 drift-issue reopen — all re-verified against schema/schema.json @ tag v0.13.6
 author: brainstorming session
 target-branch: feat/acp-0.13.6-parity-and-sdk-release
 target-pr: "feat(acp): 0.13.6 stable parity + SDK release readiness"
@@ -134,14 +135,21 @@ cancelled. Sentinel: reject `session/close` when capability not advertised,
 and reject post-close traffic on a closed session. Remove `session/close`
 from the codec Ext catch-all (`AcpJson.fs:2877`).
 
-**A3 — `session/resume`.** `ResumeSessionRequest { sessionId; _meta? }` →
-`ResumeSessionResponse { _meta? }`. Resumes an existing session **without
-replaying previous messages** (contrast `session/load`). Gated by
-`sessionCapabilities.resume`. **Source caution:** the rendered docs site
-shows a richer request (`cwd`/`mcpServers`/`additionalDirectories`) and a
-non-empty response — that render is **stale**; the v0.13.6 `schema.json` is
-authoritative (`sessionId`-only request, `_meta`-only response). `resume`
-also carries `additionalDirectories` per §5.4 schema — coordinate with A7.
+**A3 — `session/resume`.** Verified against `schema/schema.json` @ tag
+`v0.13.6` (raw `jq`). `ResumeSessionRequest` = `{ sessionId (req), cwd
+(req), mcpServers?, additionalDirectories?, _meta? }` — i.e. the **same
+shape as `session/load`** minus message replay; it is **not**
+`sessionId`-only. `ResumeSessionResponse` = `{ modes?: SessionModeState,
+configOptions?: SessionConfigOption[], _meta? }` — it **does** carry the
+stable `modes` and `configOptions` (both already modelled in our domain, so
+reuse them; both flagged `x-deserialize-default-on-error`). Semantics:
+resumes an existing session **without replaying previous messages**
+(contrast `session/load`). Gated by `sessionCapabilities.resume` (marker
+object). Reuse the existing `cwd`/`mcpServers` codec paths from
+`session/load`; coordinate `additionalDirectories` with A7.
+*(Correction: an earlier draft asserted a `sessionId`-only request / `_meta`-only
+response and blamed a stale docs render — that was a misread; the tagged
+`schema/schema.json` is authoritative and shows the load-like shape above.)*
 
 **A4 — `session/delete`.** `DeleteSessionRequest { sessionId; _meta? }` →
 `DeleteSessionResponse { _meta? }`; mirrors `session/list` mechanically
@@ -160,18 +168,24 @@ method-name maps (`Connection.fs:35,74-75`). Encode `auth.logout` such that
 absent ⇒ unsupported, so existing 0.11.3 `initialize` roundtrips
 (`Acp.Codec.Tests.fs:69`) still pass. Protocol: allow only from `Ready`.
 
-**A6 — session usage updates.** Add `type Usage = { inputTokens: int64;
-outputTokens: int64; cacheCreationInputTokens: int64 option;
-cacheReadInputTokens: int64 option; _meta: JsonObject option }` and a
-`SessionUpdate.UsageUpdate of Usage` case **before** the Ext catch-all
-(`Domain.fs:~700`). Codec: `"usage_update"` decode arm (required
-input/output tokens, optional cache fields, tolerate extras) + encode arm;
-remove the opaque usage passthrough (`AcpJson.fs:~1710`, `:3426-3434`).
-Protocol: non-state-changing notification valid in the streaming/Prompting
-phase. Sentinel: new usage lane (input/output present & non-negative; cache
-fields non-negative when present). **Couples with §5.3.1** (drop the
-spec-drift `usage` field). Flip `ACP-RFD-TRACKER.md` usage row
-Unstable→Stable.
+**A6 — session usage updates.** Verified against `schema/schema.json` @ tag
+`v0.13.6` (raw `jq`). The `session/update` `"usage_update"` variant carries
+`UsageUpdate` = `{ used: uint64 (req), size: uint64 (req), cost?: Cost,
+_meta? }`, where **`used`** = tokens currently in context and **`size`** =
+total context-window size — **not** `inputTokens`/`outputTokens`/cache
+fields. Add `type Cost = { amount: float; currency: string }` (both
+required) and `type Usage = { used: int64; size: int64; cost: Cost option;
+_meta: JsonObject option }`, plus a `SessionUpdate.UsageUpdate of Usage`
+case **before** the Ext catch-all (`Domain.fs:~700`). Codec: `"usage_update"`
+decode arm (required `used`/`size`, optional `cost`, tolerate extras) +
+encode arm; remove the opaque usage passthrough (`AcpJson.fs:~1710`,
+`:3426-3434`). Protocol: non-state-changing notification valid in the
+streaming/Prompting phase. Sentinel: usage lane (`used`/`size` present &
+non-negative; when `cost` is set, require `cost.amount` + `cost.currency`).
+**Couples with §5.3.1** (drop the spec-drift `usage` field). Flip
+`ACP-RFD-TRACKER.md` usage row Unstable→Stable.
+*(Correction: an earlier draft used an `inputTokens`/`outputTokens`/cache
+record — that shape is not in the v0.13.6 schema.)*
 
 **A7 — `additionalDirectories`.** Optional `string list` (absolute paths,
 empty == omitted) on `NewSessionParams`, `LoadSessionParams`,
@@ -228,14 +242,18 @@ visibility only.
 
 ### 5.4 Schema-source discipline
 
-The `main`-branch raw `schema.json` **404s**; parity work MUST resolve
-shapes against the **version tag**:
+Resolve every shape against the **version-tag** schema, which at `v0.13.6`
+is reachable at:
 `https://raw.githubusercontent.com/agentclientprotocol/agent-client-protocol/v0.13.6/schema/schema.json`
-(or the GitHub contents API with `Accept: application/vnd.github.raw`).
-Treat the rendered docs site as secondary — it was demonstrably stale for
-`session/resume` (§5.3, A3). Stable surface = `schema/v1/schema.json`;
-unstable surface = `schema.unstable.json` (used only to confirm §5.2 items
-are *not* stable).
+(verified **HTTP 200**, ~172 KB). **Both** the `main`-branch raw
+`schema.json` *and* the tagged `schema/v1/schema.json` return **404**
+(verified) — do not reference either; `schema/schema.json` at the tag is the
+canonical stable surface. The unstable surface is `schema.unstable.json`
+(used only to confirm §5.2 items are *not* stable). Treat the rendered docs
+site as **secondary and sometimes stale**, and prefer raw `jq` over a
+summarizing fetch for exact `required`/field lists — a summarizing fetch
+misread `session/resume` and `usage_update` during the initial audit; the
+A3/A6 corrections came from raw extraction.
 
 ### 5.5 Pin bump
 
@@ -291,11 +309,14 @@ scope-reduction spec for background.
 lines 77-82: the "create issue on drift" step dedupes on a version-agnostic
 title (`"ACP spec update available: in:title"`) and **early-exits** with no
 update branch, so the first issue (#38, v0.11.4) suppressed all later alerts
-and was never refreshed. **Fix:** capture the existing issue number
-(`--jq '.[0].number // empty'`); if present, `gh issue edit "$NUM" --title
-"ACP spec update available: v$LATEST" --body-file "$BODY_FILE"` (and
-optionally comment), else fall through to `gh issue create`. One canonical
-drift issue that always reflects the newest upstream version.
+and was never refreshed. **Fix:** capture the existing issue number across
+**both open and closed** states (`--state all --jq '.[0].number // empty'`);
+if present, **`gh issue reopen "$NUM"` when it is closed** (an
+edited-but-closed issue stays invisible — flagged in review), then `gh issue
+edit "$NUM" --title "ACP spec update available: v$LATEST" --body-file
+"$BODY_FILE"` (and optionally comment); else fall through to `gh issue
+create`. One canonical drift issue, always reopened and refreshed to the
+newest upstream version.
 
 **Issue disposition.**
 
@@ -344,7 +365,7 @@ canonical issue).
 | Risk | Mitigation |
 |------|------------|
 | Capability shape mis-modelled as bool vs marker object | §5.4 rule: model against the v0.13.6 *tagged* schema; mirror existing `list` marker. |
-| Stale docs-site render misleads implementation (e.g. resume) | Schema.json @ tag is the only source of truth; docs site secondary. |
+| Single-source shape error (docs site, or one agent's summarizing fetch) | Resolve against the reachable tagged `schema/schema.json` via raw `jq`; the A3 `resume` and A6 `usage_update` corrections came from exactly this after review caught the audit's misreads. |
 | Dropping `SessionPromptResult.usage` breaks asserting tests | Tracked explicitly in §5.3.1 with the exact test/construction sites to update. |
 | Parity workstream large enough to overrun one plan | §12 splits execution at the green-tests checkpoint; A is independent of C. |
 | Public NuGet publish is irreversible | §7 gates the actual push behind explicit user approval; dry-run only by default. |
