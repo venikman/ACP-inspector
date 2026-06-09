@@ -465,7 +465,7 @@ module ValidationTests =
         | None -> failwith "expected ACP.SESSION.INVALID_MODE_ID finding"
 
     [<Fact>]
-    let ``close trace ends in Phase.Closed`` () =
+    let ``close trace stays Ready and frees the closed session`` () =
         let sid = SessionId "s-close-1"
 
         let trace: Message list =
@@ -485,8 +485,57 @@ module ValidationTests =
         Assert.True(result.findings.IsEmpty)
 
         match result.finalPhase with
-        | Ok(Phase.Closed _) -> ()
-        | other -> failwithf "expected Phase.Closed, got %A" other
+        | Ok(Phase.Ready ctx) ->
+            // Session freed on close request
+            Assert.False(ctx.sessions |> Map.containsKey sid)
+        | other -> failwithf "expected Phase.Ready, got %A" other
+
+    [<Fact>]
+    let ``closing one session keeps the connection ready for others`` () =
+        let sid1 = SessionId "s-multi-1"
+        let sid2 = SessionId "s-multi-2"
+        let sid3 = SessionId "s-multi-3"
+
+        let trace: Message list =
+            [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
+              Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
+              // create s1
+              Message.FromClient(
+                  ClientToAgentMessage.SessionNew
+                      { cwd = "."
+                        mcpServers = []
+                        additionalDirectories = [] }
+              )
+              Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid1 None))
+              // create s2
+              Message.FromClient(
+                  ClientToAgentMessage.SessionNew
+                      { cwd = "."
+                        mcpServers = []
+                        additionalDirectories = [] }
+              )
+              Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid2 None))
+              // close s1
+              Message.FromClient(ClientToAgentMessage.SessionClose { sessionId = sid1; _meta = None })
+              Message.FromAgent(AgentToClientMessage.SessionCloseResult { _meta = None })
+              // create s3 after s1 was closed — connection must still be Ready
+              Message.FromClient(
+                  ClientToAgentMessage.SessionNew
+                      { cwd = "."
+                        mcpServers = []
+                        additionalDirectories = [] }
+              )
+              Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid3 None)) ]
+
+        let result = runWithValidation sid1 spec trace true None None
+        Assert.True(result.findings.IsEmpty)
+
+        match result.finalPhase with
+        | Ok(Phase.Ready ctx) ->
+            Assert.False(ctx.sessions |> Map.containsKey sid1)
+            Assert.True(ctx.sessions |> Map.containsKey sid2)
+            Assert.True(ctx.sessions |> Map.containsKey sid3)
+        | other -> failwithf "expected Phase.Ready, got %A" other
 
     [<Fact>]
     let ``delete trace stays in Phase.Ready and removes session`` () =
