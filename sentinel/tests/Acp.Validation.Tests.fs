@@ -604,20 +604,32 @@ module ValidationTests =
 
     [<Fact>]
     let ``capability-gated session methods require advertisement`` () =
-        // ACP 0.13.6 gates resume/close/delete on advertised session capabilities;
-        // using one without the corresponding capability advertised must surface a
-        // sentinel warning.  session/list and session/load are intentionally NOT gated.
+        // The schema gates each of these on an advertised capability ("Only available
+        // if the Agent supports ..."); using one without it must surface a sentinel
+        // warning.
         let sid = SessionId "s-nocap"
 
         let bareInit: InitializeResult =
             { initResult with
                 agentCapabilities =
                     { agentCaps with
+                        loadSession = false
                         sessionCapabilities = SessionCapabilities.empty
                         auth = AgentAuthCapabilities.empty } }
 
         let gated: (string * ClientToAgentMessage) list =
-            [ "session/resume",
+            [ "session/list",
+              ClientToAgentMessage.SessionList
+                  { cursor = None
+                    cwd = None
+                    _meta = None }
+              "session/load",
+              ClientToAgentMessage.SessionLoad
+                  { sessionId = sid
+                    cwd = "."
+                    mcpServers = []
+                    additionalDirectories = [] }
+              "session/resume",
               ClientToAgentMessage.SessionResume
                   { sessionId = sid
                     cwd = "."

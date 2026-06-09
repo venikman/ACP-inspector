@@ -476,13 +476,16 @@ module Validation =
     /// Session/auth-lane invariant: capability-gated client requests must not be sent
     /// unless the agent advertised the corresponding capability in its InitializeResult.
     ///
-    /// Gated methods (added in ACP 0.13.6):
+    /// Gated methods (schema: "Only available if the Agent supports ..."):
+    ///   session/list    → agentInit.agentCapabilities.sessionCapabilities.list
+    ///   session/load    → agentInit.agentCapabilities.loadSession
     ///   session/resume  → agentInit.agentCapabilities.sessionCapabilities.resume
     ///   session/close   → agentInit.agentCapabilities.sessionCapabilities.close
     ///   session/delete  → agentInit.agentCapabilities.sessionCapabilities.delete
     ///   logout          → agentInit.agentCapabilities.auth.logout
     ///
-    /// Intentionally NOT gated: session/list (pre-existing, never gated by this codebase).
+    /// `additionalDirectories` on new/load/resume is likewise gated on
+    /// sessionCapabilities.additionalDirectories.
     let private checkCapabilityGatedRequests (trace: SessionTrace) : ValidationFinding list =
         // Extract the InitializeResult from the trace (first occurrence wins).
         let agentInitOpt =
@@ -519,6 +522,16 @@ module Validation =
             trace.messages
             |> List.iteri (fun idx msg ->
                 match msg with
+                | Message.FromClient(ClientToAgentMessage.SessionList _) ->
+                    if caps.sessionCapabilities.list.IsNone then
+                        addFinding
+                            idx
+                            Lane.Session
+                            Severity.Warning
+                            "ACP.SESSION.CAPABILITY_NOT_ADVERTISED"
+                            "session/list was called but the agent did not advertise sessionCapabilities.list."
+                            None
+
                 | Message.FromClient(ClientToAgentMessage.SessionNew p) ->
                     if
                         not (List.isEmpty p.additionalDirectories)
@@ -533,6 +546,15 @@ module Validation =
                             None
 
                 | Message.FromClient(ClientToAgentMessage.SessionLoad p) ->
+                    if not caps.loadSession then
+                        addFinding
+                            idx
+                            Lane.Session
+                            Severity.Warning
+                            "ACP.SESSION.CAPABILITY_NOT_ADVERTISED"
+                            "session/load was called but the agent did not advertise loadSession."
+                            (Some p.sessionId)
+
                     if
                         not (List.isEmpty p.additionalDirectories)
                         && caps.sessionCapabilities.additionalDirectories.IsNone
