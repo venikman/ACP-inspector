@@ -860,14 +860,15 @@ module ConnectionTests =
 
             // Bounded wait: a missing dispatch arm means no reply ever arrives,
             // which would otherwise hang the test run instead of failing it.
-            let authTask = client.AuthenticateAsync({ methodId = "api-key" })
-            let! completed = Task.WhenAny(authTask :> Task, Task.Delay(5000))
+            try
+                let! authResult =
+                    client.AuthenticateAsync({ methodId = "api-key" }).WaitAsync(TimeSpan.FromSeconds(5.0))
 
-            Assert.True(obj.ReferenceEquals(completed, authTask), "Agent never responded to authenticate request")
-
-            match! authTask with
-            | Ok _ -> ()
-            | Error e -> failwithf "Authenticate failed: %A" e
+                match authResult with
+                | Ok _ -> ()
+                | Error e -> failwithf "Authenticate failed: %A" e
+            with :? TimeoutException ->
+                failwith "Agent never responded to authenticate request"
 
             Assert.Equal(Some "api-key", receivedMethodId)
 
