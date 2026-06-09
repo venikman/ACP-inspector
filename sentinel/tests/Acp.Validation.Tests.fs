@@ -568,6 +568,25 @@ module ValidationTests =
         | other -> failwithf "expected Phase.Ready, got %A" other
 
     [<Fact>]
+    let ``delete of a saved session from session list is allowed`` () =
+        let sid = SessionId "s-saved-1"
+
+        let trace: Message list =
+            [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
+              Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
+              // s-saved-1 exists only in the agent's persistent store (session/list);
+              // it was never created/loaded/resumed on this connection.
+              Message.FromClient(ClientToAgentMessage.SessionDelete { sessionId = sid; _meta = None })
+              Message.FromAgent(AgentToClientMessage.SessionDeleteResult { sessionId = sid; _meta = None }) ]
+
+        let result = runWithValidation sid spec trace true None None
+        Assert.True(result.findings.IsEmpty)
+
+        match result.finalPhase with
+        | Ok(Phase.Ready ctx) -> Assert.False(ctx.sessions |> Map.containsKey sid)
+        | other -> failwithf "expected Phase.Ready, got %A" other
+
+    [<Fact>]
     let ``delete error keeps the session usable`` () =
         let sid = SessionId "s-delete-err"
         let deleteReq: DeleteSessionRequest = { sessionId = sid; _meta = None }
@@ -808,3 +827,32 @@ module ValidationTests =
             result.findings |> List.filter (fun f -> f.severity = Severity.Error)
 
         Assert.True(errorFindings.IsEmpty)
+
+    [<Fact>]
+    let ``delete of a never-opened (listed) session is accepted`` () =
+        // A saved session returned by session/list may not have been opened on this connection
+        // (i.e., no session/new for it). The protocol must accept session/delete for such sessions
+        // without raising UnknownSession.
+        let listedSid = SessionId "s-listed-only"
+
+        let trace: Message list =
+            [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
+              Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
+              // Delete a session that was never created/loaded/resumed on this connection.
+              Message.FromClient(ClientToAgentMessage.SessionDelete { sessionId = listedSid; _meta = None })
+              Message.FromAgent(AgentToClientMessage.SessionDeleteResult { sessionId = listedSid; _meta = None }) ]
+
+        let result = runWithValidation listedSid spec trace true None None
+
+        match result.finalPhase with
+        | Ok(Phase.Ready _) -> ()
+        | other -> failwithf "expected Phase.Ready, got %A" other
+
+        let unknownSessionFindings =
+            result.findings
+            |> List.filter (fun f ->
+                match f.failure with
+                | Some failure -> failure.code = "ACP.PROTOCOL.UNKNOWN_SESSION"
+                | None -> false)
+
+        Assert.True(unknownSessionFindings.IsEmpty, "expected no UnknownSession findings for delete of listed session")

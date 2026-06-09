@@ -402,12 +402,10 @@ module Protocol =
                     | TurnState.PromptInFlight _ -> Ok(Phase.Ready ctx)
                     | TurnState.Idle _ -> Error(ProtocolError.NoPromptInFlight s.sessionId)
 
-            // session/delete request: session must exist; removal is deferred to the result
-            // so a rejected delete leaves the session usable.
-            | Phase.Ready ctx, Message.FromClient(ClientToAgentMessage.SessionDelete req) ->
-                match ctx.sessions |> Map.tryFind req.sessionId with
-                | None -> Error(ProtocolError.UnknownSession req.sessionId)
-                | Some _ -> Ok(Phase.Ready ctx)
+            // session/delete request: state-neutral — the session may be a saved (listed) session
+            // that was never opened on this connection and therefore absent from ctx.sessions.
+            // Removal is deferred to the result so a rejected delete leaves the session usable.
+            | Phase.Ready ctx, Message.FromClient(ClientToAgentMessage.SessionDelete _) -> Ok(Phase.Ready ctx)
 
             // session/delete result: agent confirmed; free the session (id reattached from the request).
             | Phase.Ready ctx, Message.FromAgent(AgentToClientMessage.SessionDeleteResult r) ->
