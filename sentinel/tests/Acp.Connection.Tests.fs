@@ -59,6 +59,8 @@ module ConnectionTests =
                   onNewSession = fun _ -> task { return Ok(mkNewSessionResult (SessionId "test-session")) }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
+                  onCloseSession = fun _ -> task { return Error "not implemented" }
+                  onDeleteSession = fun _ -> task { return Error "not implemented" }
                   onPrompt =
                     fun p ->
                         task {
@@ -118,6 +120,8 @@ module ConnectionTests =
                   onNewSession = fun _ -> task { return Ok(mkNewSessionResult (SessionId "new-session-123")) }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
+                  onCloseSession = fun _ -> task { return Error "not implemented" }
+                  onDeleteSession = fun _ -> task { return Error "not implemented" }
                   onPrompt = fun _ -> task { return Error "not implemented" }
                   onCancel = fun _ -> task { () }
                   onSetMode = fun _ -> task { return Error "not implemented" }
@@ -169,6 +173,8 @@ module ConnectionTests =
                                       _meta = None }
                         }
                   onListSessions = fun _ -> task { return Error "not implemented" }
+                  onCloseSession = fun _ -> task { return Error "not implemented" }
+                  onDeleteSession = fun _ -> task { return Error "not implemented" }
                   onPrompt = fun _ -> task { return Error "not implemented" }
                   onCancel = fun _ -> task { () }
                   onSetMode = fun _ -> task { return Error "not implemented" }
@@ -210,7 +216,18 @@ module ConnectionTests =
             let (clientTransport, agentTransport) = Transport.DuplexTransport.CreatePair()
 
             let handlers: Connection.AgentHandlers =
-                { onInitialize = fun _ -> task { return Ok(mkInitializeResult true { list = Some { _meta = None } }) }
+                { onInitialize =
+                    fun _ ->
+                        task {
+                            return
+                                Ok(
+                                    mkInitializeResult
+                                        true
+                                        { list = Some { _meta = None }
+                                          close = None
+                                          delete = None }
+                                )
+                        }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
                   onListSessions =
@@ -227,6 +244,8 @@ module ConnectionTests =
                                       nextCursor = None
                                       _meta = None }
                         }
+                  onCloseSession = fun _ -> task { return Error "not implemented" }
+                  onDeleteSession = fun _ -> task { return Error "not implemented" }
                   onPrompt = fun _ -> task { return Error "not implemented" }
                   onCancel = fun _ -> task { () }
                   onSetMode = fun _ -> task { return Error "not implemented" }
@@ -274,6 +293,8 @@ module ConnectionTests =
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
+                  onCloseSession = fun _ -> task { return Error "not implemented" }
+                  onDeleteSession = fun _ -> task { return Error "not implemented" }
                   onPrompt = fun _ -> task { return Error "not implemented" }
                   onCancel = fun _ -> task { () }
                   onSetMode = fun _ -> task { return Error "not implemented" }
@@ -349,6 +370,8 @@ module ConnectionTests =
                   onNewSession = fun _ -> task { return Ok(mkNewSessionResult (SessionId "s1")) }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
+                  onCloseSession = fun _ -> task { return Error "not implemented" }
+                  onDeleteSession = fun _ -> task { return Error "not implemented" }
                   onPrompt =
                     fun p ->
                         task {
@@ -415,6 +438,8 @@ module ConnectionTests =
                   onNewSession = fun _ -> task { return Error "not called" }
                   onLoadSession = fun _ -> task { return Error "not called" }
                   onListSessions = fun _ -> task { return Error "not called" }
+                  onCloseSession = fun _ -> task { return Error "not called" }
+                  onDeleteSession = fun _ -> task { return Error "not called" }
                   onPrompt = fun _ -> task { return Error "not called" }
                   onCancel = fun _ -> task { () }
                   onSetMode = fun _ -> task { return Error "not called" }
@@ -453,6 +478,8 @@ module ConnectionTests =
                   onNewSession = fun _ -> task { return Error "not called" }
                   onLoadSession = fun _ -> task { return Error "not called" }
                   onListSessions = fun _ -> task { return Error "not called" }
+                  onCloseSession = fun _ -> task { return Error "not called" }
+                  onDeleteSession = fun _ -> task { return Error "not called" }
                   onPrompt = fun _ -> task { return Error "not called" }
                   onCancel =
                     fun p ->
@@ -488,6 +515,120 @@ module ConnectionTests =
             do! Task.Delay(50)
 
             Assert.True(cancelReceived)
+
+            do! agent.StopAsync()
+        }
+
+    [<Fact>]
+    let ``Client can close session after initialization`` () =
+        task {
+            let (clientTransport, agentTransport) = Transport.DuplexTransport.CreatePair()
+
+            let handlers: Connection.AgentHandlers =
+                { onInitialize =
+                    fun _ ->
+                        task {
+                            return
+                                Ok(
+                                    mkInitializeResult
+                                        true
+                                        { list = None
+                                          close = Some { _meta = None }
+                                          delete = None }
+                                )
+                        }
+                  onNewSession = fun _ -> task { return Error "not implemented" }
+                  onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onListSessions = fun _ -> task { return Error "not implemented" }
+                  onCloseSession = fun p -> task { return Ok { _meta = None } }
+                  onDeleteSession = fun _ -> task { return Error "not implemented" }
+                  onPrompt = fun _ -> task { return Error "not implemented" }
+                  onCancel = fun _ -> task { () }
+                  onSetMode = fun _ -> task { return Error "not implemented" }
+                  onSetConfigOption = fun _ -> task { return Error "not implemented" } }
+
+            let agent = Connection.AgentConnection(agentTransport, handlers)
+            let client = Connection.ClientConnection(clientTransport)
+
+            let _ = agent.StartListening()
+
+            let! _ =
+                client.InitializeAsync(
+                    { protocolVersion = ProtocolVersion.current
+                      clientCapabilities =
+                        { fs =
+                            { readTextFile = true
+                              writeTextFile = true }
+                          terminal = true }
+                      clientInfo = None }
+                )
+
+            let! closed =
+                client.CloseSessionAsync(
+                    { sessionId = SessionId "sess-1"
+                      _meta = None }
+                )
+
+            match closed with
+            | Ok _ -> ()
+            | Error e -> failwithf "CloseSession failed: %A" e
+
+            do! agent.StopAsync()
+        }
+
+    [<Fact>]
+    let ``Client can delete session after initialization`` () =
+        task {
+            let (clientTransport, agentTransport) = Transport.DuplexTransport.CreatePair()
+
+            let handlers: Connection.AgentHandlers =
+                { onInitialize =
+                    fun _ ->
+                        task {
+                            return
+                                Ok(
+                                    mkInitializeResult
+                                        true
+                                        { list = None
+                                          close = None
+                                          delete = Some { _meta = None } }
+                                )
+                        }
+                  onNewSession = fun _ -> task { return Error "not implemented" }
+                  onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onListSessions = fun _ -> task { return Error "not implemented" }
+                  onCloseSession = fun _ -> task { return Error "not implemented" }
+                  onDeleteSession = fun p -> task { return Ok { _meta = None } }
+                  onPrompt = fun _ -> task { return Error "not implemented" }
+                  onCancel = fun _ -> task { () }
+                  onSetMode = fun _ -> task { return Error "not implemented" }
+                  onSetConfigOption = fun _ -> task { return Error "not implemented" } }
+
+            let agent = Connection.AgentConnection(agentTransport, handlers)
+            let client = Connection.ClientConnection(clientTransport)
+
+            let _ = agent.StartListening()
+
+            let! _ =
+                client.InitializeAsync(
+                    { protocolVersion = ProtocolVersion.current
+                      clientCapabilities =
+                        { fs =
+                            { readTextFile = true
+                              writeTextFile = true }
+                          terminal = true }
+                      clientInfo = None }
+                )
+
+            let! deleted =
+                client.DeleteSessionAsync(
+                    { sessionId = SessionId "sess-1"
+                      _meta = None }
+                )
+
+            match deleted with
+            | Ok _ -> ()
+            | Error e -> failwithf "DeleteSession failed: %A" e
 
             do! agent.StopAsync()
         }

@@ -90,13 +90,24 @@ module Domain =
         /// Capability marker for `session/list`.
         type SessionListCapabilities = { _meta: JsonObject option }
 
+        /// Capability marker for `session/close`.
+        type SessionCloseCapabilities = { _meta: JsonObject option }
+
+        /// Capability marker for `session/delete`.
+        type SessionDeleteCapabilities = { _meta: JsonObject option }
+
         /// Session capabilities supported by the agent.
         type SessionCapabilities =
-            { list: SessionListCapabilities option }
+            { list: SessionListCapabilities option
+              close: SessionCloseCapabilities option
+              delete: SessionDeleteCapabilities option }
 
         [<RequireQualifiedAccess>]
         module SessionCapabilities =
-            let empty = { list = None }
+            let empty =
+                { list = None
+                  close = None
+                  delete = None }
 
         /// Capability marker for the `logout` method.
         type LogoutCapabilities = { _meta: JsonObject option }
@@ -363,6 +374,22 @@ module Domain =
               configOptions: SessionConfigOption list option
               modes: SessionModeState option
               _meta: JsonObject option }
+
+        /// Params for session/close (client -> agent).
+        type CloseSessionRequest =
+            { sessionId: SessionId
+              _meta: JsonObject option }
+
+        /// Result for session/close (agent -> client). Wire result is empty.
+        type CloseSessionResponse = { _meta: JsonObject option }
+
+        /// Params for session/delete (client -> agent).
+        type DeleteSessionRequest =
+            { sessionId: SessionId
+              _meta: JsonObject option }
+
+        /// Result for session/delete (agent -> client). Wire result is empty.
+        type DeleteSessionResponse = { _meta: JsonObject option }
 
     // -------------
     // Session context (runtime helper)
@@ -851,6 +878,8 @@ module Domain =
             | SessionNew of NewSessionParams
             | SessionList of ListSessionsRequest
             | SessionLoad of LoadSessionParams
+            | SessionClose of CloseSessionRequest
+            | SessionDelete of DeleteSessionRequest
             | SessionPrompt of SessionPromptParams
             | SessionSetMode of SetSessionModeParams
             | SessionSetConfigOption of SetSessionConfigOptionRequest
@@ -893,6 +922,8 @@ module Domain =
             | SessionNewResult of NewSessionResult
             | SessionListResult of ListSessionsResponse
             | SessionLoadResult of LoadSessionResult
+            | SessionCloseResult of CloseSessionResponse
+            | SessionDeleteResult of DeleteSessionResponse
             | SessionPromptResult of SessionPromptResult
             | SessionSetModeResult of SetSessionModeResult
             | SessionSetConfigOptionResult of SetSessionConfigOptionResponse
@@ -905,6 +936,8 @@ module Domain =
             | SessionNewError of error: Error
             | SessionListError of error: Error
             | SessionLoadError of request: LoadSessionParams * error: Error
+            | SessionCloseError of request: CloseSessionRequest * error: Error
+            | SessionDeleteError of request: DeleteSessionRequest * error: Error
             | SessionPromptError of request: SessionPromptParams * error: Error
             | SessionSetModeError of request: SetSessionModeParams * error: Error
             | SessionSetConfigOptionError of request: SetSessionConfigOptionRequest * error: Error

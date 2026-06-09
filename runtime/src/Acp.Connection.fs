@@ -37,6 +37,8 @@ module Connection =
         | ClientToAgentMessage.SessionNew _ -> "session/new"
         | ClientToAgentMessage.SessionList _ -> "session/list"
         | ClientToAgentMessage.SessionLoad _ -> "session/load"
+        | ClientToAgentMessage.SessionClose _ -> "session/close"
+        | ClientToAgentMessage.SessionDelete _ -> "session/delete"
         | ClientToAgentMessage.SessionPrompt _ -> "session/prompt"
         | ClientToAgentMessage.SessionSetMode _ -> "session/set_mode"
         | ClientToAgentMessage.SessionSetConfigOption _ -> "session/set_config_option"
@@ -82,6 +84,10 @@ module Connection =
         | AgentToClientMessage.SessionListError _ -> "session/list"
         | AgentToClientMessage.SessionLoadResult _ -> "session/load"
         | AgentToClientMessage.SessionLoadError _ -> "session/load"
+        | AgentToClientMessage.SessionCloseResult _ -> "session/close"
+        | AgentToClientMessage.SessionCloseError _ -> "session/close"
+        | AgentToClientMessage.SessionDeleteResult _ -> "session/delete"
+        | AgentToClientMessage.SessionDeleteError _ -> "session/delete"
         | AgentToClientMessage.SessionPromptResult _ -> "session/prompt"
         | AgentToClientMessage.SessionPromptError _ -> "session/prompt"
         | AgentToClientMessage.SessionSetModeResult _ -> "session/set_mode"
@@ -121,6 +127,8 @@ module Connection =
           onNewSession: NewSessionParams -> Task<Result<NewSessionResult, string>>
           onListSessions: ListSessionsRequest -> Task<Result<ListSessionsResponse, string>>
           onLoadSession: LoadSessionParams -> Task<Result<LoadSessionResult, string>>
+          onCloseSession: CloseSessionRequest -> Task<Result<CloseSessionResponse, string>>
+          onDeleteSession: DeleteSessionRequest -> Task<Result<DeleteSessionResponse, string>>
           onPrompt: SessionPromptParams -> Task<Result<SessionPromptResult, string>>
           onCancel: SessionCancelParams -> Task<unit>
           onSetMode: SetSessionModeParams -> Task<Result<SetSessionModeResult, string>>
@@ -400,6 +408,34 @@ module Connection =
                 | Error e -> return Error e
                 | Ok(Message.FromAgent(AgentToClientMessage.SessionLoadResult r)) -> return Ok r
                 | Ok(Message.FromAgent(AgentToClientMessage.SessionLoadError(_, e))) ->
+                    return Error(ConnectionError.ProtocolError e.message)
+                | Ok other -> return Error(ConnectionError.ProtocolError(sprintf "Unexpected response: %A" other))
+            }
+
+        /// Send session/close request.
+        member _.CloseSessionAsync(params': CloseSessionRequest) : Task<Result<CloseSessionResponse, ConnectionError>> =
+            task {
+                let! result = sendRequest (ClientToAgentMessage.SessionClose params')
+
+                match result with
+                | Error e -> return Error e
+                | Ok(Message.FromAgent(AgentToClientMessage.SessionCloseResult r)) -> return Ok r
+                | Ok(Message.FromAgent(AgentToClientMessage.SessionCloseError(_, e))) ->
+                    return Error(ConnectionError.ProtocolError e.message)
+                | Ok other -> return Error(ConnectionError.ProtocolError(sprintf "Unexpected response: %A" other))
+            }
+
+        /// Send session/delete request.
+        member _.DeleteSessionAsync
+            (params': DeleteSessionRequest)
+            : Task<Result<DeleteSessionResponse, ConnectionError>> =
+            task {
+                let! result = sendRequest (ClientToAgentMessage.SessionDelete params')
+
+                match result with
+                | Error e -> return Error e
+                | Ok(Message.FromAgent(AgentToClientMessage.SessionDeleteResult r)) -> return Ok r
+                | Ok(Message.FromAgent(AgentToClientMessage.SessionDeleteError(_, e))) ->
                     return Error(ConnectionError.ProtocolError e.message)
                 | Ok other -> return Error(ConnectionError.ProtocolError(sprintf "Unexpected response: %A" other))
             }
@@ -826,6 +862,38 @@ module Connection =
                                 sendResponse
                                     reqId
                                     (AgentToClientMessage.SessionLoadError(
+                                        p,
+                                        { code = -32603
+                                          message = msg
+                                          data = None }
+                                    ))
+
+                    | ClientToAgentMessage.SessionClose p, Some reqId ->
+                        let! result = handlers.onCloseSession p
+
+                        match result with
+                        | Ok r -> do! sendResponse reqId (AgentToClientMessage.SessionCloseResult r)
+                        | Error msg ->
+                            do!
+                                sendResponse
+                                    reqId
+                                    (AgentToClientMessage.SessionCloseError(
+                                        p,
+                                        { code = -32603
+                                          message = msg
+                                          data = None }
+                                    ))
+
+                    | ClientToAgentMessage.SessionDelete p, Some reqId ->
+                        let! result = handlers.onDeleteSession p
+
+                        match result with
+                        | Ok r -> do! sendResponse reqId (AgentToClientMessage.SessionDeleteResult r)
+                        | Error msg ->
+                            do!
+                                sendResponse
+                                    reqId
+                                    (AgentToClientMessage.SessionDeleteError(
                                         p,
                                         { code = -32603
                                           message = msg

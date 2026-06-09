@@ -413,3 +413,70 @@ module ValidationTests =
         match invalidModeFinding with
         | Some f -> Assert.Equal(Severity.Error, f.severity)
         | None -> failwith "expected ACP.SESSION.INVALID_MODE_ID finding"
+
+    [<Fact>]
+    let ``close trace ends in Phase.Closed`` () =
+        let sid = SessionId "s-close-1"
+
+        let trace: Message list =
+            [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
+              Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
+              Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
+              Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
+              Message.FromClient(ClientToAgentMessage.SessionClose { sessionId = sid; _meta = None })
+              Message.FromAgent(AgentToClientMessage.SessionCloseResult { _meta = None }) ]
+
+        let result = runWithValidation sid spec trace true None None
+        Assert.True(result.findings.IsEmpty)
+
+        match result.finalPhase with
+        | Ok(Phase.Closed _) -> ()
+        | other -> failwithf "expected Phase.Closed, got %A" other
+
+    [<Fact>]
+    let ``delete trace stays in Phase.Ready and removes session`` () =
+        let sid = SessionId "s-delete-1"
+
+        let trace: Message list =
+            [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
+              Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
+              Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
+              Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
+              Message.FromClient(ClientToAgentMessage.SessionDelete { sessionId = sid; _meta = None })
+              Message.FromAgent(AgentToClientMessage.SessionDeleteResult { _meta = None }) ]
+
+        let result = runWithValidation sid spec trace true None None
+        Assert.True(result.findings.IsEmpty)
+
+        match result.finalPhase with
+        | Ok(Phase.Ready ctx) ->
+            // Session removed on request
+            Assert.False(ctx.sessions |> Map.containsKey sid)
+        | other -> failwithf "expected Phase.Ready, got %A" other
+
+    [<Fact>]
+    let ``capability roundtrip preserves close and delete markers`` () =
+        let state0 = Acp.Codec.CodecState.empty
+
+        // First decode an initialize request so we have a pending entry
+        let initReq =
+            """{"jsonrpc":"2.0","id":10,"method":"initialize","params":{"protocolVersion":1}}"""
+
+        let state1, _ =
+            match Acp.Codec.decode Acp.Codec.Direction.FromClient state0 initReq with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        let initRes =
+            """{"jsonrpc":"2.0","id":10,"result":{"protocolVersion":1,"agentCapabilities":{"loadSession":true,"mcpCapabilities":{"http":false,"sse":false},"promptCapabilities":{"audio":false,"image":false,"embeddedContext":false},"sessionCapabilities":{"close":{},"delete":{}}},"authMethods":[]}}"""
+
+        let _, msg =
+            match Acp.Codec.decode Acp.Codec.Direction.FromAgent state1 initRes with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg with
+        | Message.FromAgent(AgentToClientMessage.InitializeResult r) ->
+            Assert.True(r.agentCapabilities.sessionCapabilities.close.IsSome)
+            Assert.True(r.agentCapabilities.sessionCapabilities.delete.IsSome)
+        | other -> failwithf "unexpected message %A" other

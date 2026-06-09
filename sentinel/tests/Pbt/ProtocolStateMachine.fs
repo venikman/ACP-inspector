@@ -42,7 +42,8 @@ module ProtocolStateMachine =
         match phase with
         | Phase.AwaitingInitialize -> AwaitingInitialize
         | Phase.WaitingForInitializeResult _ -> WaitingForInitializeResult
-        | Phase.Ready ctx ->
+        | Phase.Ready ctx
+        | Phase.Closed ctx ->
             let sessions =
                 ctx.sessions
                 |> Map.map (fun _ s ->

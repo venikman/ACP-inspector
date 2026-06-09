@@ -642,3 +642,66 @@ module CodecTests =
             | Error e -> failwithf "unexpected encode error: %A" e
 
         Assert.DoesNotContain("\"auth\"", serialized)
+
+    [<Fact>]
+    let ``decode session close request and response correlates by id`` () =
+        let state0 = Codec.CodecState.empty
+
+        let closeReq =
+            """{"jsonrpc":"2.0","id":30,"method":"session/close","params":{"sessionId":"sess-1"}}"""
+
+        let state1, msg1 =
+            match Codec.decode Codec.Direction.FromClient state0 closeReq with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg1 with
+        | Message.FromClient(ClientToAgentMessage.SessionClose p) -> Assert.Equal("sess-1", SessionId.value p.sessionId)
+        | other -> failwithf "unexpected message %A" other
+
+        Assert.True(state1.pendingClientRequests |> Map.containsKey (RequestId.Number 30L))
+
+        let closeRes = """{"jsonrpc":"2.0","id":30,"result":{}}"""
+
+        let state2, msg2 =
+            match Codec.decode Codec.Direction.FromAgent state1 closeRes with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg2 with
+        | Message.FromAgent(AgentToClientMessage.SessionCloseResult _) -> ()
+        | other -> failwithf "unexpected message %A" other
+
+        Assert.True(state2.pendingClientRequests.IsEmpty)
+
+    [<Fact>]
+    let ``decode session delete request and response correlates by id`` () =
+        let state0 = Codec.CodecState.empty
+
+        let deleteReq =
+            """{"jsonrpc":"2.0","id":31,"method":"session/delete","params":{"sessionId":"sess-1"}}"""
+
+        let state1, msg1 =
+            match Codec.decode Codec.Direction.FromClient state0 deleteReq with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg1 with
+        | Message.FromClient(ClientToAgentMessage.SessionDelete p) ->
+            Assert.Equal("sess-1", SessionId.value p.sessionId)
+        | other -> failwithf "unexpected message %A" other
+
+        Assert.True(state1.pendingClientRequests |> Map.containsKey (RequestId.Number 31L))
+
+        let deleteRes = """{"jsonrpc":"2.0","id":31,"result":{}}"""
+
+        let state2, msg2 =
+            match Codec.decode Codec.Direction.FromAgent state1 deleteRes with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg2 with
+        | Message.FromAgent(AgentToClientMessage.SessionDeleteResult _) -> ()
+        | other -> failwithf "unexpected message %A" other
+
+        Assert.True(state2.pendingClientRequests.IsEmpty)

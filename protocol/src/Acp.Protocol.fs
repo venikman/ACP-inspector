@@ -39,6 +39,7 @@ module Protocol =
         | AwaitingInitialize
         | WaitingForInitializeResult of clientInit: InitializeParams
         | Ready of InitializedContext
+        | Closed of InitializedContext
 
     type ProtocolError =
         | UnexpectedMessage of phase: Phase * message: Message
@@ -374,8 +375,42 @@ module Protocol =
                     | TurnState.PromptInFlight _ -> Ok(Phase.Ready ctx)
                     | TurnState.Idle _ -> Error(ProtocolError.NoPromptInFlight s.sessionId)
 
+            // session/delete request: session must exist; remove it on request (response carries no id).
+            | Phase.Ready ctx, Message.FromClient(ClientToAgentMessage.SessionDelete req) ->
+                match ctx.sessions |> Map.tryFind req.sessionId with
+                | None -> Error(ProtocolError.UnknownSession req.sessionId)
+                | Some _ ->
+                    Ok(
+                        Phase.Ready
+                            { ctx with
+                                sessions = ctx.sessions |> Map.remove req.sessionId }
+                    )
+            | Phase.Ready ctx, Message.FromAgent(AgentToClientMessage.SessionDeleteResult _) -> Ok(Phase.Ready ctx)
+
+            // session/close request: session must exist; an in-flight prompt is marked cancelled.
+            | Phase.Ready ctx, Message.FromClient(ClientToAgentMessage.SessionClose req) ->
+                match ctx.sessions |> Map.tryFind req.sessionId with
+                | None -> Error(ProtocolError.UnknownSession req.sessionId)
+                | Some s ->
+                    let s' =
+                        match s.turnState with
+                        | TurnState.PromptInFlight _ ->
+                            { s with
+                                turnState = TurnState.PromptInFlight true }
+                        | TurnState.Idle _ -> s
+
+                    Ok(
+                        Phase.Ready
+                            { ctx with
+                                sessions = ctx.sessions |> Map.add s.sessionId s' }
+                    )
+            | Phase.Ready ctx, Message.FromAgent(AgentToClientMessage.SessionCloseResult _) -> Ok(Phase.Closed ctx)
+
             // Everything else: currently state-neutral (full JSON-RPC correlation is added in the codec layer).
             | Phase.Ready ctx, _ -> Ok(Phase.Ready ctx)
+
+            // Closed is a terminal phase — all messages are no-ops.
+            | Phase.Closed ctx, _ -> Ok(Phase.Closed ctx)
 
         { initial = Phase.AwaitingInitialize
           step = step }
