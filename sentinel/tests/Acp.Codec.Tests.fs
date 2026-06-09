@@ -547,6 +547,24 @@ module CodecTests =
             | other -> failwithf "unexpected %A" other
         | other -> failwithf "unexpected %A" other
 
+    [<Fact>]
+    let ``decode usage update rejects negative token counts`` () =
+        let state0 = Codec.CodecState.empty
+
+        let negativeUsed =
+            """{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess-1","update":{"sessionUpdate":"usage_update","used":-1,"size":200}}}"""
+
+        match Codec.decode Codec.Direction.FromAgent state0 negativeUsed with
+        | Error _ -> ()
+        | Ok _ -> failwith "expected decode error for negative used"
+
+        let negativeSize =
+            """{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess-1","update":{"sessionUpdate":"usage_update","used":1,"size":-200}}}"""
+
+        match Codec.decode Codec.Direction.FromAgent state0 negativeSize with
+        | Error _ -> ()
+        | Ok _ -> failwith "expected decode error for negative size"
+
     // ───────────────────────────────────────────────────────────────────────────────
     // Task 3: logout (0.13.6 A5)
     // ───────────────────────────────────────────────────────────────────────────────

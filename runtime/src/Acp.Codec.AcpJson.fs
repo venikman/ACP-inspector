@@ -2795,13 +2795,19 @@ module internal CodecAcpJson =
 
     // ---- Session update ----
 
+    // used/size are uint64 token counts in the schema; the typed model stores
+    // int64, so reject negatives at the decode boundary.
+    let private asNonNegativeInt64 (node: JsonNode) : Result<int64, string> =
+        asInt64 node
+        |> Result.bind (fun v -> if v < 0L then Error "expected uint64" else Ok v)
+
     let private decodeUsage (node: JsonNode) : Result<Usage, string> =
         result {
             let! o = asObject node
             let! usedNode = get "used" o
-            let! used = asInt64 usedNode
+            let! used = asNonNegativeInt64 usedNode
             let! sizeNode = get "size" o
-            let! size = asInt64 sizeNode
+            let! size = asNonNegativeInt64 sizeNode
 
             let! cost =
                 match tryGet "cost" o with
