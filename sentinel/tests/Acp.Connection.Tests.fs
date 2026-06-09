@@ -565,7 +565,14 @@ module ConnectionTests =
                   onLoadSession = fun _ -> task { return Error "not implemented" }
                   onResumeSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
-                  onCloseSession = fun p -> task { return Ok { _meta = None } }
+                  onCloseSession =
+                    fun p ->
+                        task {
+                            return
+                                Ok
+                                    { sessionId = p.sessionId
+                                      _meta = None }
+                        }
                   onDeleteSession = fun _ -> task { return Error "not implemented" }
                   onPrompt = fun _ -> task { return Error "not implemented" }
                   onCancel = fun _ -> task { () }
@@ -626,7 +633,14 @@ module ConnectionTests =
                   onResumeSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
                   onCloseSession = fun _ -> task { return Error "not implemented" }
-                  onDeleteSession = fun p -> task { return Ok { _meta = None } }
+                  onDeleteSession =
+                    fun p ->
+                        task {
+                            return
+                                Ok
+                                    { sessionId = p.sessionId
+                                      _meta = None }
+                        }
                   onPrompt = fun _ -> task { return Error "not implemented" }
                   onCancel = fun _ -> task { () }
                   onSetMode = fun _ -> task { return Error "not implemented" }

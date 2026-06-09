@@ -31,9 +31,9 @@ ACP Inspector follows **stable-first + gated unstable**:
 | ------- | ------ | ----- |
 | Initialize handshake | ✅ Implemented | `clientInfo` / `agentInfo`, `protocolVersion = 1` |
 | Session lifecycle | ✅ Implemented | `session/new`, `session/list`, `session/load`, `session/cancel` |
-| Session close | ✅ Implemented | `session/close` — drives terminal `Phase.Closed`; stabilized in 0.12.2 |
+| Session close | ✅ Implemented | `session/close` — frees the session once the agent confirms; connection stays `Ready`; stabilized in 0.12.2 |
 | Session resume | ✅ Implemented | `session/resume` — reattaches existing session; stabilized in 0.12.2 |
-| Session delete | ✅ Implemented | `session/delete` — removes session on request; stabilized in 0.13.6 |
+| Session delete | ✅ Implemented | `session/delete` — removes the session once the agent confirms; stabilized in 0.13.6 |
 | Logout | ✅ Implemented | `logout` method + `AgentCapabilities.auth.logout` marker; stabilized in 0.13.3 |
 | Optional message IDs | ✅ Implemented | `ContentChunk.messageId` optional field; stabilized in 0.13.6 |
 | Typed session usage updates | ✅ Implemented | `usage_update` with `used`/`size`/`cost`; stabilized in 0.13.6 |

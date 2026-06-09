@@ -402,31 +402,41 @@ module Protocol =
                     | TurnState.PromptInFlight _ -> Ok(Phase.Ready ctx)
                     | TurnState.Idle _ -> Error(ProtocolError.NoPromptInFlight s.sessionId)
 
-            // session/delete request: session must exist; remove it on request (response carries no id).
+            // session/delete request: session must exist; removal is deferred to the result
+            // so a rejected delete leaves the session usable.
             | Phase.Ready ctx, Message.FromClient(ClientToAgentMessage.SessionDelete req) ->
                 match ctx.sessions |> Map.tryFind req.sessionId with
                 | None -> Error(ProtocolError.UnknownSession req.sessionId)
-                | Some _ ->
-                    Ok(
-                        Phase.Ready
-                            { ctx with
-                                sessions = ctx.sessions |> Map.remove req.sessionId }
-                    )
-            | Phase.Ready ctx, Message.FromAgent(AgentToClientMessage.SessionDeleteResult _) -> Ok(Phase.Ready ctx)
+                | Some _ -> Ok(Phase.Ready ctx)
 
-            // session/close request: session must exist; remove it (close frees the session).
+            // session/delete result: agent confirmed; free the session (id reattached from the request).
+            | Phase.Ready ctx, Message.FromAgent(AgentToClientMessage.SessionDeleteResult r) ->
+                Ok(
+                    Phase.Ready
+                        { ctx with
+                            sessions = ctx.sessions |> Map.remove r.sessionId }
+                )
+
+            // session/delete error: agent rejected the delete; the session remains usable.
+            | Phase.Ready ctx, Message.FromAgent(AgentToClientMessage.SessionDeleteError _) -> Ok(Phase.Ready ctx)
+
+            // session/close request: session must exist; removal is deferred to the result
+            // so a rejected close leaves the session usable.
             | Phase.Ready ctx, Message.FromClient(ClientToAgentMessage.SessionClose req) ->
                 match ctx.sessions |> Map.tryFind req.sessionId with
                 | None -> Error(ProtocolError.UnknownSession req.sessionId)
-                | Some _ ->
-                    Ok(
-                        Phase.Ready
-                            { ctx with
-                                sessions = ctx.sessions |> Map.remove req.sessionId }
-                    )
+                | Some _ -> Ok(Phase.Ready ctx)
 
-            // session/close result: connection stays Ready (session already freed on request).
-            | Phase.Ready ctx, Message.FromAgent(AgentToClientMessage.SessionCloseResult _) -> Ok(Phase.Ready ctx)
+            // session/close result: agent confirmed; free the session (id reattached from the request).
+            | Phase.Ready ctx, Message.FromAgent(AgentToClientMessage.SessionCloseResult r) ->
+                Ok(
+                    Phase.Ready
+                        { ctx with
+                            sessions = ctx.sessions |> Map.remove r.sessionId }
+                )
+
+            // session/close error: agent rejected the close; the session remains usable.
+            | Phase.Ready ctx, Message.FromAgent(AgentToClientMessage.SessionCloseError _) -> Ok(Phase.Ready ctx)
 
             // Everything else: currently state-neutral (full JSON-RPC correlation is added in the codec layer).
             | Phase.Ready ctx, _ -> Ok(Phase.Ready ctx)

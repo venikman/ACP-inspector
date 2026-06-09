@@ -1780,16 +1780,16 @@ module internal CodecAcpJson =
 
         o
 
-    let private decodeCloseSessionResponse (nodeOpt: JsonNode option) : CloseSessionResponse =
+    let private decodeCloseSessionResponse (sessionId: SessionId) (nodeOpt: JsonNode option) : CloseSessionResponse =
         match nodeOpt with
-        | None -> { _meta = None }
+        | None -> { sessionId = sessionId; _meta = None }
         | Some node ->
             let meta =
                 asObject node
                 |> Result.toOption
                 |> Option.bind (fun o -> tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption))
 
-            { _meta = meta }
+            { sessionId = sessionId; _meta = meta }
 
     let private encodeCloseSessionResponse (r: CloseSessionResponse) : JsonObject =
         let o = JsonObject()
@@ -1822,16 +1822,16 @@ module internal CodecAcpJson =
 
         o
 
-    let private decodeDeleteSessionResponse (nodeOpt: JsonNode option) : DeleteSessionResponse =
+    let private decodeDeleteSessionResponse (sessionId: SessionId) (nodeOpt: JsonNode option) : DeleteSessionResponse =
         match nodeOpt with
-        | None -> { _meta = None }
+        | None -> { sessionId = sessionId; _meta = None }
         | Some node ->
             let meta =
                 asObject node
                 |> Result.toOption
                 |> Option.bind (fun o -> tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption))
 
-            { _meta = meta }
+            { sessionId = sessionId; _meta = meta }
 
     let private encodeDeleteSessionResponse (r: DeleteSessionResponse) : JsonObject =
         let o = JsonObject()
@@ -3577,11 +3577,11 @@ module internal CodecAcpJson =
             decodeResumeSessionResult req.sessionId resultNodeOpt
             |> Result.map AgentToClientMessage.SessionResumeResult
 
-        | PendingClientRequest.SessionClose _ ->
-            Ok(AgentToClientMessage.SessionCloseResult(decodeCloseSessionResponse resultNodeOpt))
+        | PendingClientRequest.SessionClose req ->
+            Ok(AgentToClientMessage.SessionCloseResult(decodeCloseSessionResponse req.sessionId resultNodeOpt))
 
-        | PendingClientRequest.SessionDelete _ ->
-            Ok(AgentToClientMessage.SessionDeleteResult(decodeDeleteSessionResponse resultNodeOpt))
+        | PendingClientRequest.SessionDelete req ->
+            Ok(AgentToClientMessage.SessionDeleteResult(decodeDeleteSessionResponse req.sessionId resultNodeOpt))
 
         | PendingClientRequest.SessionPrompt req ->
             match resultNodeOpt with

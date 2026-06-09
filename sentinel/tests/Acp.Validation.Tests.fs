@@ -479,14 +479,14 @@ module ValidationTests =
               )
               Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
               Message.FromClient(ClientToAgentMessage.SessionClose { sessionId = sid; _meta = None })
-              Message.FromAgent(AgentToClientMessage.SessionCloseResult { _meta = None }) ]
+              Message.FromAgent(AgentToClientMessage.SessionCloseResult { sessionId = sid; _meta = None }) ]
 
         let result = runWithValidation sid spec trace true None None
         Assert.True(result.findings.IsEmpty)
 
         match result.finalPhase with
         | Ok(Phase.Ready ctx) ->
-            // Session freed on close request
+            // Session freed on close result
             Assert.False(ctx.sessions |> Map.containsKey sid)
         | other -> failwithf "expected Phase.Ready, got %A" other
 
@@ -517,7 +517,7 @@ module ValidationTests =
               Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid2 None))
               // close s1
               Message.FromClient(ClientToAgentMessage.SessionClose { sessionId = sid1; _meta = None })
-              Message.FromAgent(AgentToClientMessage.SessionCloseResult { _meta = None })
+              Message.FromAgent(AgentToClientMessage.SessionCloseResult { sessionId = sid1; _meta = None })
               // create s3 after s1 was closed — connection must still be Ready
               Message.FromClient(
                   ClientToAgentMessage.SessionNew
@@ -538,6 +538,66 @@ module ValidationTests =
         | other -> failwithf "expected Phase.Ready, got %A" other
 
     [<Fact>]
+    let ``close error keeps the session usable`` () =
+        let sid = SessionId "s-close-err"
+        let closeReq: CloseSessionRequest = { sessionId = sid; _meta = None }
+
+        let closeError: Acp.Domain.JsonRpc.Error =
+            { code = -32603
+              message = "close rejected"
+              data = None }
+
+        let trace: Message list =
+            [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
+              Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
+              Message.FromClient(
+                  ClientToAgentMessage.SessionNew
+                      { cwd = "."
+                        mcpServers = []
+                        additionalDirectories = [] }
+              )
+              Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
+              Message.FromClient(ClientToAgentMessage.SessionClose closeReq)
+              // Agent rejected the close: the session must remain tracked and usable.
+              Message.FromAgent(AgentToClientMessage.SessionCloseError(closeReq, closeError)) ]
+
+        let result = runWithValidation sid spec trace true None None
+
+        match result.finalPhase with
+        | Ok(Phase.Ready ctx) -> Assert.True(ctx.sessions |> Map.containsKey sid)
+        | other -> failwithf "expected Phase.Ready, got %A" other
+
+    [<Fact>]
+    let ``delete error keeps the session usable`` () =
+        let sid = SessionId "s-delete-err"
+        let deleteReq: DeleteSessionRequest = { sessionId = sid; _meta = None }
+
+        let deleteError: Acp.Domain.JsonRpc.Error =
+            { code = -32603
+              message = "delete rejected"
+              data = None }
+
+        let trace: Message list =
+            [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
+              Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
+              Message.FromClient(
+                  ClientToAgentMessage.SessionNew
+                      { cwd = "."
+                        mcpServers = []
+                        additionalDirectories = [] }
+              )
+              Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
+              Message.FromClient(ClientToAgentMessage.SessionDelete deleteReq)
+              // Agent rejected the delete: the session must remain tracked and usable.
+              Message.FromAgent(AgentToClientMessage.SessionDeleteError(deleteReq, deleteError)) ]
+
+        let result = runWithValidation sid spec trace true None None
+
+        match result.finalPhase with
+        | Ok(Phase.Ready ctx) -> Assert.True(ctx.sessions |> Map.containsKey sid)
+        | other -> failwithf "expected Phase.Ready, got %A" other
+
+    [<Fact>]
     let ``delete trace stays in Phase.Ready and removes session`` () =
         let sid = SessionId "s-delete-1"
 
@@ -552,14 +612,14 @@ module ValidationTests =
               )
               Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
               Message.FromClient(ClientToAgentMessage.SessionDelete { sessionId = sid; _meta = None })
-              Message.FromAgent(AgentToClientMessage.SessionDeleteResult { _meta = None }) ]
+              Message.FromAgent(AgentToClientMessage.SessionDeleteResult { sessionId = sid; _meta = None }) ]
 
         let result = runWithValidation sid spec trace true None None
         Assert.True(result.findings.IsEmpty)
 
         match result.finalPhase with
         | Ok(Phase.Ready ctx) ->
-            // Session removed on request
+            // Session removed on delete result
             Assert.False(ctx.sessions |> Map.containsKey sid)
         | other -> failwithf "expected Phase.Ready, got %A" other
 

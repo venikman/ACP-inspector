@@ -409,16 +409,22 @@ module Domain =
             { sessionId: SessionId
               _meta: JsonObject option }
 
-        /// Result for session/close (agent -> client). Wire result is empty.
-        type CloseSessionResponse = { _meta: JsonObject option }
+        /// Result for session/close (agent -> client). Wire result is empty;
+        /// the session id is reattached from the request.
+        type CloseSessionResponse =
+            { sessionId: SessionId
+              _meta: JsonObject option }
 
         /// Params for session/delete (client -> agent).
         type DeleteSessionRequest =
             { sessionId: SessionId
               _meta: JsonObject option }
 
-        /// Result for session/delete (agent -> client). Wire result is empty.
-        type DeleteSessionResponse = { _meta: JsonObject option }
+        /// Result for session/delete (agent -> client). Wire result is empty;
+        /// the session id is reattached from the request.
+        type DeleteSessionResponse =
+            { sessionId: SessionId
+              _meta: JsonObject option }
 
     // -------------
     // Session context (runtime helper)
