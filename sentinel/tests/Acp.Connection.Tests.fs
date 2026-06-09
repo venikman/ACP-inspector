@@ -8,6 +8,7 @@ open Acp
 open Acp.Domain
 open Acp.Domain.PrimitivesAndParties
 open Acp.Domain.Capabilities
+open Acp.Domain.Authentication
 open Acp.Domain.Initialization
 open Acp.Domain.SessionSetup
 open Acp.Domain.Prompting
@@ -56,6 +57,7 @@ module ConnectionTests =
 
                             return Ok(mkInitializeResult false SessionCapabilities.empty)
                         }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Ok(mkNewSessionResult (SessionId "test-session")) }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
                   onResumeSession = fun _ -> task { return Error "not implemented" }
@@ -118,6 +120,7 @@ module ConnectionTests =
 
             let handlers: Connection.AgentHandlers =
                 { onInitialize = fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Ok(mkNewSessionResult (SessionId "new-session-123")) }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
                   onResumeSession = fun _ -> task { return Error "not implemented" }
@@ -168,6 +171,7 @@ module ConnectionTests =
 
             let handlers: Connection.AgentHandlers =
                 { onInitialize = fun _ -> task { return Ok(mkInitializeResult true SessionCapabilities.empty) }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession =
                     fun p ->
@@ -239,6 +243,7 @@ module ConnectionTests =
                                           additionalDirectories = None }
                                 )
                         }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
                   onResumeSession = fun _ -> task { return Error "not implemented" }
@@ -303,6 +308,7 @@ module ConnectionTests =
 
             let handlers: Connection.AgentHandlers =
                 { onInitialize = fun _ -> task { return Ok(mkInitializeResult true SessionCapabilities.empty) }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
                   onResumeSession = fun _ -> task { return Error "not implemented" }
@@ -381,6 +387,7 @@ module ConnectionTests =
 
             let handlers: Connection.AgentHandlers =
                 { onInitialize = fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Ok(mkNewSessionResult (SessionId "s1")) }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
                   onResumeSession = fun _ -> task { return Error "not implemented" }
@@ -455,6 +462,7 @@ module ConnectionTests =
 
             let handlers: Connection.AgentHandlers =
                 { onInitialize = fun _ -> task { return Error "not called" }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not called" }
                   onLoadSession = fun _ -> task { return Error "not called" }
                   onResumeSession = fun _ -> task { return Error "not implemented" }
@@ -496,6 +504,7 @@ module ConnectionTests =
 
             let handlers: Connection.AgentHandlers =
                 { onInitialize = fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not called" }
                   onLoadSession = fun _ -> task { return Error "not called" }
                   onResumeSession = fun _ -> task { return Error "not implemented" }
@@ -561,6 +570,7 @@ module ConnectionTests =
                                           additionalDirectories = None }
                                 )
                         }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
                   onResumeSession = fun _ -> task { return Error "not implemented" }
@@ -628,6 +638,7 @@ module ConnectionTests =
                                           additionalDirectories = None }
                                 )
                         }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
                   onResumeSession = fun _ -> task { return Error "not implemented" }
@@ -695,6 +706,7 @@ module ConnectionTests =
                                           additionalDirectories = None }
                                 )
                         }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
                   onResumeSession =
@@ -743,6 +755,50 @@ module ConnectionTests =
             match resumed with
             | Ok r -> Assert.Equal("resume-me", SessionId.value r.sessionId)
             | Error e -> failwithf "ResumeSession failed: %A" e
+
+            do! agent.StopAsync()
+        }
+
+    [<Fact>]
+    let ``Client can logout and agent responds`` () =
+        task {
+            let (clientTransport, agentTransport) = Transport.DuplexTransport.CreatePair()
+
+            let handlers: Connection.AgentHandlers =
+                { onInitialize = fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
+                  onNewSession = fun _ -> task { return Error "not implemented" }
+                  onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
+                  onListSessions = fun _ -> task { return Error "not implemented" }
+                  onCloseSession = fun _ -> task { return Error "not implemented" }
+                  onDeleteSession = fun _ -> task { return Error "not implemented" }
+                  onPrompt = fun _ -> task { return Error "not implemented" }
+                  onCancel = fun _ -> task { () }
+                  onSetMode = fun _ -> task { return Error "not implemented" }
+                  onSetConfigOption = fun _ -> task { return Error "not implemented" } }
+
+            let agent = Connection.AgentConnection(agentTransport, handlers)
+            let client = Connection.ClientConnection(clientTransport)
+
+            let _ = agent.StartListening()
+
+            let! _ =
+                client.InitializeAsync(
+                    { protocolVersion = ProtocolVersion.current
+                      clientCapabilities =
+                        { fs =
+                            { readTextFile = true
+                              writeTextFile = true }
+                          terminal = true }
+                      clientInfo = None }
+                )
+
+            let! logoutResult = client.LogoutAsync({ _meta = None })
+
+            match logoutResult with
+            | Ok _ -> ()
+            | Error e -> failwithf "Logout failed: %A" e
 
             do! agent.StopAsync()
         }

@@ -12,6 +12,7 @@ open Acp.Domain
 open Acp.Domain.JsonRpc
 open Acp.Domain.PrimitivesAndParties
 open Acp.Domain.Capabilities
+open Acp.Domain.Authentication
 open Acp.Domain.Initialization
 open Acp.Domain.SessionSetup
 open Acp.Domain.SessionModes
@@ -127,6 +128,7 @@ module Connection =
     /// Handlers for agent-side message processing.
     type AgentHandlers =
         { onInitialize: InitializeParams -> Task<Result<InitializeResult, string>>
+          onLogout: LogoutParams -> Task<Result<LogoutResult, string>>
           onNewSession: NewSessionParams -> Task<Result<NewSessionResult, string>>
           onListSessions: ListSessionsRequest -> Task<Result<ListSessionsResponse, string>>
           onLoadSession: LoadSessionParams -> Task<Result<LoadSessionResult, string>>
@@ -373,6 +375,19 @@ module Connection =
                 | Error e -> return Error e
                 | Ok(Message.FromAgent(AgentToClientMessage.InitializeResult r)) -> return Ok r
                 | Ok(Message.FromAgent(AgentToClientMessage.InitializeError e)) ->
+                    return Error(ConnectionError.ProtocolError e.message)
+                | Ok other -> return Error(ConnectionError.ProtocolError(sprintf "Unexpected response: %A" other))
+            }
+
+        /// Send logout request.
+        member _.LogoutAsync(params': LogoutParams) : Task<Result<LogoutResult, ConnectionError>> =
+            task {
+                let! result = sendRequest (ClientToAgentMessage.Logout params')
+
+                match result with
+                | Error e -> return Error e
+                | Ok(Message.FromAgent(AgentToClientMessage.LogoutResult r)) -> return Ok r
+                | Ok(Message.FromAgent(AgentToClientMessage.LogoutError e)) ->
                     return Error(ConnectionError.ProtocolError e.message)
                 | Ok other -> return Error(ConnectionError.ProtocolError(sprintf "Unexpected response: %A" other))
             }
@@ -837,6 +852,20 @@ module Connection =
                                 sendResponse
                                     reqId
                                     (AgentToClientMessage.ProxyInitializeError
+                                        { code = -32603
+                                          message = msg
+                                          data = None })
+
+                    | ClientToAgentMessage.Logout p, Some reqId ->
+                        let! result = handlers.onLogout p
+
+                        match result with
+                        | Ok r -> do! sendResponse reqId (AgentToClientMessage.LogoutResult r)
+                        | Error msg ->
+                            do!
+                                sendResponse
+                                    reqId
+                                    (AgentToClientMessage.LogoutError
                                         { code = -32603
                                           message = msg
                                           data = None })
