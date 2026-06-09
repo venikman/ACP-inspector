@@ -540,3 +540,162 @@ module ValidationTests =
             Assert.True(r.agentCapabilities.sessionCapabilities.close.IsSome)
             Assert.True(r.agentCapabilities.sessionCapabilities.delete.IsSome)
         | other -> failwithf "unexpected message %A" other
+
+    [<Fact>]
+    let ``ext request produces exactly one Protocol-lane Info finding with ACP.PROTOCOL.EXT_UNKNOWN code`` () =
+        let sid = SessionId "s-ext-req"
+
+        let trace: Message list =
+            [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
+              Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
+              Message.FromClient(ClientToAgentMessage.ExtRequest("session/fork", None)) ]
+
+        let result = runWithValidation sid spec trace false None None
+
+        let extFindings =
+            result.findings
+            |> List.filter (fun f ->
+                f.lane = Lane.Protocol
+                && match f.failure with
+                   | Some failure -> failure.code = "ACP.PROTOCOL.EXT_UNKNOWN"
+                   | None -> false)
+
+        Assert.Equal(1, extFindings.Length)
+        Assert.Equal(Severity.Info, extFindings.[0].severity)
+
+        let errorFindings =
+            result.findings |> List.filter (fun f -> f.severity = Severity.Error)
+
+        Assert.True(errorFindings.IsEmpty)
+
+    [<Fact>]
+    let ``ext notification from agent produces Protocol-lane Info finding with method name`` () =
+        let sid = SessionId "s-ext-notif"
+
+        let trace: Message list =
+            [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
+              Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
+              Message.FromAgent(AgentToClientMessage.ExtNotification("plan_update", None)) ]
+
+        let result = runWithValidation sid spec trace false None None
+
+        let extFindings =
+            result.findings
+            |> List.filter (fun f ->
+                f.lane = Lane.Protocol
+                && match f.failure with
+                   | Some failure -> failure.code = "ACP.PROTOCOL.EXT_UNKNOWN"
+                   | None -> false)
+
+        Assert.Equal(1, extFindings.Length)
+        Assert.Equal(Severity.Info, extFindings.[0].severity)
+
+        match extFindings.[0].failure with
+        | Some failure -> Assert.Contains("plan_update", failure.message)
+        | None -> failwith "expected failure record"
+
+    [<Fact>]
+    let ``session update with Ext tag produces Protocol-lane Info finding`` () =
+        let sid = SessionId "s-ext-update"
+
+        let trace: Message list =
+            [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
+              Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
+              Message.FromClient(
+                  ClientToAgentMessage.SessionNew
+                      { cwd = "."
+                        mcpServers = []
+                        additionalDirectories = [] }
+              )
+              Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
+              Message.FromAgent(
+                  AgentToClientMessage.SessionUpdate(
+                      mkSessionUpdate sid (SessionUpdate.Ext("plan_update", System.Text.Json.Nodes.JsonObject()))
+                  )
+              ) ]
+
+        let result = runWithValidation sid spec trace false None None
+
+        let extFindings =
+            result.findings
+            |> List.filter (fun f ->
+                f.lane = Lane.Protocol
+                && match f.failure with
+                   | Some failure -> failure.code = "ACP.PROTOCOL.EXT_UNKNOWN"
+                   | None -> false)
+
+        Assert.Equal(1, extFindings.Length)
+        Assert.Equal(Severity.Info, extFindings.[0].severity)
+
+        let errorFindings =
+            result.findings |> List.filter (fun f -> f.severity = Severity.Error)
+
+        Assert.True(errorFindings.IsEmpty)
+
+    [<Fact>]
+    let ``happy path with no Ext produces no ACP.PROTOCOL.EXT_UNKNOWN finding`` () =
+        let sid = SessionId "s-no-ext"
+        let result = runWithValidation sid spec (mkHappyTrace sid) false None None
+
+        let extFindings =
+            result.findings
+            |> List.filter (fun f ->
+                match f.failure with
+                | Some failure -> failure.code = "ACP.PROTOCOL.EXT_UNKNOWN"
+                | None -> false)
+
+        Assert.True(extFindings.IsEmpty)
+
+    [<Fact>]
+    let ``agent-side ExtRequest produces exactly one Protocol-lane Info ACP.PROTOCOL.EXT_UNKNOWN finding`` () =
+        let sid = SessionId "s-ext-agent-req"
+
+        let trace: Message list =
+            [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
+              Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
+              Message.FromAgent(AgentToClientMessage.ExtRequest("session/fork", None)) ]
+
+        let result = runWithValidation sid spec trace false None None
+
+        let extFindings =
+            result.findings
+            |> List.filter (fun f ->
+                f.lane = Lane.Protocol
+                && match f.failure with
+                   | Some failure -> failure.code = "ACP.PROTOCOL.EXT_UNKNOWN"
+                   | None -> false)
+
+        Assert.Equal(1, extFindings.Length)
+        Assert.Equal(Severity.Info, extFindings.[0].severity)
+
+        let errorFindings =
+            result.findings |> List.filter (fun f -> f.severity = Severity.Error)
+
+        Assert.True(errorFindings.IsEmpty)
+
+    [<Fact>]
+    let ``client-side ExtNotification produces exactly one Protocol-lane Info ACP.PROTOCOL.EXT_UNKNOWN finding`` () =
+        let sid = SessionId "s-ext-client-notif"
+
+        let trace: Message list =
+            [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
+              Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
+              Message.FromClient(ClientToAgentMessage.ExtNotification("plan_update", None)) ]
+
+        let result = runWithValidation sid spec trace false None None
+
+        let extFindings =
+            result.findings
+            |> List.filter (fun f ->
+                f.lane = Lane.Protocol
+                && match f.failure with
+                   | Some failure -> failure.code = "ACP.PROTOCOL.EXT_UNKNOWN"
+                   | None -> false)
+
+        Assert.Equal(1, extFindings.Length)
+        Assert.Equal(Severity.Info, extFindings.[0].severity)
+
+        let errorFindings =
+            result.findings |> List.filter (fun f -> f.severity = Severity.Error)
+
+        Assert.True(errorFindings.IsEmpty)

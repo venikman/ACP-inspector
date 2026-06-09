@@ -350,6 +350,43 @@ module Validation =
 
         findings
 
+    /// Protocol-lane informational finding: unknown/unstable Ext variant observed.
+    /// Emits one Severity.Info finding per Ext message (ExtRequest, ExtNotification, SessionUpdate.Ext)
+    /// so that forward-compat traffic is visible in the finding stream without blocking validation.
+    let private checkExtVariants (trace: SessionTrace) : ValidationFinding list =
+        trace.messages
+        |> List.mapi (fun idx msg ->
+            let makeExtFinding (tag: string) (sidOpt: SessionId option) : ValidationFinding =
+                let subject = Subject.MessageAt(idx, msg)
+
+                let failure =
+                    { code = "ACP.PROTOCOL.EXT_UNKNOWN"
+                      message = sprintf "unknown/unstable variant: %s" tag
+                      subject = subject }
+
+                { lane = Lane.Protocol
+                  severity = Severity.Info
+                  subject = subject
+                  failure = Some failure
+                  sessionId = sidOpt
+                  traceIndex = Some idx
+                  note = None }
+
+            match msg with
+            | Message.FromClient(ClientToAgentMessage.ExtRequest(methodName, _)) ->
+                Some(makeExtFinding methodName None)
+            | Message.FromClient(ClientToAgentMessage.ExtNotification(methodName, _)) ->
+                Some(makeExtFinding methodName None)
+            | Message.FromAgent(AgentToClientMessage.ExtRequest(methodName, _)) -> Some(makeExtFinding methodName None)
+            | Message.FromAgent(AgentToClientMessage.ExtNotification(methodName, _)) ->
+                Some(makeExtFinding methodName None)
+            | Message.FromAgent(AgentToClientMessage.SessionUpdate u) ->
+                match u.update with
+                | Prompting.SessionUpdate.Ext(tag, _) -> Some(makeExtFinding tag (Some u.sessionId))
+                | _ -> None
+            | _ -> None)
+        |> List.choose id
+
     /// Session-lane invariants for session modes:
     /// - If a mode state is known, set_mode requests must target a mode in availableModes.
     /// - If a mode state is known, current_mode_update must report a mode in availableModes.
@@ -625,12 +662,14 @@ module Validation =
         let sessionCancelFindings = checkSessionCancelInvariant trace
         let sessionConcurrencyFindings = checkSessionPromptConcurrency trace
         let sessionModeFindings = checkSessionModes trace
+        let extVariantFindings = checkExtVariants trace
 
         let combinedFindings =
             findings
             @ sessionCancelFindings
             @ sessionConcurrencyFindings
             @ sessionModeFindings
+            @ extVariantFindings
 
         sw.Stop()
         Observability.recordValidationRun sessionIdText sw.Elapsed.TotalMilliseconds
