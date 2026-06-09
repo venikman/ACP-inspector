@@ -58,6 +58,7 @@ module ConnectionTests =
                         }
                   onNewSession = fun _ -> task { return Ok(mkNewSessionResult (SessionId "test-session")) }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
                   onCloseSession = fun _ -> task { return Error "not implemented" }
                   onDeleteSession = fun _ -> task { return Error "not implemented" }
@@ -119,6 +120,7 @@ module ConnectionTests =
                 { onInitialize = fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
                   onNewSession = fun _ -> task { return Ok(mkNewSessionResult (SessionId "new-session-123")) }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
                   onCloseSession = fun _ -> task { return Error "not implemented" }
                   onDeleteSession = fun _ -> task { return Error "not implemented" }
@@ -145,7 +147,12 @@ module ConnectionTests =
                 )
 
             // Create session
-            let! sessionResult = client.NewSessionAsync({ cwd = "/tmp"; mcpServers = [] })
+            let! sessionResult =
+                client.NewSessionAsync(
+                    { cwd = "/tmp"
+                      mcpServers = []
+                      additionalDirectories = [] }
+                )
 
             match sessionResult with
             | Ok r -> Assert.Equal("new-session-123", SessionId.value r.sessionId)
@@ -172,6 +179,7 @@ module ConnectionTests =
                                       modes = None
                                       _meta = None }
                         }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
                   onCloseSession = fun _ -> task { return Error "not implemented" }
                   onDeleteSession = fun _ -> task { return Error "not implemented" }
@@ -200,7 +208,8 @@ module ConnectionTests =
                 client.LoadSessionAsync(
                     { sessionId = SessionId "load-me"
                       cwd = "/tmp"
-                      mcpServers = [] }
+                      mcpServers = []
+                      additionalDirectories = [] }
                 )
 
             match loaded with
@@ -225,11 +234,14 @@ module ConnectionTests =
                                         true
                                         { list = Some { _meta = None }
                                           close = None
-                                          delete = None }
+                                          delete = None
+                                          resume = None
+                                          additionalDirectories = None }
                                 )
                         }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
                   onListSessions =
                     fun _ ->
                         task {
@@ -240,6 +252,7 @@ module ConnectionTests =
                                             cwd = "/tmp"
                                             title = Some "Roadmap"
                                             updatedAt = Some "2026-03-19T12:00:00Z"
+                                            additionalDirectories = []
                                             _meta = None } ]
                                       nextCursor = None
                                       _meta = None }
@@ -292,6 +305,7 @@ module ConnectionTests =
                 { onInitialize = fun _ -> task { return Ok(mkInitializeResult true SessionCapabilities.empty) }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
                   onCloseSession = fun _ -> task { return Error "not implemented" }
                   onDeleteSession = fun _ -> task { return Error "not implemented" }
@@ -369,6 +383,7 @@ module ConnectionTests =
                 { onInitialize = fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
                   onNewSession = fun _ -> task { return Ok(mkNewSessionResult (SessionId "s1")) }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
                   onCloseSession = fun _ -> task { return Error "not implemented" }
                   onDeleteSession = fun _ -> task { return Error "not implemented" }
@@ -405,7 +420,12 @@ module ConnectionTests =
                 )
 
             // Create session
-            let! _ = client.NewSessionAsync({ cwd = "/tmp"; mcpServers = [] })
+            let! _ =
+                client.NewSessionAsync(
+                    { cwd = "/tmp"
+                      mcpServers = []
+                      additionalDirectories = [] }
+                )
 
             // Send prompt
             let! promptResult =
@@ -437,6 +457,7 @@ module ConnectionTests =
                 { onInitialize = fun _ -> task { return Error "not called" }
                   onNewSession = fun _ -> task { return Error "not called" }
                   onLoadSession = fun _ -> task { return Error "not called" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not called" }
                   onCloseSession = fun _ -> task { return Error "not called" }
                   onDeleteSession = fun _ -> task { return Error "not called" }
@@ -477,6 +498,7 @@ module ConnectionTests =
                 { onInitialize = fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
                   onNewSession = fun _ -> task { return Error "not called" }
                   onLoadSession = fun _ -> task { return Error "not called" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not called" }
                   onCloseSession = fun _ -> task { return Error "not called" }
                   onDeleteSession = fun _ -> task { return Error "not called" }
@@ -534,11 +556,14 @@ module ConnectionTests =
                                         true
                                         { list = None
                                           close = Some { _meta = None }
-                                          delete = None }
+                                          delete = None
+                                          resume = None
+                                          additionalDirectories = None }
                                 )
                         }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
                   onCloseSession = fun p -> task { return Ok { _meta = None } }
                   onDeleteSession = fun _ -> task { return Error "not implemented" }
@@ -591,11 +616,14 @@ module ConnectionTests =
                                         true
                                         { list = None
                                           close = None
-                                          delete = Some { _meta = None } }
+                                          delete = Some { _meta = None }
+                                          resume = None
+                                          additionalDirectories = None }
                                 )
                         }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
                   onCloseSession = fun _ -> task { return Error "not implemented" }
                   onDeleteSession = fun p -> task { return Ok { _meta = None } }
@@ -629,6 +657,78 @@ module ConnectionTests =
             match deleted with
             | Ok _ -> ()
             | Error e -> failwithf "DeleteSession failed: %A" e
+
+            do! agent.StopAsync()
+        }
+
+    [<Fact>]
+    let ``Client can resume session after initialization`` () =
+        task {
+            let (clientTransport, agentTransport) = Transport.DuplexTransport.CreatePair()
+
+            let handlers: Connection.AgentHandlers =
+                { onInitialize =
+                    fun _ ->
+                        task {
+                            return
+                                Ok(
+                                    mkInitializeResult
+                                        true
+                                        { list = None
+                                          close = None
+                                          delete = None
+                                          resume = Some { _meta = None }
+                                          additionalDirectories = None }
+                                )
+                        }
+                  onNewSession = fun _ -> task { return Error "not implemented" }
+                  onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onResumeSession =
+                    fun p ->
+                        task {
+                            return
+                                Ok
+                                    { sessionId = p.sessionId
+                                      configOptions = None
+                                      modes = None
+                                      _meta = None }
+                        }
+                  onListSessions = fun _ -> task { return Error "not implemented" }
+                  onCloseSession = fun _ -> task { return Error "not implemented" }
+                  onDeleteSession = fun _ -> task { return Error "not implemented" }
+                  onPrompt = fun _ -> task { return Error "not implemented" }
+                  onCancel = fun _ -> task { () }
+                  onSetMode = fun _ -> task { return Error "not implemented" }
+                  onSetConfigOption = fun _ -> task { return Error "not implemented" } }
+
+            let agent = Connection.AgentConnection(agentTransport, handlers)
+            let client = Connection.ClientConnection(clientTransport)
+
+            let _ = agent.StartListening()
+
+            let! _ =
+                client.InitializeAsync(
+                    { protocolVersion = ProtocolVersion.current
+                      clientCapabilities =
+                        { fs =
+                            { readTextFile = true
+                              writeTextFile = true }
+                          terminal = true }
+                      clientInfo = None }
+                )
+
+            let! resumed =
+                client.ResumeSessionAsync(
+                    { sessionId = SessionId "resume-me"
+                      cwd = "/tmp"
+                      mcpServers = []
+                      additionalDirectories = [ "/extra" ]
+                      _meta = None }
+                )
+
+            match resumed with
+            | Ok r -> Assert.Equal("resume-me", SessionId.value r.sessionId)
+            | Error e -> failwithf "ResumeSession failed: %A" e
 
             do! agent.StopAsync()
         }

@@ -37,6 +37,7 @@ module Connection =
         | ClientToAgentMessage.SessionNew _ -> "session/new"
         | ClientToAgentMessage.SessionList _ -> "session/list"
         | ClientToAgentMessage.SessionLoad _ -> "session/load"
+        | ClientToAgentMessage.SessionResume _ -> "session/resume"
         | ClientToAgentMessage.SessionClose _ -> "session/close"
         | ClientToAgentMessage.SessionDelete _ -> "session/delete"
         | ClientToAgentMessage.SessionPrompt _ -> "session/prompt"
@@ -84,6 +85,8 @@ module Connection =
         | AgentToClientMessage.SessionListError _ -> "session/list"
         | AgentToClientMessage.SessionLoadResult _ -> "session/load"
         | AgentToClientMessage.SessionLoadError _ -> "session/load"
+        | AgentToClientMessage.SessionResumeResult _ -> "session/resume"
+        | AgentToClientMessage.SessionResumeError _ -> "session/resume"
         | AgentToClientMessage.SessionCloseResult _ -> "session/close"
         | AgentToClientMessage.SessionCloseError _ -> "session/close"
         | AgentToClientMessage.SessionDeleteResult _ -> "session/delete"
@@ -127,6 +130,7 @@ module Connection =
           onNewSession: NewSessionParams -> Task<Result<NewSessionResult, string>>
           onListSessions: ListSessionsRequest -> Task<Result<ListSessionsResponse, string>>
           onLoadSession: LoadSessionParams -> Task<Result<LoadSessionResult, string>>
+          onResumeSession: ResumeSessionParams -> Task<Result<ResumeSessionResult, string>>
           onCloseSession: CloseSessionRequest -> Task<Result<CloseSessionResponse, string>>
           onDeleteSession: DeleteSessionRequest -> Task<Result<DeleteSessionResponse, string>>
           onPrompt: SessionPromptParams -> Task<Result<SessionPromptResult, string>>
@@ -408,6 +412,19 @@ module Connection =
                 | Error e -> return Error e
                 | Ok(Message.FromAgent(AgentToClientMessage.SessionLoadResult r)) -> return Ok r
                 | Ok(Message.FromAgent(AgentToClientMessage.SessionLoadError(_, e))) ->
+                    return Error(ConnectionError.ProtocolError e.message)
+                | Ok other -> return Error(ConnectionError.ProtocolError(sprintf "Unexpected response: %A" other))
+            }
+
+        /// Send session/resume request.
+        member _.ResumeSessionAsync(params': ResumeSessionParams) : Task<Result<ResumeSessionResult, ConnectionError>> =
+            task {
+                let! result = sendRequest (ClientToAgentMessage.SessionResume params')
+
+                match result with
+                | Error e -> return Error e
+                | Ok(Message.FromAgent(AgentToClientMessage.SessionResumeResult r)) -> return Ok r
+                | Ok(Message.FromAgent(AgentToClientMessage.SessionResumeError(_, e))) ->
                     return Error(ConnectionError.ProtocolError e.message)
                 | Ok other -> return Error(ConnectionError.ProtocolError(sprintf "Unexpected response: %A" other))
             }
@@ -862,6 +879,22 @@ module Connection =
                                 sendResponse
                                     reqId
                                     (AgentToClientMessage.SessionLoadError(
+                                        p,
+                                        { code = -32603
+                                          message = msg
+                                          data = None }
+                                    ))
+
+                    | ClientToAgentMessage.SessionResume p, Some reqId ->
+                        let! result = handlers.onResumeSession p
+
+                        match result with
+                        | Ok r -> do! sendResponse reqId (AgentToClientMessage.SessionResumeResult r)
+                        | Error msg ->
+                            do!
+                                sendResponse
+                                    reqId
+                                    (AgentToClientMessage.SessionResumeError(
                                         p,
                                         { code = -32603
                                           message = msg

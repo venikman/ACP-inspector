@@ -216,10 +216,38 @@ module Protocol =
             // session/load request: state unchanged; result ensures the session is tracked.
             | Phase.Ready ctx, Message.FromClient(ClientToAgentMessage.SessionLoad _) -> Ok(Phase.Ready ctx)
 
+            // session/resume request: state unchanged; result upserts the session (mirrors load).
+            | Phase.Ready ctx, Message.FromClient(ClientToAgentMessage.SessionResume _) -> Ok(Phase.Ready ctx)
+
             | Phase.Ready ctx,
               Message.FromAgent(AgentToClientMessage.SessionLoadResult { sessionId = sid
                                                                          configOptions = configOptions
                                                                          modes = modes }) ->
+                let sessions' =
+                    if ctx.sessions |> Map.containsKey sid then
+                        let s = ctx.sessions.[sid]
+
+                        let s' =
+                            { s with
+                                configOptions = Option.orElse configOptions s.configOptions
+                                modeState = Option.orElse modes s.modeState }
+
+                        ctx.sessions |> Map.add sid s'
+                    else
+                        let s =
+                            { sessionId = sid
+                              configOptions = configOptions
+                              modeState = modes
+                              turnState = TurnState.Idle None }
+
+                        ctx.sessions |> Map.add sid s
+
+                Ok(Phase.Ready { ctx with sessions = sessions' })
+
+            | Phase.Ready ctx,
+              Message.FromAgent(AgentToClientMessage.SessionResumeResult { sessionId = sid
+                                                                           configOptions = configOptions
+                                                                           modes = modes }) ->
                 let sessions' =
                     if ctx.sessions |> Map.containsKey sid then
                         let s = ctx.sessions.[sid]

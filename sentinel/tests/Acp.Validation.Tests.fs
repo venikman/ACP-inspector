@@ -101,7 +101,12 @@ module ValidationTests =
     let mkHappyTrace (sid: SessionId) : Message list =
         [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
           Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
-          Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
+          Message.FromClient(
+              ClientToAgentMessage.SessionNew
+                  { cwd = "."
+                    mcpServers = []
+                    additionalDirectories = [] }
+          )
           Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
           Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "hi" ]))
           Message.FromAgent(AgentToClientMessage.SessionPromptResult(mkPromptResult sid StopReason.EndTurn)) ]
@@ -109,7 +114,12 @@ module ValidationTests =
     let mkCancelledTraceGood (sid: SessionId) : Message list =
         [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
           Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
-          Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
+          Message.FromClient(
+              ClientToAgentMessage.SessionNew
+                  { cwd = "."
+                    mcpServers = []
+                    additionalDirectories = [] }
+          )
           Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
           Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "hi" ]))
           Message.FromClient(ClientToAgentMessage.SessionCancel { sessionId = sid })
@@ -118,7 +128,12 @@ module ValidationTests =
     let mkCancelledTraceBad (sid: SessionId) : Message list =
         [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
           Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
-          Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
+          Message.FromClient(
+              ClientToAgentMessage.SessionNew
+                  { cwd = "."
+                    mcpServers = []
+                    additionalDirectories = [] }
+          )
           Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
           Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "hi" ]))
           Message.FromClient(ClientToAgentMessage.SessionCancel { sessionId = sid })
@@ -127,7 +142,12 @@ module ValidationTests =
     let mkSequentialPromptsTraceGood (sid: SessionId) : Message list =
         [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
           Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
-          Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
+          Message.FromClient(
+              ClientToAgentMessage.SessionNew
+                  { cwd = "."
+                    mcpServers = []
+                    additionalDirectories = [] }
+          )
           Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
           Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "p1" ]))
           Message.FromAgent(AgentToClientMessage.SessionPromptResult(mkPromptResult sid StopReason.EndTurn))
@@ -137,7 +157,12 @@ module ValidationTests =
     let mkConcurrentPromptsTraceBad (sid: SessionId) : Message list =
         [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
           Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
-          Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
+          Message.FromClient(
+              ClientToAgentMessage.SessionNew
+                  { cwd = "."
+                    mcpServers = []
+                    additionalDirectories = [] }
+          )
           Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
           Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "p1" ]))
           Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "p2" ]))
@@ -146,7 +171,12 @@ module ValidationTests =
     let mkResultWithoutPromptTraceBad (sid: SessionId) : Message list =
         [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
           Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
-          Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
+          Message.FromClient(
+              ClientToAgentMessage.SessionNew
+                  { cwd = "."
+                    mcpServers = []
+                    additionalDirectories = [] }
+          )
           Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
           Message.FromAgent(AgentToClientMessage.SessionPromptResult(mkPromptResult sid StopReason.EndTurn)) ]
 
@@ -185,7 +215,12 @@ module ValidationTests =
         let trace =
             [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
               Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
-              Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
+              Message.FromClient(
+                  ClientToAgentMessage.SessionNew
+                      { cwd = "."
+                        mcpServers = []
+                        additionalDirectories = [] }
+              )
               Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
               Message.FromClient(ClientToAgentMessage.SessionPrompt(mkPromptParams sid [ textBlock "hi" ]))
               Message.FromClient(ClientToAgentMessage.SessionCancel { sessionId = sid })
@@ -346,7 +381,12 @@ module ValidationTests =
         let trace: Message list =
             [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
               Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
-              Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
+              Message.FromClient(
+                  ClientToAgentMessage.SessionNew
+                      { cwd = "."
+                        mcpServers = []
+                        additionalDirectories = [] }
+              )
               Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid (Some modes))) ]
 
         let result = runWithValidation sid spec trace true None None
@@ -366,7 +406,12 @@ module ValidationTests =
         let trace: Message list =
             [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
               Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
-              Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
+              Message.FromClient(
+                  ClientToAgentMessage.SessionNew
+                      { cwd = "."
+                        mcpServers = []
+                        additionalDirectories = [] }
+              )
               Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid (Some modes)))
               Message.FromAgent(
                   AgentToClientMessage.SessionUpdate(
@@ -394,7 +439,12 @@ module ValidationTests =
         let trace: Message list =
             [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
               Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
-              Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
+              Message.FromClient(
+                  ClientToAgentMessage.SessionNew
+                      { cwd = "."
+                        mcpServers = []
+                        additionalDirectories = [] }
+              )
               Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid (Some modes)))
               Message.FromClient(ClientToAgentMessage.SessionSetMode { sessionId = sid; modeId = badModeId }) ]
 
@@ -421,7 +471,12 @@ module ValidationTests =
         let trace: Message list =
             [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
               Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
-              Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
+              Message.FromClient(
+                  ClientToAgentMessage.SessionNew
+                      { cwd = "."
+                        mcpServers = []
+                        additionalDirectories = [] }
+              )
               Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
               Message.FromClient(ClientToAgentMessage.SessionClose { sessionId = sid; _meta = None })
               Message.FromAgent(AgentToClientMessage.SessionCloseResult { _meta = None }) ]
@@ -440,7 +495,12 @@ module ValidationTests =
         let trace: Message list =
             [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
               Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
-              Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
+              Message.FromClient(
+                  ClientToAgentMessage.SessionNew
+                      { cwd = "."
+                        mcpServers = []
+                        additionalDirectories = [] }
+              )
               Message.FromAgent(AgentToClientMessage.SessionNewResult(mkNewSessionResult sid None))
               Message.FromClient(ClientToAgentMessage.SessionDelete { sessionId = sid; _meta = None })
               Message.FromAgent(AgentToClientMessage.SessionDeleteResult { _meta = None }) ]

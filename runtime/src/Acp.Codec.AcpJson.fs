@@ -331,6 +331,60 @@ module internal CodecAcpJson =
 
             Some(o :> JsonNode)
 
+    let private decodeSessionResumeCapabilities
+        (nodeOpt: JsonNode option)
+        : Result<SessionResumeCapabilities option, string> =
+        match nodeOpt with
+        | None -> Ok None
+        | Some node ->
+            result {
+                let! o = asObject node
+
+                let meta = tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+
+                return Some { _meta = meta }
+            }
+
+    let private encodeSessionResumeCapabilities (capsOpt: SessionResumeCapabilities option) : JsonNode option =
+        match capsOpt with
+        | None -> None
+        | Some caps ->
+            let o = JsonObject()
+
+            match caps._meta with
+            | None -> ()
+            | Some meta -> o["_meta"] <- meta.DeepClone()
+
+            Some(o :> JsonNode)
+
+    let private decodeSessionAdditionalDirectoriesCapabilities
+        (nodeOpt: JsonNode option)
+        : Result<SessionAdditionalDirectoriesCapabilities option, string> =
+        match nodeOpt with
+        | None -> Ok None
+        | Some node ->
+            result {
+                let! o = asObject node
+
+                let meta = tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+
+                return Some { _meta = meta }
+            }
+
+    let private encodeSessionAdditionalDirectoriesCapabilities
+        (capsOpt: SessionAdditionalDirectoriesCapabilities option)
+        : JsonNode option =
+        match capsOpt with
+        | None -> None
+        | Some caps ->
+            let o = JsonObject()
+
+            match caps._meta with
+            | None -> ()
+            | Some meta -> o["_meta"] <- meta.DeepClone()
+
+            Some(o :> JsonNode)
+
     let private decodeSessionCapabilities (nodeOpt: JsonNode option) : Result<SessionCapabilities, string> =
         match nodeOpt with
         | None -> Ok SessionCapabilities.empty
@@ -340,11 +394,17 @@ module internal CodecAcpJson =
                 let! list = decodeSessionListCapabilities (tryGet "list" o)
                 let! close = decodeSessionCloseCapabilities (tryGet "close" o)
                 let! delete = decodeSessionDeleteCapabilities (tryGet "delete" o)
+                let! resume = decodeSessionResumeCapabilities (tryGet "resume" o)
+
+                let! additionalDirectories =
+                    decodeSessionAdditionalDirectoriesCapabilities (tryGet "additionalDirectories" o)
 
                 return
                     { list = list
                       close = close
-                      delete = delete }
+                      delete = delete
+                      resume = resume
+                      additionalDirectories = additionalDirectories }
             }
 
     let private encodeSessionCapabilities (caps: SessionCapabilities) : JsonObject =
@@ -361,6 +421,14 @@ module internal CodecAcpJson =
         match encodeSessionDeleteCapabilities caps.delete with
         | None -> ()
         | Some deleteCaps -> o["delete"] <- deleteCaps
+
+        match encodeSessionResumeCapabilities caps.resume with
+        | None -> ()
+        | Some resumeCaps -> o["resume"] <- resumeCaps
+
+        match encodeSessionAdditionalDirectoriesCapabilities caps.additionalDirectories with
+        | None -> ()
+        | Some addDirCaps -> o["additionalDirectories"] <- addDirCaps
 
         o
 
@@ -979,6 +1047,20 @@ module internal CodecAcpJson =
                 | None -> None
                 | Some n -> asString n |> Result.toOption
 
+            let additionalDirectories =
+                match tryGet "additionalDirectories" o with
+                | None -> []
+                | Some n ->
+                    match n with
+                    | :? JsonArray as dirArr ->
+                        dirArr
+                        |> Seq.choose (fun d ->
+                            match d with
+                            | null -> None
+                            | d -> asString d |> Result.toOption)
+                        |> Seq.toList
+                    | _ -> []
+
             let meta = tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
 
             return
@@ -986,6 +1068,7 @@ module internal CodecAcpJson =
                   cwd = cwd
                   title = title
                   updatedAt = updatedAt
+                  additionalDirectories = additionalDirectories
                   _meta = meta }
         }
 
@@ -1001,6 +1084,14 @@ module internal CodecAcpJson =
         match info.updatedAt with
         | None -> ()
         | Some updatedAt -> o["updatedAt"] <- JsonValue.Create(updatedAt)
+
+        if not info.additionalDirectories.IsEmpty then
+            let dirArr = JsonArray()
+
+            info.additionalDirectories
+            |> List.iter (fun d -> dirArr.Add(JsonValue.Create(d)))
+
+            o["additionalDirectories"] <- dirArr
 
         match info._meta with
         | None -> ()
@@ -1395,7 +1486,24 @@ module internal CodecAcpJson =
                     | n -> decodeMcpServer n |> Result.toOption)
                 |> Seq.toList
 
-            return { cwd = cwd; mcpServers = servers }
+            let additionalDirectories =
+                match tryGet "additionalDirectories" o with
+                | None -> []
+                | Some n ->
+                    match n with
+                    | :? JsonArray as dirArr ->
+                        dirArr
+                        |> Seq.choose (fun d ->
+                            match d with
+                            | null -> None
+                            | d -> asString d |> Result.toOption)
+                        |> Seq.toList
+                    | _ -> []
+
+            return
+                { cwd = cwd
+                  mcpServers = servers
+                  additionalDirectories = additionalDirectories }
         }
 
     let private encodeNewSessionParams (p: NewSessionParams) : JsonObject =
@@ -1404,6 +1512,12 @@ module internal CodecAcpJson =
         let arr = JsonArray()
         p.mcpServers |> List.iter (fun s -> arr.Add(encodeMcpServer s))
         o["mcpServers"] <- arr
+
+        if not p.additionalDirectories.IsEmpty then
+            let dirArr = JsonArray()
+            p.additionalDirectories |> List.iter (fun d -> dirArr.Add(JsonValue.Create(d)))
+            o["additionalDirectories"] <- dirArr
+
         o
 
     let private decodeLoadSessionParams (node: JsonNode) : Result<LoadSessionParams, string> =
@@ -1423,10 +1537,25 @@ module internal CodecAcpJson =
                     | n -> decodeMcpServer n |> Result.toOption)
                 |> Seq.toList
 
+            let additionalDirectories =
+                match tryGet "additionalDirectories" o with
+                | None -> []
+                | Some n ->
+                    match n with
+                    | :? JsonArray as dirArr ->
+                        dirArr
+                        |> Seq.choose (fun d ->
+                            match d with
+                            | null -> None
+                            | d -> asString d |> Result.toOption)
+                        |> Seq.toList
+                    | _ -> []
+
             return
                 { sessionId = sessionId
                   cwd = cwd
-                  mcpServers = servers }
+                  mcpServers = servers
+                  additionalDirectories = additionalDirectories }
         }
 
     let private encodeLoadSessionParams (p: LoadSessionParams) : JsonObject =
@@ -1436,6 +1565,12 @@ module internal CodecAcpJson =
         let arr = JsonArray()
         p.mcpServers |> List.iter (fun s -> arr.Add(encodeMcpServer s))
         o["mcpServers"] <- arr
+
+        if not p.additionalDirectories.IsEmpty then
+            let dirArr = JsonArray()
+            p.additionalDirectories |> List.iter (fun d -> dirArr.Add(JsonValue.Create(d)))
+            o["additionalDirectories"] <- dirArr
+
         o
 
     let private decodeNewSessionResult (node: JsonNode) : Result<NewSessionResult, string> =
@@ -1500,6 +1635,109 @@ module internal CodecAcpJson =
             }
 
     let private encodeLoadSessionResult (r: LoadSessionResult) : JsonObject =
+        let o = JsonObject()
+
+        match encodeConfigOptions r.configOptions with
+        | None -> ()
+        | Some configOptions -> o["configOptions"] <- configOptions
+
+        match encodeModeState r.modes with
+        | None -> ()
+        | Some ms -> o["modes"] <- ms
+
+        match r._meta with
+        | None -> ()
+        | Some meta -> o["_meta"] <- meta.DeepClone()
+
+        o
+
+    let private decodeResumeSessionParams (node: JsonNode) : Result<ResumeSessionParams, string> =
+        result {
+            let! o = asObject node
+            let! sidNode = get "sessionId" o
+            let! sessionId = decodeSessionId sidNode
+            let! cwd = get "cwd" o |> Result.bind asString
+            let! msNode = get "mcpServers" o
+            let! arr = asArray msNode
+
+            let servers =
+                arr
+                |> Seq.choose (fun n ->
+                    match n with
+                    | null -> None
+                    | n -> decodeMcpServer n |> Result.toOption)
+                |> Seq.toList
+
+            let additionalDirectories =
+                match tryGet "additionalDirectories" o with
+                | None -> []
+                | Some n ->
+                    match n with
+                    | :? JsonArray as dirArr ->
+                        dirArr
+                        |> Seq.choose (fun d ->
+                            match d with
+                            | null -> None
+                            | d -> asString d |> Result.toOption)
+                        |> Seq.toList
+                    | _ -> []
+
+            let meta = tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+
+            return
+                { sessionId = sessionId
+                  cwd = cwd
+                  mcpServers = servers
+                  additionalDirectories = additionalDirectories
+                  _meta = meta }
+        }
+
+    let private encodeResumeSessionParams (p: ResumeSessionParams) : JsonObject =
+        let o = JsonObject()
+        o["sessionId"] <- encodeSessionId p.sessionId
+        o["cwd"] <- JsonValue.Create(p.cwd)
+        let arr = JsonArray()
+        p.mcpServers |> List.iter (fun s -> arr.Add(encodeMcpServer s))
+        o["mcpServers"] <- arr
+
+        if not p.additionalDirectories.IsEmpty then
+            let dirArr = JsonArray()
+            p.additionalDirectories |> List.iter (fun d -> dirArr.Add(JsonValue.Create(d)))
+            o["additionalDirectories"] <- dirArr
+
+        match p._meta with
+        | None -> ()
+        | Some meta -> o["_meta"] <- meta.DeepClone()
+
+        o
+
+    let private decodeResumeSessionResult
+        (sessionId: SessionId)
+        (nodeOpt: JsonNode option)
+        : Result<ResumeSessionResult, string> =
+        match nodeOpt with
+        | None ->
+            Ok
+                { sessionId = sessionId
+                  configOptions = None
+                  modes = None
+                  _meta = None }
+        | Some node ->
+            result {
+                let! o = asObject node
+                let! configOptions = decodeConfigOptions (tryGet "configOptions" o)
+                let! modes = decodeModeState (tryGet "modes" o)
+
+                let meta = tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+
+                return
+                    { sessionId = sessionId
+                      configOptions = configOptions
+                      modes = modes
+                      _meta = meta }
+            }
+
+    let private encodeResumeSessionResult (r: ResumeSessionResult) : JsonObject =
         let o = JsonObject()
 
         match encodeConfigOptions r.configOptions with
@@ -3085,6 +3323,7 @@ module internal CodecAcpJson =
         | PendingClientRequest.SessionNew -> "session/new"
         | PendingClientRequest.SessionList -> "session/list"
         | PendingClientRequest.SessionLoad _ -> "session/load"
+        | PendingClientRequest.SessionResume _ -> "session/resume"
         | PendingClientRequest.SessionClose _ -> "session/close"
         | PendingClientRequest.SessionDelete _ -> "session/delete"
         | PendingClientRequest.SessionPrompt _ -> "session/prompt"
@@ -3144,6 +3383,9 @@ module internal CodecAcpJson =
                 | "session/load" ->
                     let! p = decodeLoadSessionParams paramsNode
                     return ClientToAgentMessage.SessionLoad p, PendingClientRequest.SessionLoad p
+                | "session/resume" ->
+                    let! p = decodeResumeSessionParams paramsNode
+                    return ClientToAgentMessage.SessionResume p, PendingClientRequest.SessionResume p
                 | "session/close" ->
                     let! p = decodeCloseSessionRequest paramsNode
                     return ClientToAgentMessage.SessionClose p, PendingClientRequest.SessionClose p
@@ -3247,6 +3489,7 @@ module internal CodecAcpJson =
             | "session/new"
             | "session/list"
             | "session/load"
+            | "session/resume"
             | "session/close"
             | "session/delete"
             | "session/prompt"
@@ -3320,6 +3563,10 @@ module internal CodecAcpJson =
             decodeLoadSessionResult req.sessionId resultNodeOpt
             |> Result.map AgentToClientMessage.SessionLoadResult
 
+        | PendingClientRequest.SessionResume req ->
+            decodeResumeSessionResult req.sessionId resultNodeOpt
+            |> Result.map AgentToClientMessage.SessionResumeResult
+
         | PendingClientRequest.SessionClose _ ->
             Ok(AgentToClientMessage.SessionCloseResult(decodeCloseSessionResponse resultNodeOpt))
 
@@ -3362,6 +3609,7 @@ module internal CodecAcpJson =
         | PendingClientRequest.SessionNew -> AgentToClientMessage.SessionNewError err
         | PendingClientRequest.SessionList -> AgentToClientMessage.SessionListError err
         | PendingClientRequest.SessionLoad req -> AgentToClientMessage.SessionLoadError(req, err)
+        | PendingClientRequest.SessionResume req -> AgentToClientMessage.SessionResumeError(req, err)
         | PendingClientRequest.SessionClose req -> AgentToClientMessage.SessionCloseError(req, err)
         | PendingClientRequest.SessionDelete req -> AgentToClientMessage.SessionDeleteError(req, err)
         | PendingClientRequest.SessionPrompt req -> AgentToClientMessage.SessionPromptError(req, err)
@@ -3506,6 +3754,14 @@ module internal CodecAcpJson =
                 o["id"] <- encodeRequestId id
                 o["method"] <- JsonValue.Create("session/load")
                 o["params"] <- encodeLoadSessionParams p
+                Ok o
+        | ClientToAgentMessage.SessionResume p ->
+            match idOpt with
+            | None -> Error EncodeError.MissingRequestId
+            | Some id ->
+                o["id"] <- encodeRequestId id
+                o["method"] <- JsonValue.Create("session/resume")
+                o["params"] <- encodeResumeSessionParams p
                 Ok o
         | ClientToAgentMessage.SessionClose p ->
             match idOpt with
@@ -3762,6 +4018,14 @@ module internal CodecAcpJson =
                 o["result"] <- encodeLoadSessionResult r
                 Ok o
 
+        | AgentToClientMessage.SessionResumeResult r ->
+            match idOpt with
+            | None -> Error EncodeError.MissingRequestId
+            | Some id ->
+                o["id"] <- encodeRequestId id
+                o["result"] <- encodeResumeSessionResult r
+                Ok o
+
         | AgentToClientMessage.SessionCloseResult r ->
             match idOpt with
             | None -> Error EncodeError.MissingRequestId
@@ -3847,6 +4111,7 @@ module internal CodecAcpJson =
                 Ok o
 
         | AgentToClientMessage.SessionLoadError(_, err)
+        | AgentToClientMessage.SessionResumeError(_, err)
         | AgentToClientMessage.SessionCloseError(_, err)
         | AgentToClientMessage.SessionDeleteError(_, err)
         | AgentToClientMessage.SessionPromptError(_, err)

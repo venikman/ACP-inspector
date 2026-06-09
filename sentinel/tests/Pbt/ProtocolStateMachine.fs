@@ -77,7 +77,12 @@ module ProtocolStateMachine =
     let private opSessionNewReq =
         StateMachine.operation "SessionNew" (fun m -> m) (fun (actual, model) ->
             let msg =
-                Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] })
+                Message.FromClient(
+                    ClientToAgentMessage.SessionNew
+                        { cwd = "."
+                          mcpServers = []
+                          additionalDirectories = [] }
+                )
 
             apply actual msg && (projectPhase actual.Value = model))
 
@@ -105,7 +110,8 @@ module ProtocolStateMachine =
                     ClientToAgentMessage.SessionLoad
                         { sessionId = sid
                           cwd = "."
-                          mcpServers = [] }
+                          mcpServers = []
+                          additionalDirectories = [] }
                 )
 
             apply actual msg && (projectPhase actual.Value = model))

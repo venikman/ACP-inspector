@@ -96,18 +96,28 @@ module Domain =
         /// Capability marker for `session/delete`.
         type SessionDeleteCapabilities = { _meta: JsonObject option }
 
+        /// Capability marker for `session/resume`.
+        type SessionResumeCapabilities = { _meta: JsonObject option }
+
+        /// Capability marker for `additionalDirectories` support.
+        type SessionAdditionalDirectoriesCapabilities = { _meta: JsonObject option }
+
         /// Session capabilities supported by the agent.
         type SessionCapabilities =
             { list: SessionListCapabilities option
               close: SessionCloseCapabilities option
-              delete: SessionDeleteCapabilities option }
+              delete: SessionDeleteCapabilities option
+              resume: SessionResumeCapabilities option
+              additionalDirectories: SessionAdditionalDirectoriesCapabilities option }
 
         [<RequireQualifiedAccess>]
         module SessionCapabilities =
             let empty =
                 { list = None
                   close = None
-                  delete = None }
+                  delete = None
+                  resume = None
+                  additionalDirectories = None }
 
         /// Capability marker for the `logout` method.
         type LogoutCapabilities = { _meta: JsonObject option }
@@ -264,13 +274,15 @@ module Domain =
         /// Params for session/new (client -> agent).
         type NewSessionParams =
             { cwd: string
-              mcpServers: McpServer list }
+              mcpServers: McpServer list
+              additionalDirectories: string list }
 
         /// Params for session/load (client -> agent).
         type LoadSessionParams =
             { sessionId: SessionId
               cwd: string
-              mcpServers: McpServer list }
+              mcpServers: McpServer list
+              additionalDirectories: string list }
 
         /// Params for session/list (client -> agent).
         type ListSessionsRequest =
@@ -353,6 +365,7 @@ module Domain =
               cwd: string
               title: string option
               updatedAt: string option
+              additionalDirectories: string list
               _meta: JsonObject option }
 
         type ListSessionsResponse =
@@ -370,6 +383,22 @@ module Domain =
         /// Domain-level result for session/load (agent -> client).
         /// Wire result does not include a session id; we reattach it from the request.
         type LoadSessionResult =
+            { sessionId: SessionId
+              configOptions: SessionConfigOption list option
+              modes: SessionModeState option
+              _meta: JsonObject option }
+
+        /// Params for session/resume (client -> agent).
+        type ResumeSessionParams =
+            { sessionId: SessionId
+              cwd: string
+              mcpServers: McpServer list
+              additionalDirectories: string list
+              _meta: JsonObject option }
+
+        /// Domain-level result for session/resume (agent -> client).
+        /// Wire result does not include a session id; we reattach it from the request.
+        type ResumeSessionResult =
             { sessionId: SessionId
               configOptions: SessionConfigOption list option
               modes: SessionModeState option
@@ -878,6 +907,7 @@ module Domain =
             | SessionNew of NewSessionParams
             | SessionList of ListSessionsRequest
             | SessionLoad of LoadSessionParams
+            | SessionResume of ResumeSessionParams
             | SessionClose of CloseSessionRequest
             | SessionDelete of DeleteSessionRequest
             | SessionPrompt of SessionPromptParams
@@ -922,6 +952,7 @@ module Domain =
             | SessionNewResult of NewSessionResult
             | SessionListResult of ListSessionsResponse
             | SessionLoadResult of LoadSessionResult
+            | SessionResumeResult of ResumeSessionResult
             | SessionCloseResult of CloseSessionResponse
             | SessionDeleteResult of DeleteSessionResponse
             | SessionPromptResult of SessionPromptResult
@@ -936,6 +967,7 @@ module Domain =
             | SessionNewError of error: Error
             | SessionListError of error: Error
             | SessionLoadError of request: LoadSessionParams * error: Error
+            | SessionResumeError of request: ResumeSessionParams * error: Error
             | SessionCloseError of request: CloseSessionRequest * error: Error
             | SessionDeleteError of request: DeleteSessionRequest * error: Error
             | SessionPromptError of request: SessionPromptParams * error: Error

@@ -45,6 +45,7 @@ module CodecTypes =
         | SessionNew
         | SessionList
         | SessionLoad of request: LoadSessionParams
+        | SessionResume of request: ResumeSessionParams
         | SessionClose of request: CloseSessionRequest
         | SessionDelete of request: DeleteSessionRequest
         | SessionPrompt of request: SessionPromptParams

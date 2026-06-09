@@ -705,3 +705,76 @@ module CodecTests =
         | other -> failwithf "unexpected message %A" other
 
         Assert.True(state2.pendingClientRequests.IsEmpty)
+
+    [<Fact>]
+    let ``decode session resume request and response reattaches sessionId`` () =
+        let state0 = Codec.CodecState.empty
+
+        let resumeReq =
+            """{"jsonrpc":"2.0","id":"r1","method":"session/resume","params":{"sessionId":"s-1","cwd":"/tmp","mcpServers":[],"additionalDirectories":["/extra"]}}"""
+
+        let state1, msg1 =
+            match Codec.decode Codec.Direction.FromClient state0 resumeReq with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg1 with
+        | Message.FromClient(ClientToAgentMessage.SessionResume p) ->
+            Assert.Equal<string list>([ "/extra" ], p.additionalDirectories)
+        | other -> failwithf "unexpected message %A" other
+
+        let resumeRes = """{"jsonrpc":"2.0","id":"r1","result":{}}"""
+
+        let state2, msg2 =
+            match Codec.decode Codec.Direction.FromAgent state1 resumeRes with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg2 with
+        | Message.FromAgent(AgentToClientMessage.SessionResumeResult r) ->
+            Assert.Equal("s-1", SessionId.value r.sessionId)
+        | other -> failwithf "unexpected message %A" other
+
+        Assert.True(state2.pendingClientRequests.IsEmpty)
+
+    [<Fact>]
+    let ``new session params omit additionalDirectories when empty`` () =
+        let state0 = Codec.CodecState.empty
+
+        let req =
+            """{"jsonrpc":"2.0","id":3,"method":"session/new","params":{"cwd":"/tmp","mcpServers":[]}}"""
+
+        let _, msg =
+            match Codec.decode Codec.Direction.FromClient state0 req with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg with
+        | Message.FromClient(ClientToAgentMessage.SessionNew p) -> Assert.True(p.additionalDirectories.IsEmpty)
+        | other -> failwithf "unexpected %A" other
+
+    [<Fact>]
+    let ``session resume capability roundtrips`` () =
+        let state0 = Codec.CodecState.empty
+
+        let initReq =
+            """{"jsonrpc":"2.0","id":10,"method":"initialize","params":{"protocolVersion":1}}"""
+
+        let state1, _ =
+            match Codec.decode Codec.Direction.FromClient state0 initReq with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        let initRes =
+            """{"jsonrpc":"2.0","id":10,"result":{"protocolVersion":1,"agentCapabilities":{"loadSession":true,"mcpCapabilities":{"http":false,"sse":false},"promptCapabilities":{"audio":false,"image":false,"embeddedContext":false},"sessionCapabilities":{"resume":{},"additionalDirectories":{}}},"authMethods":[]}}"""
+
+        let _, msg =
+            match Codec.decode Codec.Direction.FromAgent state1 initRes with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg with
+        | Message.FromAgent(AgentToClientMessage.InitializeResult r) ->
+            Assert.True(r.agentCapabilities.sessionCapabilities.resume.IsSome)
+            Assert.True(r.agentCapabilities.sessionCapabilities.additionalDirectories.IsSome)
+        | other -> failwithf "unexpected message %A" other
