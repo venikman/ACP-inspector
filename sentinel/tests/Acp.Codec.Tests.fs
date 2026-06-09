@@ -546,3 +546,99 @@ module CodecTests =
             | Acp.Domain.Prompting.SessionUpdate.UsageUpdate usage -> Assert.True(usage.cost.IsNone)
             | other -> failwithf "unexpected %A" other
         | other -> failwithf "unexpected %A" other
+
+    // ───────────────────────────────────────────────────────────────────────────────
+    // Task 3: logout (0.13.6 A5)
+    // ───────────────────────────────────────────────────────────────────────────────
+
+    [<Fact>]
+    let ``decode logout request and response correlates by id`` () =
+        let state0 = Codec.CodecState.empty
+        let logoutReq = """{"jsonrpc":"2.0","id":31,"method":"logout"}"""
+
+        let state1, msg1 =
+            match Codec.decode Codec.Direction.FromClient state0 logoutReq with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg1 with
+        | Message.FromClient(ClientToAgentMessage.Logout _) -> ()
+        | other -> failwithf "unexpected message %A" other
+
+        Assert.True(state1.pendingClientRequests |> Map.containsKey (RequestId.Number 31L))
+        let logoutRes = """{"jsonrpc":"2.0","id":31,"result":{}}"""
+
+        let state2, msg2 =
+            match Codec.decode Codec.Direction.FromAgent state1 logoutRes with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg2 with
+        | Message.FromAgent(AgentToClientMessage.LogoutResult _) -> ()
+        | other -> failwithf "unexpected message %A" other
+
+        Assert.True(state2.pendingClientRequests.IsEmpty)
+
+    [<Fact>]
+    let ``initialize result with auth logout capability roundtrips`` () =
+        let state0 = Codec.CodecState.empty
+
+        // Register a pending initialize request first
+        let initReq =
+            """{"jsonrpc":"2.0","id":10,"method":"initialize","params":{"protocolVersion":1}}"""
+
+        let state1, _ =
+            match Codec.decode Codec.Direction.FromClient state0 initReq with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        let initRes =
+            """{"jsonrpc":"2.0","id":10,"result":{"protocolVersion":1,"agentCapabilities":{"loadSession":true,"mcpCapabilities":{"http":false,"sse":false},"promptCapabilities":{"audio":false,"image":false,"embeddedContext":false},"auth":{"logout":{}}},"authMethods":[]}}"""
+
+        let _, msg =
+            match Codec.decode Codec.Direction.FromAgent state1 initRes with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg with
+        | Message.FromAgent(AgentToClientMessage.InitializeResult r) ->
+            Assert.True(r.agentCapabilities.auth.logout.IsSome)
+        | other -> failwithf "unexpected message %A" other
+
+    [<Fact>]
+    let ``initialize result with empty auth omits auth key from wire`` () =
+        // CRITICAL: absent auth must not be emitted so existing 0.11.x payloads round-trip unchanged.
+        let state0 = Codec.CodecState.empty
+
+        // First decode an initialize request so we have a pending entry
+        let initReq =
+            """{"jsonrpc":"2.0","id":10,"method":"initialize","params":{"protocolVersion":1}}"""
+
+        let state1, _ =
+            match Codec.decode Codec.Direction.FromClient state0 initReq with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        // Build an InitializeResult with auth = AgentAuthCapabilities.empty
+        let result: Domain.Initialization.InitializeResult =
+            { protocolVersion = Domain.PrimitivesAndParties.ProtocolVersion.current
+              agentCapabilities =
+                { loadSession = false
+                  mcpCapabilities = { http = false; sse = false }
+                  promptCapabilities =
+                    { audio = false
+                      image = false
+                      embeddedContext = false }
+                  sessionCapabilities = Domain.Capabilities.SessionCapabilities.empty
+                  auth = Domain.Capabilities.AgentAuthCapabilities.empty }
+              agentInfo = None
+              authMethods = [] }
+
+        let msg = Message.FromAgent(AgentToClientMessage.InitializeResult result)
+
+        let serialized =
+            match Codec.encode (Some(RequestId.Number 10L)) msg with
+            | Ok s -> s
+            | Error e -> failwithf "unexpected encode error: %A" e
+
+        Assert.DoesNotContain("\"auth\"", serialized)

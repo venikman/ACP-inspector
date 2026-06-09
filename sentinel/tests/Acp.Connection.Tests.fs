@@ -25,7 +25,8 @@ module ConnectionTests =
                 { audio = false
                   image = false
                   embeddedContext = false }
-              sessionCapabilities = sessionCapabilities }
+              sessionCapabilities = sessionCapabilities
+              auth = AgentAuthCapabilities.empty }
           agentInfo = None
           authMethods = [] }
 

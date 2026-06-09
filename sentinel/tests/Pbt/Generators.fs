@@ -97,7 +97,8 @@ module Generators =
         { loadSession = true
           mcpCapabilities = mcpCaps
           promptCapabilities = promptCaps
-          sessionCapabilities = SessionCapabilities.empty }
+          sessionCapabilities = SessionCapabilities.empty
+          auth = AgentAuthCapabilities.empty }
 
     let private clientInfo: ImplementationInfo =
         { name = "pbt-client"

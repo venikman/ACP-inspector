@@ -298,6 +298,49 @@ module internal CodecAcpJson =
 
         o
 
+    let private decodeLogoutCapabilities (nodeOpt: JsonNode option) : Result<LogoutCapabilities option, string> =
+        match nodeOpt with
+        | None -> Ok None
+        | Some node ->
+            result {
+                let! o = asObject node
+
+                let meta = tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+
+                return Some { _meta = meta }
+            }
+
+    let private encodeLogoutCapabilities (capsOpt: LogoutCapabilities option) : JsonNode option =
+        match capsOpt with
+        | None -> None
+        | Some caps ->
+            let o = JsonObject()
+
+            match caps._meta with
+            | None -> ()
+            | Some meta -> o["_meta"] <- meta.DeepClone()
+
+            Some(o :> JsonNode)
+
+    let private decodeAgentAuthCapabilities (nodeOpt: JsonNode option) : Result<AgentAuthCapabilities, string> =
+        match nodeOpt with
+        | None -> Ok AgentAuthCapabilities.empty
+        | Some node ->
+            result {
+                let! o = asObject node
+                let! logout = decodeLogoutCapabilities (tryGet "logout" o)
+                return { logout = logout }
+            }
+
+    let private encodeAgentAuthCapabilities (caps: AgentAuthCapabilities) : JsonObject =
+        let o = JsonObject()
+
+        match encodeLogoutCapabilities caps.logout with
+        | None -> ()
+        | Some logoutCaps -> o["logout"] <- logoutCaps
+
+        o
+
     let private decodeAgentCaps (nodeOpt: JsonNode option) : Result<AgentCapabilities, string> =
         match nodeOpt with
         | None ->
@@ -308,7 +351,8 @@ module internal CodecAcpJson =
                     { audio = false
                       image = false
                       embeddedContext = false }
-                  sessionCapabilities = SessionCapabilities.empty }
+                  sessionCapabilities = SessionCapabilities.empty
+                  auth = AgentAuthCapabilities.empty }
         | Some node ->
             result {
                 let! o = asObject node
@@ -323,11 +367,14 @@ module internal CodecAcpJson =
 
                 let! sessionCaps = decodeSessionCapabilities (tryGet "sessionCapabilities" o)
 
+                let! authCaps = decodeAgentAuthCapabilities (tryGet "auth" o)
+
                 return
                     { loadSession = load
                       mcpCapabilities = mcp
                       promptCapabilities = prompt
-                      sessionCapabilities = sessionCaps }
+                      sessionCapabilities = sessionCaps
+                      auth = authCaps }
             }
 
     let private encodeAgentCaps (caps: AgentCapabilities) : JsonObject =
@@ -336,6 +383,11 @@ module internal CodecAcpJson =
         o["mcpCapabilities"] <- encodeMcpCaps caps.mcpCapabilities
         o["promptCapabilities"] <- encodePromptCaps caps.promptCapabilities
         o["sessionCapabilities"] <- encodeSessionCapabilities caps.sessionCapabilities
+
+        match caps.auth.logout with
+        | None -> ()
+        | Some _ -> o["auth"] <- encodeAgentAuthCapabilities caps.auth
+
         o
 
     // ---- Authentication ----
@@ -386,6 +438,30 @@ module internal CodecAcpJson =
     let private decodeAuthenticateResult (_nodeOpt: JsonNode option) : AuthenticateResult = AuthenticateResult.empty
 
     let private encodeAuthenticateResult (_r: AuthenticateResult) : JsonObject = JsonObject()
+
+    let private decodeLogoutParams (nodeOpt: JsonNode option) : LogoutParams =
+        match nodeOpt with
+        | None -> LogoutParams.empty
+        | Some node ->
+            let meta =
+                match asObject node with
+                | Error _ -> None
+                | Ok o -> tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+
+            { _meta = meta }
+
+    let private encodeLogoutParams (p: LogoutParams) : JsonObject =
+        let o = JsonObject()
+
+        match p._meta with
+        | None -> ()
+        | Some meta -> o["_meta"] <- meta.DeepClone()
+
+        o
+
+    let private decodeLogoutResult (_nodeOpt: JsonNode option) : LogoutResult = LogoutResult.empty
+
+    let private encodeLogoutResult (_r: LogoutResult) : JsonObject = JsonObject()
 
     // ---- Initialization ----
 
@@ -2855,6 +2931,7 @@ module internal CodecAcpJson =
         | PendingClientRequest.Initialize -> "initialize"
         | PendingClientRequest.ProxyInitialize -> "proxy/initialize"
         | PendingClientRequest.Authenticate -> "authenticate"
+        | PendingClientRequest.Logout -> "logout"
         | PendingClientRequest.SessionNew -> "session/new"
         | PendingClientRequest.SessionList -> "session/list"
         | PendingClientRequest.SessionLoad _ -> "session/load"
@@ -2883,57 +2960,64 @@ module internal CodecAcpJson =
         : Result<ClientToAgentMessage * PendingClientRequest, string> =
         let paramsNodeOpt = paramsNodeOpt |> cloneOpt
 
-        result {
-            let! paramsNode =
-                match paramsNodeOpt with
-                | Some p -> Ok p
-                | None -> Error "missing params"
+        // logout has optional/absent params — handle before the mandatory paramsNode binding.
+        match methodName with
+        | "logout" ->
+            let p = decodeLogoutParams paramsNodeOpt
+            Ok(ClientToAgentMessage.Logout p, PendingClientRequest.Logout)
+        | _ ->
 
-            match methodName with
-            | "initialize" ->
-                let! p = decodeInitializeParams paramsNode
-                return ClientToAgentMessage.Initialize p, PendingClientRequest.Initialize
-            | "proxy/initialize" ->
-                let! p = decodeInitializeParams paramsNode
-                return ClientToAgentMessage.ProxyInitialize p, PendingClientRequest.ProxyInitialize
-            | "authenticate" ->
-                let! p = decodeAuthenticateParams paramsNode
-                return ClientToAgentMessage.Authenticate p, PendingClientRequest.Authenticate
-            | "session/new" ->
-                let! p = decodeNewSessionParams paramsNode
-                return ClientToAgentMessage.SessionNew p, PendingClientRequest.SessionNew
-            | "session/list" ->
-                let! p = decodeListSessionsRequest paramsNode
-                return ClientToAgentMessage.SessionList p, PendingClientRequest.SessionList
-            | "session/load" ->
-                let! p = decodeLoadSessionParams paramsNode
-                return ClientToAgentMessage.SessionLoad p, PendingClientRequest.SessionLoad p
-            | "session/prompt" ->
-                let! p = decodeSessionPromptParams paramsNode
-                return ClientToAgentMessage.SessionPrompt p, PendingClientRequest.SessionPrompt p
-            | "session/set_mode" ->
-                let! p = decodeSetSessionModeParams paramsNode
-                return ClientToAgentMessage.SessionSetMode p, PendingClientRequest.SessionSetMode p
-            | "session/set_config_option" ->
-                let! p = decodeSetSessionConfigOptionRequest paramsNode
-                return ClientToAgentMessage.SessionSetConfigOption p, PendingClientRequest.SessionSetConfigOption p
-            | "proxy/successor" ->
-                let! p = decodeProxySuccessorParams paramsNode
-                return ClientToAgentMessage.ProxySuccessorRequest p, PendingClientRequest.ProxySuccessor p.method
-            | "session/cancel"
-            | "session/update"
-            | "session/request_permission"
-            | "fs/read_text_file"
-            | "fs/write_text_file"
-            | "terminal/create"
-            | "terminal/output"
-            | "terminal/wait_for_exit"
-            | "terminal/kill"
-            | "terminal/release" -> return! Error "method is not a client->agent request"
-            | other ->
-                // Extension request (opaque params allowed).
-                return ClientToAgentMessage.ExtRequest(other, paramsNodeOpt), PendingClientRequest.ExtRequest other
-        }
+            result {
+                let! paramsNode =
+                    match paramsNodeOpt with
+                    | Some p -> Ok p
+                    | None -> Error "missing params"
+
+                match methodName with
+                | "initialize" ->
+                    let! p = decodeInitializeParams paramsNode
+                    return ClientToAgentMessage.Initialize p, PendingClientRequest.Initialize
+                | "proxy/initialize" ->
+                    let! p = decodeInitializeParams paramsNode
+                    return ClientToAgentMessage.ProxyInitialize p, PendingClientRequest.ProxyInitialize
+                | "authenticate" ->
+                    let! p = decodeAuthenticateParams paramsNode
+                    return ClientToAgentMessage.Authenticate p, PendingClientRequest.Authenticate
+                | "session/new" ->
+                    let! p = decodeNewSessionParams paramsNode
+                    return ClientToAgentMessage.SessionNew p, PendingClientRequest.SessionNew
+                | "session/list" ->
+                    let! p = decodeListSessionsRequest paramsNode
+                    return ClientToAgentMessage.SessionList p, PendingClientRequest.SessionList
+                | "session/load" ->
+                    let! p = decodeLoadSessionParams paramsNode
+                    return ClientToAgentMessage.SessionLoad p, PendingClientRequest.SessionLoad p
+                | "session/prompt" ->
+                    let! p = decodeSessionPromptParams paramsNode
+                    return ClientToAgentMessage.SessionPrompt p, PendingClientRequest.SessionPrompt p
+                | "session/set_mode" ->
+                    let! p = decodeSetSessionModeParams paramsNode
+                    return ClientToAgentMessage.SessionSetMode p, PendingClientRequest.SessionSetMode p
+                | "session/set_config_option" ->
+                    let! p = decodeSetSessionConfigOptionRequest paramsNode
+                    return ClientToAgentMessage.SessionSetConfigOption p, PendingClientRequest.SessionSetConfigOption p
+                | "proxy/successor" ->
+                    let! p = decodeProxySuccessorParams paramsNode
+                    return ClientToAgentMessage.ProxySuccessorRequest p, PendingClientRequest.ProxySuccessor p.method
+                | "session/cancel"
+                | "session/update"
+                | "session/request_permission"
+                | "fs/read_text_file"
+                | "fs/write_text_file"
+                | "terminal/create"
+                | "terminal/output"
+                | "terminal/wait_for_exit"
+                | "terminal/kill"
+                | "terminal/release" -> return! Error "method is not a client->agent request"
+                | other ->
+                    // Extension request (opaque params allowed).
+                    return ClientToAgentMessage.ExtRequest(other, paramsNodeOpt), PendingClientRequest.ExtRequest other
+            }
 
     let decodeClientNotification
         (methodName: string)
@@ -3001,6 +3085,7 @@ module internal CodecAcpJson =
                 return AgentToClientMessage.TerminalReleaseRequest p, PendingAgentRequest.TerminalRelease p
             | "initialize"
             | "authenticate"
+            | "logout"
             | "session/new"
             | "session/list"
             | "session/load"
@@ -3057,6 +3142,8 @@ module internal CodecAcpJson =
         | PendingClientRequest.Authenticate ->
             Ok(AgentToClientMessage.AuthenticateResult(decodeAuthenticateResult resultNodeOpt))
 
+        | PendingClientRequest.Logout -> Ok(AgentToClientMessage.LogoutResult(decodeLogoutResult resultNodeOpt))
+
         | PendingClientRequest.SessionNew ->
             match resultNodeOpt with
             | None -> Error "missing result"
@@ -3105,6 +3192,7 @@ module internal CodecAcpJson =
         | PendingClientRequest.Initialize -> AgentToClientMessage.InitializeError err
         | PendingClientRequest.ProxyInitialize -> AgentToClientMessage.ProxyInitializeError err
         | PendingClientRequest.Authenticate -> AgentToClientMessage.AuthenticateError err
+        | PendingClientRequest.Logout -> AgentToClientMessage.LogoutError err
         | PendingClientRequest.SessionNew -> AgentToClientMessage.SessionNewError err
         | PendingClientRequest.SessionList -> AgentToClientMessage.SessionListError err
         | PendingClientRequest.SessionLoad req -> AgentToClientMessage.SessionLoadError(req, err)
@@ -3214,6 +3302,18 @@ module internal CodecAcpJson =
                 o["id"] <- encodeRequestId id
                 o["method"] <- JsonValue.Create("authenticate")
                 o["params"] <- encodeAuthenticateParams p
+                Ok o
+        | ClientToAgentMessage.Logout p ->
+            match idOpt with
+            | None -> Error EncodeError.MissingRequestId
+            | Some id ->
+                o["id"] <- encodeRequestId id
+                o["method"] <- JsonValue.Create("logout")
+                let paramsObj = encodeLogoutParams p
+
+                if paramsObj.Count > 0 then
+                    o["params"] <- paramsObj
+
                 Ok o
         | ClientToAgentMessage.SessionNew p ->
             match idOpt with
@@ -3446,6 +3546,14 @@ module internal CodecAcpJson =
                 o["result"] <- encodeAuthenticateResult r
                 Ok o
 
+        | AgentToClientMessage.LogoutResult r ->
+            match idOpt with
+            | None -> Error EncodeError.MissingRequestId
+            | Some id ->
+                o["id"] <- encodeRequestId id
+                o["result"] <- encodeLogoutResult r
+                Ok o
+
         | AgentToClientMessage.SessionNewResult r ->
             match idOpt with
             | None -> Error EncodeError.MissingRequestId
@@ -3528,6 +3636,7 @@ module internal CodecAcpJson =
         | AgentToClientMessage.InitializeError err
         | AgentToClientMessage.ProxyInitializeError err
         | AgentToClientMessage.AuthenticateError err
+        | AgentToClientMessage.LogoutError err
         | AgentToClientMessage.SessionNewError err
         | AgentToClientMessage.SessionListError err ->
             match idOpt with

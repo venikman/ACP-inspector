@@ -34,7 +34,8 @@ module SessionProperties =
             { audio = false
               image = false
               embeddedContext = false }
-          sessionCapabilities = SessionCapabilities.empty }
+          sessionCapabilities = SessionCapabilities.empty
+          auth = AgentAuthCapabilities.empty }
 
     let private initParams: InitializeParams =
         { protocolVersion = ProtocolVersion.current

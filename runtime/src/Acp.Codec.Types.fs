@@ -41,6 +41,7 @@ module CodecTypes =
         | Initialize
         | ProxyInitialize
         | Authenticate
+        | Logout
         | SessionNew
         | SessionList
         | SessionLoad of request: LoadSessionParams

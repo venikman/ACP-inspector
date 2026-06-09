@@ -98,12 +98,23 @@ module Domain =
         module SessionCapabilities =
             let empty = { list = None }
 
+        /// Capability marker for the `logout` method.
+        type LogoutCapabilities = { _meta: JsonObject option }
+
+        /// Auth capabilities advertised by the agent.
+        type AgentAuthCapabilities = { logout: LogoutCapabilities option }
+
+        [<RequireQualifiedAccess>]
+        module AgentAuthCapabilities =
+            let empty = { logout = None }
+
         /// Capabilities advertised by the agent during initialize.
         type AgentCapabilities =
             { loadSession: bool
               mcpCapabilities: McpCapabilities
               promptCapabilities: PromptCapabilities
-              sessionCapabilities: SessionCapabilities }
+              sessionCapabilities: SessionCapabilities
+              auth: AgentAuthCapabilities }
 
     // -------------
     // Authentication (schema)
@@ -125,6 +136,19 @@ module Domain =
         [<RequireQualifiedAccess>]
         module AuthenticateResult =
             let empty = AuthenticateResult
+
+        type LogoutParams = { _meta: JsonObject option }
+
+        [<RequireQualifiedAccess>]
+        module LogoutParams =
+            let empty = { _meta = None }
+
+        [<Struct>]
+        type LogoutResult = LogoutResult
+
+        [<RequireQualifiedAccess>]
+        module LogoutResult =
+            let empty = LogoutResult
 
     // -------------
     // Initialization (schema)
@@ -823,6 +847,7 @@ module Domain =
             | Initialize of InitializeParams
             | ProxyInitialize of InitializeParams
             | Authenticate of AuthenticateParams
+            | Logout of LogoutParams
             | SessionNew of NewSessionParams
             | SessionList of ListSessionsRequest
             | SessionLoad of LoadSessionParams
@@ -864,6 +889,7 @@ module Domain =
             | InitializeResult of InitializeResult
             | ProxyInitializeResult of InitializeResult
             | AuthenticateResult of AuthenticateResult
+            | LogoutResult of LogoutResult
             | SessionNewResult of NewSessionResult
             | SessionListResult of ListSessionsResponse
             | SessionLoadResult of LoadSessionResult
@@ -875,6 +901,7 @@ module Domain =
             | InitializeError of error: Error
             | ProxyInitializeError of error: Error
             | AuthenticateError of error: Error
+            | LogoutError of error: Error
             | SessionNewError of error: Error
             | SessionListError of error: Error
             | SessionLoadError of request: LoadSessionParams * error: Error
