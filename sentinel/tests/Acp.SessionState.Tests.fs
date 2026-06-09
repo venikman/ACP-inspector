@@ -32,7 +32,9 @@ module SessionStateTests =
         let notification: SessionUpdateNotification =
             { sessionId = SessionId "test-session"
               update =
-                SessionUpdate.AgentMessageChunk { content = ContentBlock.Text { text = "Hello"; annotations = None } }
+                SessionUpdate.AgentMessageChunk
+                    { content = ContentBlock.Text { text = "Hello"; annotations = None }
+                      messageId = None }
               _meta = None }
 
         let snapshot = acc.Apply(notification)
@@ -47,13 +49,17 @@ module SessionStateTests =
         let notify1: SessionUpdateNotification =
             { sessionId = SessionId "s1"
               update =
-                SessionUpdate.AgentMessageChunk { content = ContentBlock.Text { text = "First"; annotations = None } }
+                SessionUpdate.AgentMessageChunk
+                    { content = ContentBlock.Text { text = "First"; annotations = None }
+                      messageId = None }
               _meta = None }
 
         let notify2: SessionUpdateNotification =
             { sessionId = SessionId "s1"
               update =
-                SessionUpdate.AgentMessageChunk { content = ContentBlock.Text { text = "Second"; annotations = None } }
+                SessionUpdate.AgentMessageChunk
+                    { content = ContentBlock.Text { text = "Second"; annotations = None }
+                      messageId = None }
               _meta = None }
 
         let _ = acc.Apply(notify1)
@@ -72,7 +78,8 @@ module SessionStateTests =
                     { content =
                         ContentBlock.Text
                             { text = "User says hi"
-                              annotations = None } }
+                              annotations = None }
+                      messageId = None }
               _meta = None }
 
         let snapshot = acc.Apply(notify)
@@ -207,6 +214,33 @@ module SessionStateTests =
         Assert.Single(snapshot.usageUpdates) |> ignore
 
     [<Fact>]
+    let ``Apply typed UsageUpdate preserves cost and meta in usageUpdates snapshot`` () =
+        let acc = SessionState.SessionAccumulator()
+
+        let meta = JsonObject()
+        meta["traceparent"] <- JsonValue.Create("00-abc-def-01")
+
+        let notify =
+            { sessionId = SessionId "s1"
+              update =
+                SessionUpdate.UsageUpdate
+                    { used = 100L
+                      size = 500L
+                      cost = Some { amount = 0.05; currency = "USD" }
+                      _meta = Some meta }
+              _meta = None }
+
+        let snapshot = acc.Apply(notify)
+        let payload = Assert.Single(snapshot.usageUpdates)
+        Assert.Equal(100L, payload["used"].GetValue<int64>())
+        Assert.Equal(500L, payload["size"].GetValue<int64>())
+        let cost = payload["cost"]
+        Assert.Equal(0.05, cost["amount"].GetValue<float>(), 3)
+        Assert.Equal("USD", cost["currency"].GetValue<string>())
+        let storedMeta = payload["_meta"]
+        Assert.Equal("00-abc-def-01", storedMeta["traceparent"].GetValue<string>())
+
+    [<Fact>]
     let ``Apply updates tool call status`` () =
         let acc = SessionState.SessionAccumulator()
 
@@ -317,7 +351,9 @@ module SessionStateTests =
         let notify: SessionUpdateNotification =
             { sessionId = SessionId "s1"
               update =
-                SessionUpdate.AgentMessageChunk { content = ContentBlock.Text { text = "Hello"; annotations = None } }
+                SessionUpdate.AgentMessageChunk
+                    { content = ContentBlock.Text { text = "Hello"; annotations = None }
+                      messageId = None }
               _meta = None }
 
         let _ = acc.Apply(notify)
@@ -336,7 +372,8 @@ module SessionStateTests =
                     { content =
                         ContentBlock.Text
                             { text = "Message 1"
-                              annotations = None } }
+                              annotations = None }
+                      messageId = None }
               _meta = None }
 
         let notify2: SessionUpdateNotification =
@@ -346,7 +383,8 @@ module SessionStateTests =
                     { content =
                         ContentBlock.Text
                             { text = "Message 2"
-                              annotations = None } }
+                              annotations = None }
+                      messageId = None }
               _meta = None }
 
         let _ = acc.Apply(notify1)
@@ -367,7 +405,8 @@ module SessionStateTests =
                     { content =
                         ContentBlock.Text
                             { text = "Message 1"
-                              annotations = None } }
+                              annotations = None }
+                      messageId = None }
               _meta = None }
 
         let notify2: SessionUpdateNotification =
@@ -377,7 +416,8 @@ module SessionStateTests =
                     { content =
                         ContentBlock.Text
                             { text = "Message 2"
-                              annotations = None } }
+                              annotations = None }
+                      messageId = None }
               _meta = None }
 
         let _ = acc.Apply(notify1)
@@ -399,7 +439,9 @@ module SessionStateTests =
         let notify: SessionUpdateNotification =
             { sessionId = SessionId "s1"
               update =
-                SessionUpdate.AgentMessageChunk { content = ContentBlock.Text { text = "Hello"; annotations = None } }
+                SessionUpdate.AgentMessageChunk
+                    { content = ContentBlock.Text { text = "Hello"; annotations = None }
+                      messageId = None }
               _meta = None }
 
         let _ = acc.Apply(notify)
@@ -420,7 +462,9 @@ module SessionStateTests =
         let notify1: SessionUpdateNotification =
             { sessionId = SessionId "s1"
               update =
-                SessionUpdate.AgentMessageChunk { content = ContentBlock.Text { text = "First"; annotations = None } }
+                SessionUpdate.AgentMessageChunk
+                    { content = ContentBlock.Text { text = "First"; annotations = None }
+                      messageId = None }
               _meta = None }
 
         let snapshot1 = acc.Apply(notify1)
@@ -428,7 +472,9 @@ module SessionStateTests =
         let notify2: SessionUpdateNotification =
             { sessionId = SessionId "s1"
               update =
-                SessionUpdate.AgentMessageChunk { content = ContentBlock.Text { text = "Second"; annotations = None } }
+                SessionUpdate.AgentMessageChunk
+                    { content = ContentBlock.Text { text = "Second"; annotations = None }
+                      messageId = None }
               _meta = None }
 
         let snapshot2 = acc.Apply(notify2)

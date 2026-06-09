@@ -229,6 +229,24 @@ module SessionState =
             | SessionUpdate.ConfigOptionUpdate update -> configOptions <- update.configOptions
             | SessionUpdate.AvailableCommandsUpdate update -> availableCommands <- update.availableCommands
             | SessionUpdate.CurrentModeUpdate update -> currentModeId <- Some update.currentModeId
+            | SessionUpdate.UsageUpdate usage ->
+                let payload = JsonObject()
+                payload["used"] <- JsonValue.Create(usage.used)
+                payload["size"] <- JsonValue.Create(usage.size)
+
+                match usage.cost with
+                | None -> ()
+                | Some cost ->
+                    let costObj = JsonObject()
+                    costObj["amount"] <- JsonValue.Create(cost.amount)
+                    costObj["currency"] <- JsonValue.Create(cost.currency)
+                    payload["cost"] <- costObj
+
+                match usage._meta with
+                | None -> ()
+                | Some meta -> payload["_meta"] <- meta.DeepClone()
+
+                applyUsageUpdate payload
             | SessionUpdate.Ext(tag, payload) ->
                 match tag with
                 | "session_info_update" -> applySessionInfoUpdate payload
