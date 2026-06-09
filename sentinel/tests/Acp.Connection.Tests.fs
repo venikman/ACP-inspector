@@ -429,7 +429,8 @@ module ConnectionTests =
                     { content =
                         ContentBlock.Text
                             { text = "Hello from agent!"
-                              annotations = None } }
+                              annotations = None }
+                      messageId = None }
 
             do! agent.SessionUpdateAsync(SessionId "s1", update)
 

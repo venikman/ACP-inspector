@@ -501,3 +501,41 @@ module CodecTests =
             Assert.Equal("s-nometa", SessionId.value p.sessionId)
             Assert.True(p._meta.IsNone)
         | other -> failwithf "unexpected message %A" other
+
+    [<Fact>]
+    let ``decode agent message chunk preserves messageId`` () =
+        let state0 = Codec.CodecState.empty
+
+        let raw =
+            """{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess-1","update":{"sessionUpdate":"agent_message_chunk","messageId":"m-7","content":{"type":"text","text":"hi"}}}}"""
+
+        let _, msg =
+            match Codec.decode Codec.Direction.FromAgent state0 raw with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg with
+        | Message.FromAgent(AgentToClientMessage.SessionUpdate notification) ->
+            match notification.update with
+            | Acp.Domain.Prompting.SessionUpdate.AgentMessageChunk chunk -> Assert.Equal(Some "m-7", chunk.messageId)
+            | other -> failwithf "unexpected session update %A" other
+        | other -> failwithf "unexpected message %A" other
+
+    [<Fact>]
+    let ``decode agent message chunk without messageId is None`` () =
+        let state0 = Codec.CodecState.empty
+
+        let raw =
+            """{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess-1","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"hi"}}}}"""
+
+        let _, msg =
+            match Codec.decode Codec.Direction.FromAgent state0 raw with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg with
+        | Message.FromAgent(AgentToClientMessage.SessionUpdate notification) ->
+            match notification.update with
+            | Acp.Domain.Prompting.SessionUpdate.AgentMessageChunk chunk -> Assert.True(chunk.messageId.IsNone)
+            | other -> failwithf "unexpected session update %A" other
+        | other -> failwithf "unexpected message %A" other

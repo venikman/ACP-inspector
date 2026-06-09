@@ -195,7 +195,9 @@ module ProtocolStateMachine =
                         { sessionId = sid
                           update =
                             SessionUpdate.AgentMessageChunk(
-                                ({ content = ContentBlock.Text { text = "ok"; annotations = None } }: ContentChunk)
+                                ({ content = ContentBlock.Text { text = "ok"; annotations = None }
+                                   messageId = None }
+                                : ContentChunk)
                             )
                           _meta = None }
                 )

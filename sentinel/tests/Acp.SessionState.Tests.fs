@@ -32,7 +32,9 @@ module SessionStateTests =
         let notification: SessionUpdateNotification =
             { sessionId = SessionId "test-session"
               update =
-                SessionUpdate.AgentMessageChunk { content = ContentBlock.Text { text = "Hello"; annotations = None } }
+                SessionUpdate.AgentMessageChunk
+                    { content = ContentBlock.Text { text = "Hello"; annotations = None }
+                      messageId = None }
               _meta = None }
 
         let snapshot = acc.Apply(notification)
@@ -47,13 +49,17 @@ module SessionStateTests =
         let notify1: SessionUpdateNotification =
             { sessionId = SessionId "s1"
               update =
-                SessionUpdate.AgentMessageChunk { content = ContentBlock.Text { text = "First"; annotations = None } }
+                SessionUpdate.AgentMessageChunk
+                    { content = ContentBlock.Text { text = "First"; annotations = None }
+                      messageId = None }
               _meta = None }
 
         let notify2: SessionUpdateNotification =
             { sessionId = SessionId "s1"
               update =
-                SessionUpdate.AgentMessageChunk { content = ContentBlock.Text { text = "Second"; annotations = None } }
+                SessionUpdate.AgentMessageChunk
+                    { content = ContentBlock.Text { text = "Second"; annotations = None }
+                      messageId = None }
               _meta = None }
 
         let _ = acc.Apply(notify1)
@@ -72,7 +78,8 @@ module SessionStateTests =
                     { content =
                         ContentBlock.Text
                             { text = "User says hi"
-                              annotations = None } }
+                              annotations = None }
+                      messageId = None }
               _meta = None }
 
         let snapshot = acc.Apply(notify)
@@ -317,7 +324,9 @@ module SessionStateTests =
         let notify: SessionUpdateNotification =
             { sessionId = SessionId "s1"
               update =
-                SessionUpdate.AgentMessageChunk { content = ContentBlock.Text { text = "Hello"; annotations = None } }
+                SessionUpdate.AgentMessageChunk
+                    { content = ContentBlock.Text { text = "Hello"; annotations = None }
+                      messageId = None }
               _meta = None }
 
         let _ = acc.Apply(notify)
@@ -336,7 +345,8 @@ module SessionStateTests =
                     { content =
                         ContentBlock.Text
                             { text = "Message 1"
-                              annotations = None } }
+                              annotations = None }
+                      messageId = None }
               _meta = None }
 
         let notify2: SessionUpdateNotification =
@@ -346,7 +356,8 @@ module SessionStateTests =
                     { content =
                         ContentBlock.Text
                             { text = "Message 2"
-                              annotations = None } }
+                              annotations = None }
+                      messageId = None }
               _meta = None }
 
         let _ = acc.Apply(notify1)
@@ -367,7 +378,8 @@ module SessionStateTests =
                     { content =
                         ContentBlock.Text
                             { text = "Message 1"
-                              annotations = None } }
+                              annotations = None }
+                      messageId = None }
               _meta = None }
 
         let notify2: SessionUpdateNotification =
@@ -377,7 +389,8 @@ module SessionStateTests =
                     { content =
                         ContentBlock.Text
                             { text = "Message 2"
-                              annotations = None } }
+                              annotations = None }
+                      messageId = None }
               _meta = None }
 
         let _ = acc.Apply(notify1)
@@ -399,7 +412,9 @@ module SessionStateTests =
         let notify: SessionUpdateNotification =
             { sessionId = SessionId "s1"
               update =
-                SessionUpdate.AgentMessageChunk { content = ContentBlock.Text { text = "Hello"; annotations = None } }
+                SessionUpdate.AgentMessageChunk
+                    { content = ContentBlock.Text { text = "Hello"; annotations = None }
+                      messageId = None }
               _meta = None }
 
         let _ = acc.Apply(notify)
@@ -420,7 +435,9 @@ module SessionStateTests =
         let notify1: SessionUpdateNotification =
             { sessionId = SessionId "s1"
               update =
-                SessionUpdate.AgentMessageChunk { content = ContentBlock.Text { text = "First"; annotations = None } }
+                SessionUpdate.AgentMessageChunk
+                    { content = ContentBlock.Text { text = "First"; annotations = None }
+                      messageId = None }
               _meta = None }
 
         let snapshot1 = acc.Apply(notify1)
@@ -428,7 +445,9 @@ module SessionStateTests =
         let notify2: SessionUpdateNotification =
             { sessionId = SessionId "s1"
               update =
-                SessionUpdate.AgentMessageChunk { content = ContentBlock.Text { text = "Second"; annotations = None } }
+                SessionUpdate.AgentMessageChunk
+                    { content = ContentBlock.Text { text = "Second"; annotations = None }
+                      messageId = None }
               _meta = None }
 
         let snapshot2 = acc.Apply(notify2)

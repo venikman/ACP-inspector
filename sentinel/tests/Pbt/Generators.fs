@@ -159,7 +159,9 @@ module Generators =
               _meta = None })
 
     let private genSessionUpdate (sid: SessionId) : Gen<SessionUpdateNotification> =
-        let genChunk = genContentBlock |> G.map (fun cb -> ({ content = cb }: ContentChunk))
+        let genChunk =
+            genContentBlock
+            |> G.map (fun cb -> ({ content = cb; messageId = None }: ContentChunk))
 
         let genUpdate =
             G.frequency

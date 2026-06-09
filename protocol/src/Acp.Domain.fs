@@ -515,7 +515,9 @@ module Domain =
             | ResourceLink of ResourceLink
             | Resource of EmbeddedResource
 
-        type ContentChunk = { content: ContentBlock }
+        type ContentChunk =
+            { content: ContentBlock
+              messageId: string option }
 
         // ---- Prompt request/response ----
 

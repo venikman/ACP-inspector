@@ -1610,12 +1610,23 @@ module internal CodecAcpJson =
             let! o = asObject node
             let! cNode = get "content" o
             let! c = decodeContentBlock cNode
-            return { content = c }
+
+            let messageId =
+                match tryGet "messageId" o with
+                | None -> None
+                | Some n -> asString n |> Result.toOption
+
+            return { content = c; messageId = messageId }
         }
 
     let private encodeContentChunk (c: ContentChunk) : JsonObject =
         let o = JsonObject()
         o["content"] <- encodeContentBlock c.content
+
+        match c.messageId with
+        | None -> ()
+        | Some mid -> o["messageId"] <- JsonValue.Create(mid)
+
         o
 
     let private decodeStopReason (node: JsonNode) : Result<StopReason, string> =
