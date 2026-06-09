@@ -4,12 +4,12 @@ This document compares the ACP Inspector F# SDK with the official TypeScript and
 
 ## Overview
 
-| Aspect               | F# SDK (ACP Inspector) | Python SDK      | TypeScript SDK            |
-| -------------------- | ---------------------- | --------------- | ------------------------- |
-| **Language**         | F# (.NET 10)           | Python 3.10+    | TypeScript/Node.js        |
-| **Protocol Version** | 0.10.x                 | 0.10.x          | 0.10.x                    |
-| **License**          | -                      | Apache 2.0      | Apache 2.0                |
-| **Package**          | NuGet (local)          | PyPI: `acp-sdk` | npm: `@anthropic/acp-sdk` |
+| Aspect               | F# SDK (ACP Inspector) | Python SDK      | TypeScript SDK                                  |
+| -------------------- | ---------------------- | --------------- | ----------------------------------------------- |
+| **Language**         | F# (.NET 10)           | Python 3.10+    | TypeScript/Node.js                              |
+| **Protocol Version** | 0.13.6                 | 0.13.x          | 0.13.x                                          |
+| **License**          | -                      | Apache 2.0      | Apache 2.0                                      |
+| **Package**          | NuGet (local)          | PyPI: `acp-sdk` | npm: `@zed-industries/agent-client-protocol`    |
 
 ---
 
@@ -20,7 +20,7 @@ This document compares the ACP Inspector F# SDK with the official TypeScript and
 | Metric                    | F# SDK | Python SDK | Ratio |
 | ------------------------- | -----: | ---------: | ----: |
 | **Source files**          |     17 |         19 | 0.89x |
-| **Test files**            |     17 |          9 | 1.89x |
+| **Test files**            |     22 |          9 | 2.44x |
 | **Total F#/Python lines** | 11,450 |     ~8,000 | 1.43x |
 
 ### Lines of Code by Module
@@ -45,8 +45,8 @@ This document compares the ACP Inspector F# SDK with the official TypeScript and
 | SessionState        | 14 tests (310 LOC) |       5 tests | **2.8x more tests** |
 | ToolCalls           | 20 tests (405 LOC) |       2 tests |  **10x more tests** |
 | Permissions         | 21 tests (360 LOC) |       3 tests |   **7x more tests** |
-| Protocol/Validation |          45+ tests |     ~20 tests |  **2x+ more tests** |
-| **Total**           |      **130 tests** | **~38 tests** | **3.4x more tests** |
+| Protocol/Validation |         230+ tests |     ~20 tests | **11x+ more tests** |
+| **Total**           |      **424 tests** | **~38 tests** |  **11x more tests** |
 
 ### Type Definitions
 
@@ -65,7 +65,7 @@ This document compares the ACP Inspector F# SDK with the official TypeScript and
 | Feature                      | F# SDK | Python SDK | Notes                               |
 | ---------------------------- | :----: | :--------: | ----------------------------------- |
 | JSON-RPC 2.0 codec           |   ✅   |     ✅     | Full encode/decode with correlation |
-| Protocol schema types        |   ✅   |     ✅     | Complete ACP 0.10.x type coverage   |
+| Protocol schema types        |   ✅   |     ✅     | Complete ACP 0.13.6 type coverage   |
 | Request/response correlation |   ✅   |     ✅     | Async pending request tracking      |
 | Notification handling        |   ✅   |     ✅     | Session updates, events             |
 | Error types                  |   ✅   |     ✅     | Protocol errors, transport errors   |
@@ -297,8 +297,8 @@ F# SDK Tests by Module:
 ├── Acp.Codec.Tests.fs            4 tests
 ├── Acp.Eval.Tests.fs             8 tests
 ├── Acp.RuntimeAdapter.Tests.fs   3 tests
-├── Other tests                  32 tests
-└── TOTAL                       130 tests
+├── Other tests (22 test files)  326 tests
+└── TOTAL                        424 tests
 
 Python SDK Tests by Module:
 ├── test_contrib_session_state.py  5 tests
@@ -367,7 +367,7 @@ The F# SDK achieves **full feature parity** with the official Python SDK for cor
 
 | Metric                | F# SDK Advantage                            |
 | --------------------- | ------------------------------------------- |
-| Test coverage         | **3.4x more tests** (130 vs ~38)            |
+| Test coverage         | **11x more tests** (424 vs ~38)             |
 | Test LOC              | **7x more test code** (1,597 vs ~225 lines) |
 | Contrib test coverage | **5.5x more tests** (55 vs 10)              |
 | Unique features       | **9 exclusive features** vs Python's 4      |
