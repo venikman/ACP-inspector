@@ -3,7 +3,7 @@ namespace Acp
 open System
 open System.Text.Json.Nodes
 
-/// Domain model for ACP v0.11.3 (schema.json).
+/// Domain model for ACP v0.13.6 (schema.json).
 /// This is the typed, transport-agnostic meaning of ACP after JSON-RPC framing is decoded.
 module Domain =
 
@@ -14,7 +14,7 @@ module Domain =
         /// Update this when upgrading to a new ACP release.
         /// See: https://github.com/agentclientprotocol/agent-client-protocol/releases
         [<Literal>]
-        let Schema = "0.11.3"
+        let Schema = "0.13.6"
 
         /// JSON-RPC framing version used by the codec.
         [<Literal>]
@@ -90,20 +90,52 @@ module Domain =
         /// Capability marker for `session/list`.
         type SessionListCapabilities = { _meta: JsonObject option }
 
+        /// Capability marker for `session/close`.
+        type SessionCloseCapabilities = { _meta: JsonObject option }
+
+        /// Capability marker for `session/delete`.
+        type SessionDeleteCapabilities = { _meta: JsonObject option }
+
+        /// Capability marker for `session/resume`.
+        type SessionResumeCapabilities = { _meta: JsonObject option }
+
+        /// Capability marker for `additionalDirectories` support.
+        type SessionAdditionalDirectoriesCapabilities = { _meta: JsonObject option }
+
         /// Session capabilities supported by the agent.
         type SessionCapabilities =
-            { list: SessionListCapabilities option }
+            { list: SessionListCapabilities option
+              close: SessionCloseCapabilities option
+              delete: SessionDeleteCapabilities option
+              resume: SessionResumeCapabilities option
+              additionalDirectories: SessionAdditionalDirectoriesCapabilities option }
 
         [<RequireQualifiedAccess>]
         module SessionCapabilities =
-            let empty = { list = None }
+            let empty =
+                { list = None
+                  close = None
+                  delete = None
+                  resume = None
+                  additionalDirectories = None }
+
+        /// Capability marker for the `logout` method.
+        type LogoutCapabilities = { _meta: JsonObject option }
+
+        /// Auth capabilities advertised by the agent.
+        type AgentAuthCapabilities = { logout: LogoutCapabilities option }
+
+        [<RequireQualifiedAccess>]
+        module AgentAuthCapabilities =
+            let empty = { logout = None }
 
         /// Capabilities advertised by the agent during initialize.
         type AgentCapabilities =
             { loadSession: bool
               mcpCapabilities: McpCapabilities
               promptCapabilities: PromptCapabilities
-              sessionCapabilities: SessionCapabilities }
+              sessionCapabilities: SessionCapabilities
+              auth: AgentAuthCapabilities }
 
     // -------------
     // Authentication (schema)
@@ -125,6 +157,19 @@ module Domain =
         [<RequireQualifiedAccess>]
         module AuthenticateResult =
             let empty = AuthenticateResult
+
+        type LogoutParams = { _meta: JsonObject option }
+
+        [<RequireQualifiedAccess>]
+        module LogoutParams =
+            let empty = { _meta = None }
+
+        [<Struct>]
+        type LogoutResult = LogoutResult
+
+        [<RequireQualifiedAccess>]
+        module LogoutResult =
+            let empty = LogoutResult
 
     // -------------
     // Initialization (schema)
@@ -229,13 +274,15 @@ module Domain =
         /// Params for session/new (client -> agent).
         type NewSessionParams =
             { cwd: string
-              mcpServers: McpServer list }
+              mcpServers: McpServer list
+              additionalDirectories: string list }
 
         /// Params for session/load (client -> agent).
         type LoadSessionParams =
             { sessionId: SessionId
               cwd: string
-              mcpServers: McpServer list }
+              mcpServers: McpServer list
+              additionalDirectories: string list }
 
         /// Params for session/list (client -> agent).
         type ListSessionsRequest =
@@ -318,6 +365,7 @@ module Domain =
               cwd: string
               title: string option
               updatedAt: string option
+              additionalDirectories: string list
               _meta: JsonObject option }
 
         type ListSessionsResponse =
@@ -338,6 +386,44 @@ module Domain =
             { sessionId: SessionId
               configOptions: SessionConfigOption list option
               modes: SessionModeState option
+              _meta: JsonObject option }
+
+        /// Params for session/resume (client -> agent).
+        type ResumeSessionParams =
+            { sessionId: SessionId
+              cwd: string
+              mcpServers: McpServer list
+              additionalDirectories: string list
+              _meta: JsonObject option }
+
+        /// Domain-level result for session/resume (agent -> client).
+        /// Wire result does not include a session id; we reattach it from the request.
+        type ResumeSessionResult =
+            { sessionId: SessionId
+              configOptions: SessionConfigOption list option
+              modes: SessionModeState option
+              _meta: JsonObject option }
+
+        /// Params for session/close (client -> agent).
+        type CloseSessionRequest =
+            { sessionId: SessionId
+              _meta: JsonObject option }
+
+        /// Result for session/close (agent -> client). Wire result is empty;
+        /// the session id is reattached from the request.
+        type CloseSessionResponse =
+            { sessionId: SessionId
+              _meta: JsonObject option }
+
+        /// Params for session/delete (client -> agent).
+        type DeleteSessionRequest =
+            { sessionId: SessionId
+              _meta: JsonObject option }
+
+        /// Result for session/delete (agent -> client). Wire result is empty;
+        /// the session id is reattached from the request.
+        type DeleteSessionResponse =
+            { sessionId: SessionId
               _meta: JsonObject option }
 
     // -------------
@@ -515,7 +601,9 @@ module Domain =
             | ResourceLink of ResourceLink
             | Resource of EmbeddedResource
 
-        type ContentChunk = { content: ContentBlock }
+        type ContentChunk =
+            { content: ContentBlock
+              messageId: string option }
 
         // ---- Prompt request/response ----
 
@@ -533,7 +621,6 @@ module Domain =
             {
                 sessionId: SessionId
                 stopReason: StopReason
-                usage: JsonObject option
                 /// Draft RFD: _meta field for W3C trace context propagation (traceparent, tracestate, baggage).
                 _meta: JsonObject option
             }
@@ -596,6 +683,14 @@ module Domain =
 
         type ConfigOptionUpdate =
             { configOptions: SessionConfigOption list
+              _meta: JsonObject option }
+
+        type Cost = { amount: float; currency: string }
+
+        type Usage =
+            { used: int64
+              size: int64
+              cost: Cost option
               _meta: JsonObject option }
 
         // ---- Tool calls ----
@@ -697,6 +792,7 @@ module Domain =
             | ConfigOptionUpdate of ConfigOptionUpdate
             | AvailableCommandsUpdate of AvailableCommandsUpdate
             | CurrentModeUpdate of CurrentModeUpdate
+            | UsageUpdate of Usage
             /// Unknown update payload preserved for forward compatibility.
             | Ext of tag: string * payload: JsonObject
 
@@ -813,9 +909,13 @@ module Domain =
             | Initialize of InitializeParams
             | ProxyInitialize of InitializeParams
             | Authenticate of AuthenticateParams
+            | Logout of LogoutParams
             | SessionNew of NewSessionParams
             | SessionList of ListSessionsRequest
             | SessionLoad of LoadSessionParams
+            | SessionResume of ResumeSessionParams
+            | SessionClose of CloseSessionRequest
+            | SessionDelete of DeleteSessionRequest
             | SessionPrompt of SessionPromptParams
             | SessionSetMode of SetSessionModeParams
             | SessionSetConfigOption of SetSessionConfigOptionRequest
@@ -854,9 +954,13 @@ module Domain =
             | InitializeResult of InitializeResult
             | ProxyInitializeResult of InitializeResult
             | AuthenticateResult of AuthenticateResult
+            | LogoutResult of LogoutResult
             | SessionNewResult of NewSessionResult
             | SessionListResult of ListSessionsResponse
             | SessionLoadResult of LoadSessionResult
+            | SessionResumeResult of ResumeSessionResult
+            | SessionCloseResult of CloseSessionResponse
+            | SessionDeleteResult of DeleteSessionResponse
             | SessionPromptResult of SessionPromptResult
             | SessionSetModeResult of SetSessionModeResult
             | SessionSetConfigOptionResult of SetSessionConfigOptionResponse
@@ -865,9 +969,13 @@ module Domain =
             | InitializeError of error: Error
             | ProxyInitializeError of error: Error
             | AuthenticateError of error: Error
+            | LogoutError of error: Error
             | SessionNewError of error: Error
             | SessionListError of error: Error
             | SessionLoadError of request: LoadSessionParams * error: Error
+            | SessionResumeError of request: ResumeSessionParams * error: Error
+            | SessionCloseError of request: CloseSessionRequest * error: Error
+            | SessionDeleteError of request: DeleteSessionRequest * error: Error
             | SessionPromptError of request: SessionPromptParams * error: Error
             | SessionSetModeError of request: SetSessionModeParams * error: Error
             | SessionSetConfigOptionError of request: SetSessionConfigOptionRequest * error: Error

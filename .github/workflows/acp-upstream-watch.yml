@@ -74,13 +74,6 @@ jobs:
             echo "::notice::Label '$LABEL' not found; creating issue without a label."
           fi
 
-          # Check if issue already exists
-          EXISTING=$(gh issue list --state open "${LABEL_ARGS[@]}" --search "ACP spec update available: in:title" --json number --jq 'length')
-          if [ "$EXISTING" -gt 0 ]; then
-            echo "Issue already exists, skipping creation"
-            exit 0
-          fi
-
           BODY_FILE="$(mktemp)"
           cat > "$BODY_FILE" <<BODY
           ## ACP Upstream Update Detected
@@ -103,6 +96,17 @@ jobs:
           ---
           *This issue was automatically created by the ACP Upstream Watch workflow.*
           BODY
+
+          # Find an existing canonical issue (open OR closed)
+          EXISTING_NUM=$(gh issue list --state all "${LABEL_ARGS[@]}" \
+            --search "ACP spec update available: in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING_NUM" ]; then
+            gh issue reopen "$EXISTING_NUM" || true
+            gh issue edit "$EXISTING_NUM" \
+              --title "ACP spec update available: v$LATEST" --body-file "$BODY_FILE"
+            echo "Updated existing drift issue #$EXISTING_NUM to v$LATEST"
+            exit 0
+          fi
 
           gh issue create \
             --title "ACP spec update available: v$LATEST" \
@@ -182,12 +186,6 @@ jobs:
             echo "::notice::Label '$LABEL' not found; creating issue without a label."
           fi
 
-          EXISTING=$(gh issue list --state open "${LABEL_ARGS[@]}" --search "ACP RFD update detected in:title" --json number --jq 'length')
-          if [ "$EXISTING" -gt 0 ]; then
-            echo "Issue already exists, skipping creation"
-            exit 0
-          fi
-
           BODY_FILE="$(mktemp)"
           cat > "$BODY_FILE" <<BODY
           ## ACP RFD Update Detected
@@ -203,6 +201,17 @@ jobs:
           ---
           *This issue was automatically created by the ACP Upstream Watch workflow.*
           BODY
+
+          # Find an existing canonical issue (open OR closed)
+          EXISTING_NUM=$(gh issue list --state all "${LABEL_ARGS[@]}" \
+            --search "ACP RFD update detected in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING_NUM" ]; then
+            gh issue reopen "$EXISTING_NUM" || true
+            gh issue edit "$EXISTING_NUM" \
+              --title "ACP RFD update detected" --body-file "$BODY_FILE"
+            echo "Updated existing RFD drift issue #$EXISTING_NUM"
+            exit 0
+          fi
 
           gh issue create \
             --title "ACP RFD update detected" \

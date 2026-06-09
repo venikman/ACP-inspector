@@ -34,7 +34,8 @@ module SessionProperties =
             { audio = false
               image = false
               embeddedContext = false }
-          sessionCapabilities = SessionCapabilities.empty }
+          sessionCapabilities = SessionCapabilities.empty
+          auth = AgentAuthCapabilities.empty }
 
     let private initParams: InitializeParams =
         { protocolVersion = ProtocolVersion.current
@@ -75,7 +76,6 @@ module SessionProperties =
                             AgentToClientMessage.SessionPromptResult
                                 { sessionId = sid
                                   stopReason = StopReason.EndTurn
-                                  usage = None
                                   _meta = None }
                         ) ]
 
@@ -133,7 +133,6 @@ module SessionProperties =
                                 AgentToClientMessage.SessionPromptResult
                                     { sessionId = sid
                                       stopReason = sr
-                                      usage = None
                                       _meta = None }
                             ) ]
 

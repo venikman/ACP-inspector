@@ -41,9 +41,13 @@ module CodecTypes =
         | Initialize
         | ProxyInitialize
         | Authenticate
+        | Logout
         | SessionNew
         | SessionList
         | SessionLoad of request: LoadSessionParams
+        | SessionResume of request: ResumeSessionParams
+        | SessionClose of request: CloseSessionRequest
+        | SessionDelete of request: DeleteSessionRequest
         | SessionPrompt of request: SessionPromptParams
         | SessionSetMode of request: SetSessionModeParams
         | SessionSetConfigOption of request: SetSessionConfigOptionRequest

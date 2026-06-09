@@ -1,0 +1,18 @@
+{"ts":"2026-06-09T00:00:00.000Z","direction":"fromClient","json":"{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":1,\"clientCapabilities\":{\"fs\":{\"readTextFile\":true,\"writeTextFile\":true},\"terminal\":false}}}"}
+{"ts":"2026-06-09T00:00:00.100Z","direction":"fromAgent","json":"{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":1,\"agentCapabilities\":{\"loadSession\":true,\"mcpCapabilities\":{\"http\":false,\"sse\":false},\"promptCapabilities\":{\"audio\":false,\"image\":false,\"embeddedContext\":false},\"sessionCapabilities\":{\"list\":{},\"resume\":{},\"close\":{},\"delete\":{}},\"auth\":{\"logout\":{}}},\"authMethods\":[]}}"}
+{"ts":"2026-06-09T00:00:00.200Z","direction":"fromClient","json":"{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"session/new\",\"params\":{\"cwd\":\"/home/user/project\",\"mcpServers\":[]}}"}
+{"ts":"2026-06-09T00:00:00.300Z","direction":"fromAgent","json":"{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{\"sessionId\":\"s-001\"}}"}
+{"ts":"2026-06-09T00:00:00.400Z","direction":"fromClient","json":"{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"session/resume\",\"params\":{\"sessionId\":\"s-001\",\"cwd\":\"/home/user/project\",\"mcpServers\":[]}}"}
+{"ts":"2026-06-09T00:00:00.500Z","direction":"fromAgent","json":"{\"jsonrpc\":\"2.0\",\"id\":3,\"result\":{}}"}
+{"ts":"2026-06-09T00:00:00.600Z","direction":"fromClient","json":"{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"session/prompt\",\"params\":{\"sessionId\":\"s-001\",\"prompt\":[{\"type\":\"text\",\"text\":\"Tell me a fact.\"}]}}"}
+{"ts":"2026-06-09T00:00:00.700Z","direction":"fromAgent","json":"{\"jsonrpc\":\"2.0\",\"method\":\"session/update\",\"params\":{\"sessionId\":\"s-001\",\"update\":{\"sessionUpdate\":\"usage_update\",\"used\":42,\"size\":1000,\"cost\":{\"amount\":0.01,\"currency\":\"USD\"}}}}"}
+{"ts":"2026-06-09T00:00:00.800Z","direction":"fromAgent","json":"{\"jsonrpc\":\"2.0\",\"method\":\"session/update\",\"params\":{\"sessionId\":\"s-001\",\"update\":{\"sessionUpdate\":\"agent_message_chunk\",\"messageId\":\"msg-001\",\"content\":{\"type\":\"text\",\"text\":\"Water boils at 100°C at sea level.\"}}}}"}
+{"ts":"2026-06-09T00:00:00.900Z","direction":"fromAgent","json":"{\"jsonrpc\":\"2.0\",\"id\":4,\"result\":{\"sessionId\":\"s-001\",\"stopReason\":\"end_turn\"}}"}
+{"ts":"2026-06-09T00:00:01.000Z","direction":"fromClient","json":"{\"jsonrpc\":\"2.0\",\"id\":5,\"method\":\"session/delete\",\"params\":{\"sessionId\":\"s-001\"}}"}
+{"ts":"2026-06-09T00:00:01.100Z","direction":"fromAgent","json":"{\"jsonrpc\":\"2.0\",\"id\":5,\"result\":{}}"}
+{"ts":"2026-06-09T00:00:01.200Z","direction":"fromClient","json":"{\"jsonrpc\":\"2.0\",\"id\":6,\"method\":\"session/new\",\"params\":{\"cwd\":\"/home/user/project\",\"mcpServers\":[]}}"}
+{"ts":"2026-06-09T00:00:01.300Z","direction":"fromAgent","json":"{\"jsonrpc\":\"2.0\",\"id\":6,\"result\":{\"sessionId\":\"s-002\"}}"}
+{"ts":"2026-06-09T00:00:01.400Z","direction":"fromClient","json":"{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"logout\"}"}
+{"ts":"2026-06-09T00:00:01.500Z","direction":"fromAgent","json":"{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{}}"}
+{"ts":"2026-06-09T00:00:01.600Z","direction":"fromClient","json":"{\"jsonrpc\":\"2.0\",\"id\":8,\"method\":\"session/close\",\"params\":{\"sessionId\":\"s-002\"}}"}
+{"ts":"2026-06-09T00:00:01.700Z","direction":"fromAgent","json":"{\"jsonrpc\":\"2.0\",\"id\":8,\"result\":{}}"}

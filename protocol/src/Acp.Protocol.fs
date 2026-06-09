@@ -114,7 +114,7 @@ module Protocol =
             let sessions' = ctx.sessions |> Map.add sid s'
             Ok { ctx with sessions = sessions' }
 
-    /// MVP Spec<Phase,Message> for ACP v0.11.3 "core slice" (see Domain.Spec.Schema).
+    /// MVP Spec<Phase,Message> for ACP v0.13.6 "core slice" (see Domain.Spec.Schema).
     /// Rules encoded:
     ///   - initialize must be first
     ///   - exactly one initialize result
@@ -215,10 +215,38 @@ module Protocol =
             // session/load request: state unchanged; result ensures the session is tracked.
             | Phase.Ready ctx, Message.FromClient(ClientToAgentMessage.SessionLoad _) -> Ok(Phase.Ready ctx)
 
+            // session/resume request: state unchanged; result upserts the session (mirrors load).
+            | Phase.Ready ctx, Message.FromClient(ClientToAgentMessage.SessionResume _) -> Ok(Phase.Ready ctx)
+
             | Phase.Ready ctx,
               Message.FromAgent(AgentToClientMessage.SessionLoadResult { sessionId = sid
                                                                          configOptions = configOptions
                                                                          modes = modes }) ->
+                let sessions' =
+                    if ctx.sessions |> Map.containsKey sid then
+                        let s = ctx.sessions.[sid]
+
+                        let s' =
+                            { s with
+                                configOptions = Option.orElse configOptions s.configOptions
+                                modeState = Option.orElse modes s.modeState }
+
+                        ctx.sessions |> Map.add sid s'
+                    else
+                        let s =
+                            { sessionId = sid
+                              configOptions = configOptions
+                              modeState = modes
+                              turnState = TurnState.Idle None }
+
+                        ctx.sessions |> Map.add sid s
+
+                Ok(Phase.Ready { ctx with sessions = sessions' })
+
+            | Phase.Ready ctx,
+              Message.FromAgent(AgentToClientMessage.SessionResumeResult { sessionId = sid
+                                                                           configOptions = configOptions
+                                                                           modes = modes }) ->
                 let sessions' =
                     if ctx.sessions |> Map.containsKey sid then
                         let s = ctx.sessions.[sid]
@@ -373,6 +401,40 @@ module Protocol =
                     match s.turnState with
                     | TurnState.PromptInFlight _ -> Ok(Phase.Ready ctx)
                     | TurnState.Idle _ -> Error(ProtocolError.NoPromptInFlight s.sessionId)
+
+            // session/delete request: state-neutral — the session may be a saved (listed) session
+            // that was never opened on this connection and therefore absent from ctx.sessions.
+            // Removal is deferred to the result so a rejected delete leaves the session usable.
+            | Phase.Ready ctx, Message.FromClient(ClientToAgentMessage.SessionDelete _) -> Ok(Phase.Ready ctx)
+
+            // session/delete result: agent confirmed; free the session (id reattached from the request).
+            | Phase.Ready ctx, Message.FromAgent(AgentToClientMessage.SessionDeleteResult r) ->
+                Ok(
+                    Phase.Ready
+                        { ctx with
+                            sessions = ctx.sessions |> Map.remove r.sessionId }
+                )
+
+            // session/delete error: agent rejected the delete; the session remains usable.
+            | Phase.Ready ctx, Message.FromAgent(AgentToClientMessage.SessionDeleteError _) -> Ok(Phase.Ready ctx)
+
+            // session/close request: session must exist; removal is deferred to the result
+            // so a rejected close leaves the session usable.
+            | Phase.Ready ctx, Message.FromClient(ClientToAgentMessage.SessionClose req) ->
+                match ctx.sessions |> Map.tryFind req.sessionId with
+                | None -> Error(ProtocolError.UnknownSession req.sessionId)
+                | Some _ -> Ok(Phase.Ready ctx)
+
+            // session/close result: agent confirmed; free the session (id reattached from the request).
+            | Phase.Ready ctx, Message.FromAgent(AgentToClientMessage.SessionCloseResult r) ->
+                Ok(
+                    Phase.Ready
+                        { ctx with
+                            sessions = ctx.sessions |> Map.remove r.sessionId }
+                )
+
+            // session/close error: agent rejected the close; the session remains usable.
+            | Phase.Ready ctx, Message.FromAgent(AgentToClientMessage.SessionCloseError _) -> Ok(Phase.Ready ctx)
 
             // Everything else: currently state-neutral (full JSON-RPC correlation is added in the codec layer).
             | Phase.Ready ctx, _ -> Ok(Phase.Ready ctx)

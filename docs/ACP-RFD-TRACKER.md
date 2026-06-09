@@ -1,9 +1,9 @@
 # ACP RFD Tracker
 
-**Last Updated**: 2026-03-19
-**Current ACP Schema Target**: `0.11.3` (pinned in code)
+**Last Updated**: 2026-06-09
+**Current ACP Schema Target**: `0.13.6` (pinned in code)
 **Protocol Version**: `1`
-**Current Upstream Stable ACP Release**: `0.11.3` (2026-03-18)
+**Current Upstream Stable ACP Release**: `0.13.6` (2026-06-05)
 
 ## Overview
 
@@ -31,7 +31,14 @@ ACP Inspector follows **stable-first + gated unstable**:
 | ------- | ------ | ----- |
 | Initialize handshake | ✅ Implemented | `clientInfo` / `agentInfo`, `protocolVersion = 1` |
 | Session lifecycle | ✅ Implemented | `session/new`, `session/list`, `session/load`, `session/cancel` |
-| Prompt turns | ✅ Implemented | `session/prompt`, streaming `session/update`, usage field |
+| Session close | ✅ Implemented | `session/close` — frees the session once the agent confirms; connection stays `Ready`; stabilized in 0.12.2 |
+| Session resume | ✅ Implemented | `session/resume` — reattaches existing session; stabilized in 0.12.2 |
+| Session delete | ✅ Implemented | `session/delete` — removes the session once the agent confirms; stabilized in 0.13.6 |
+| Logout | ✅ Implemented | `logout` method + `AgentCapabilities.auth.logout` marker; stabilized in 0.13.3 |
+| Optional message IDs | ✅ Implemented | `ContentChunk.messageId` optional field; stabilized in 0.13.6 |
+| Typed session usage updates | ✅ Implemented | `usage_update` with `used`/`size`/`cost`; stabilized in 0.13.6 |
+| Additional directories | ✅ Implemented | `additionalDirectories` on new/load/resume params and `SessionInfo`; stabilized in 0.13.5 |
+| Prompt turns | ✅ Implemented | `session/prompt`, streaming `session/update` |
 | File system and terminal tools | ✅ Implemented | Request/response flow in runtime + codec |
 | Permission requests | ✅ Implemented | `session/request_permission` |
 | Agent plans | ✅ Implemented | `plan` session update modeled as first-class type |
@@ -43,29 +50,36 @@ ACP Inspector follows **stable-first + gated unstable**:
 
 ## Current Stable Parity Gaps
 
-No known stable parity gaps are open against ACP `0.11.3` in the currently implemented surface.
+No known stable parity gaps are open against ACP `0.13.6` in the currently implemented surface.
 
 Areas to keep watching:
 
 - If upstream adds new stable session metadata fields, extend `Acp.Domain`, codec mappings, and session snapshots together.
 - Keep `modes` compatibility tests alongside `configOptions` tests until ACP formally removes legacy interoperability expectations.
 
-## Selected Unstable Support
+## Selected Unstable / Gated Support
 
 | Feature | Status | Current handling |
 | ------- | ------ | ---------------- |
+| `providers` | Unstable | Not implemented as stable types; preserved as opaque extension payload |
+| MCP-over-ACP | Unstable | Not implemented; unknown variants surface as `Ext` informational findings |
+| Plan operations (`plan_update` v2) | Unstable | Not implemented as stable; opaque via `SessionUpdate.Ext` |
+| `session/fork` | Unstable | Not implemented; opaque via `Ext` |
 | Proxy chains | Unstable | Implemented as first-class protocol extensions |
-| Usage updates | Unstable | Preserved through extension payload handling |
 | Telemetry export guidance | Unstable | Documented and surfaced in inspector output |
 | Registry support | RFD completed upstream, integration remains product-specific | Optional tooling/docs support |
 | Streamable HTTP transport | Still unstable upstream | Not implemented |
-| New auth/logout/elicitation shapes | Unstable upstream | Not implemented |
+| Elicitation shapes | Unstable upstream | Not implemented |
 
 ## Changelog Notes That Matter for This Repo
 
 - **`0.10.8`** stabilized Session Config Options.
 - **`0.11.1`** stabilized `session/list` and `session_info_update`.
-- **`0.11.3`** is the current stable upstream release as of 2026-03-19.
+- **`0.11.3`** pinned schema baseline for this repo as of 2026-03-19.
+- **`0.12.2`** stabilized `session/close` and `session/resume`.
+- **`0.13.3`** stabilized `logout` + `AgentCapabilities.auth.logout` capability marker.
+- **`0.13.5`** stabilized `additionalDirectories` on session new/load/resume params and `SessionInfo`.
+- **`0.13.6`** stabilized `session/delete`, optional `ContentChunk.messageId`, and typed `usage_update` (used/size/cost). Current upstream stable release as of 2026-06-05.
 
 ## Near-Term Implementation Order
 
@@ -97,6 +111,8 @@ Areas to keep watching:
 - [x] Add CI job that alerts on RFD updates (scrape agentclientprotocol.com/rfds)
 - [x] Pin schema version in `protocol/src/Acp.Domain.fs`
 - [x] Upgrade the pinned schema from `0.10.5` to current stable ACP (`0.11.3`)
+- [x] Upgrade the pinned schema from `0.11.3` to current stable ACP (`0.13.6`)
+- [x] Fix CI drift-dedupe bug: drift workflow now reopens and edits the canonical issue instead of early-exiting on an existing (possibly closed) issue (fixes #38)
 
 ## References
 

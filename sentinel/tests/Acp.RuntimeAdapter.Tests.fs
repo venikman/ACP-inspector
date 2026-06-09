@@ -38,7 +38,8 @@ module RuntimeAdapterTests =
         { AgentCapabilities.loadSession = true
           mcpCapabilities = mcpCaps
           promptCapabilities = promptCaps
-          sessionCapabilities = SessionCapabilities.empty }
+          sessionCapabilities = SessionCapabilities.empty
+          auth = AgentAuthCapabilities.empty }
 
     let clientInfo =
         { ImplementationInfo.name = "test-client"

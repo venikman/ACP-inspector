@@ -26,7 +26,8 @@ module ConnectionTests =
                 { audio = false
                   image = false
                   embeddedContext = false }
-              sessionCapabilities = sessionCapabilities }
+              sessionCapabilities = sessionCapabilities
+              auth = AgentAuthCapabilities.empty }
           agentInfo = None
           authMethods = [] }
 
@@ -57,9 +58,13 @@ module ConnectionTests =
                             return Ok(mkInitializeResult false SessionCapabilities.empty)
                         }
                   onAuthenticate = fun _ -> task { return Error "not implemented" }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Ok(mkNewSessionResult (SessionId "test-session")) }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
+                  onCloseSession = fun _ -> task { return Error "not implemented" }
+                  onDeleteSession = fun _ -> task { return Error "not implemented" }
                   onPrompt =
                     fun p ->
                         task {
@@ -67,7 +72,6 @@ module ConnectionTests =
                                 Ok
                                     { sessionId = p.sessionId
                                       stopReason = StopReason.EndTurn
-                                      usage = None
                                       _meta = None }
                         }
                   onCancel = fun _ -> task { () }
@@ -118,9 +122,13 @@ module ConnectionTests =
             let handlers: Connection.AgentHandlers =
                 { onInitialize = fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
                   onAuthenticate = fun _ -> task { return Error "not implemented" }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Ok(mkNewSessionResult (SessionId "new-session-123")) }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
+                  onCloseSession = fun _ -> task { return Error "not implemented" }
+                  onDeleteSession = fun _ -> task { return Error "not implemented" }
                   onPrompt = fun _ -> task { return Error "not implemented" }
                   onCancel = fun _ -> task { () }
                   onSetMode = fun _ -> task { return Error "not implemented" }
@@ -144,7 +152,12 @@ module ConnectionTests =
                 )
 
             // Create session
-            let! sessionResult = client.NewSessionAsync({ cwd = "/tmp"; mcpServers = [] })
+            let! sessionResult =
+                client.NewSessionAsync(
+                    { cwd = "/tmp"
+                      mcpServers = []
+                      additionalDirectories = [] }
+                )
 
             match sessionResult with
             | Ok r -> Assert.Equal("new-session-123", SessionId.value r.sessionId)
@@ -161,6 +174,7 @@ module ConnectionTests =
             let handlers: Connection.AgentHandlers =
                 { onInitialize = fun _ -> task { return Ok(mkInitializeResult true SessionCapabilities.empty) }
                   onAuthenticate = fun _ -> task { return Error "not implemented" }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession =
                     fun p ->
@@ -172,7 +186,10 @@ module ConnectionTests =
                                       modes = None
                                       _meta = None }
                         }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
+                  onCloseSession = fun _ -> task { return Error "not implemented" }
+                  onDeleteSession = fun _ -> task { return Error "not implemented" }
                   onPrompt = fun _ -> task { return Error "not implemented" }
                   onCancel = fun _ -> task { () }
                   onSetMode = fun _ -> task { return Error "not implemented" }
@@ -198,7 +215,8 @@ module ConnectionTests =
                 client.LoadSessionAsync(
                     { sessionId = SessionId "load-me"
                       cwd = "/tmp"
-                      mcpServers = [] }
+                      mcpServers = []
+                      additionalDirectories = [] }
                 )
 
             match loaded with
@@ -214,10 +232,25 @@ module ConnectionTests =
             let (clientTransport, agentTransport) = Transport.DuplexTransport.CreatePair()
 
             let handlers: Connection.AgentHandlers =
-                { onInitialize = fun _ -> task { return Ok(mkInitializeResult true { list = Some { _meta = None } }) }
+                { onInitialize =
+                    fun _ ->
+                        task {
+                            return
+                                Ok(
+                                    mkInitializeResult
+                                        true
+                                        { list = Some { _meta = None }
+                                          close = None
+                                          delete = None
+                                          resume = None
+                                          additionalDirectories = None }
+                                )
+                        }
                   onAuthenticate = fun _ -> task { return Error "not implemented" }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
                   onListSessions =
                     fun _ ->
                         task {
@@ -228,10 +261,13 @@ module ConnectionTests =
                                             cwd = "/tmp"
                                             title = Some "Roadmap"
                                             updatedAt = Some "2026-03-19T12:00:00Z"
+                                            additionalDirectories = []
                                             _meta = None } ]
                                       nextCursor = None
                                       _meta = None }
                         }
+                  onCloseSession = fun _ -> task { return Error "not implemented" }
+                  onDeleteSession = fun _ -> task { return Error "not implemented" }
                   onPrompt = fun _ -> task { return Error "not implemented" }
                   onCancel = fun _ -> task { () }
                   onSetMode = fun _ -> task { return Error "not implemented" }
@@ -277,9 +313,13 @@ module ConnectionTests =
             let handlers: Connection.AgentHandlers =
                 { onInitialize = fun _ -> task { return Ok(mkInitializeResult true SessionCapabilities.empty) }
                   onAuthenticate = fun _ -> task { return Error "not implemented" }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
+                  onCloseSession = fun _ -> task { return Error "not implemented" }
+                  onDeleteSession = fun _ -> task { return Error "not implemented" }
                   onPrompt = fun _ -> task { return Error "not implemented" }
                   onCancel = fun _ -> task { () }
                   onSetMode = fun _ -> task { return Error "not implemented" }
@@ -353,9 +393,13 @@ module ConnectionTests =
             let handlers: Connection.AgentHandlers =
                 { onInitialize = fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
                   onAuthenticate = fun _ -> task { return Error "not implemented" }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Ok(mkNewSessionResult (SessionId "s1")) }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
+                  onCloseSession = fun _ -> task { return Error "not implemented" }
+                  onDeleteSession = fun _ -> task { return Error "not implemented" }
                   onPrompt =
                     fun p ->
                         task {
@@ -365,7 +409,6 @@ module ConnectionTests =
                                 Ok
                                     { sessionId = p.sessionId
                                       stopReason = StopReason.EndTurn
-                                      usage = None
                                       _meta = None }
                         }
                   onCancel = fun _ -> task { () }
@@ -390,7 +433,12 @@ module ConnectionTests =
                 )
 
             // Create session
-            let! _ = client.NewSessionAsync({ cwd = "/tmp"; mcpServers = [] })
+            let! _ =
+                client.NewSessionAsync(
+                    { cwd = "/tmp"
+                      mcpServers = []
+                      additionalDirectories = [] }
+                )
 
             // Send prompt
             let! promptResult =
@@ -421,9 +469,13 @@ module ConnectionTests =
             let handlers: Connection.AgentHandlers =
                 { onInitialize = fun _ -> task { return Error "not called" }
                   onAuthenticate = fun _ -> task { return Error "not implemented" }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not called" }
                   onLoadSession = fun _ -> task { return Error "not called" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not called" }
+                  onCloseSession = fun _ -> task { return Error "not called" }
+                  onDeleteSession = fun _ -> task { return Error "not called" }
                   onPrompt = fun _ -> task { return Error "not called" }
                   onCancel = fun _ -> task { () }
                   onSetMode = fun _ -> task { return Error "not called" }
@@ -437,7 +489,8 @@ module ConnectionTests =
                     { content =
                         ContentBlock.Text
                             { text = "Hello from agent!"
-                              annotations = None } }
+                              annotations = None }
+                      messageId = None }
 
             do! agent.SessionUpdateAsync(SessionId "s1", update)
 
@@ -459,9 +512,13 @@ module ConnectionTests =
             let handlers: Connection.AgentHandlers =
                 { onInitialize = fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
                   onAuthenticate = fun _ -> task { return Error "not implemented" }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not called" }
                   onLoadSession = fun _ -> task { return Error "not called" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not called" }
+                  onCloseSession = fun _ -> task { return Error "not called" }
+                  onDeleteSession = fun _ -> task { return Error "not called" }
                   onPrompt = fun _ -> task { return Error "not called" }
                   onCancel =
                     fun p ->
@@ -502,6 +559,263 @@ module ConnectionTests =
         }
 
     [<Fact>]
+    let ``Client can close session after initialization`` () =
+        task {
+            let (clientTransport, agentTransport) = Transport.DuplexTransport.CreatePair()
+
+            let handlers: Connection.AgentHandlers =
+                { onInitialize =
+                    fun _ ->
+                        task {
+                            return
+                                Ok(
+                                    mkInitializeResult
+                                        true
+                                        { list = None
+                                          close = Some { _meta = None }
+                                          delete = None
+                                          resume = None
+                                          additionalDirectories = None }
+                                )
+                        }
+                  onAuthenticate = fun _ -> task { return Error "not implemented" }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
+                  onNewSession = fun _ -> task { return Error "not implemented" }
+                  onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
+                  onListSessions = fun _ -> task { return Error "not implemented" }
+                  onCloseSession =
+                    fun p ->
+                        task {
+                            return
+                                Ok
+                                    { sessionId = p.sessionId
+                                      _meta = None }
+                        }
+                  onDeleteSession = fun _ -> task { return Error "not implemented" }
+                  onPrompt = fun _ -> task { return Error "not implemented" }
+                  onCancel = fun _ -> task { () }
+                  onSetMode = fun _ -> task { return Error "not implemented" }
+                  onSetConfigOption = fun _ -> task { return Error "not implemented" } }
+
+            let agent = Connection.AgentConnection(agentTransport, handlers)
+            let client = Connection.ClientConnection(clientTransport)
+
+            let _ = agent.StartListening()
+
+            let! _ =
+                client.InitializeAsync(
+                    { protocolVersion = ProtocolVersion.current
+                      clientCapabilities =
+                        { fs =
+                            { readTextFile = true
+                              writeTextFile = true }
+                          terminal = true }
+                      clientInfo = None }
+                )
+
+            let! closed =
+                client.CloseSessionAsync(
+                    { sessionId = SessionId "sess-1"
+                      _meta = None }
+                )
+
+            match closed with
+            | Ok _ -> ()
+            | Error e -> failwithf "CloseSession failed: %A" e
+
+            do! agent.StopAsync()
+        }
+
+    [<Fact>]
+    let ``Client can delete session after initialization`` () =
+        task {
+            let (clientTransport, agentTransport) = Transport.DuplexTransport.CreatePair()
+
+            let handlers: Connection.AgentHandlers =
+                { onInitialize =
+                    fun _ ->
+                        task {
+                            return
+                                Ok(
+                                    mkInitializeResult
+                                        true
+                                        { list = None
+                                          close = None
+                                          delete = Some { _meta = None }
+                                          resume = None
+                                          additionalDirectories = None }
+                                )
+                        }
+                  onAuthenticate = fun _ -> task { return Error "not implemented" }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
+                  onNewSession = fun _ -> task { return Error "not implemented" }
+                  onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
+                  onListSessions = fun _ -> task { return Error "not implemented" }
+                  onCloseSession = fun _ -> task { return Error "not implemented" }
+                  onDeleteSession =
+                    fun p ->
+                        task {
+                            return
+                                Ok
+                                    { sessionId = p.sessionId
+                                      _meta = None }
+                        }
+                  onPrompt = fun _ -> task { return Error "not implemented" }
+                  onCancel = fun _ -> task { () }
+                  onSetMode = fun _ -> task { return Error "not implemented" }
+                  onSetConfigOption = fun _ -> task { return Error "not implemented" } }
+
+            let agent = Connection.AgentConnection(agentTransport, handlers)
+            let client = Connection.ClientConnection(clientTransport)
+
+            let _ = agent.StartListening()
+
+            let! _ =
+                client.InitializeAsync(
+                    { protocolVersion = ProtocolVersion.current
+                      clientCapabilities =
+                        { fs =
+                            { readTextFile = true
+                              writeTextFile = true }
+                          terminal = true }
+                      clientInfo = None }
+                )
+
+            let! deleted =
+                client.DeleteSessionAsync(
+                    { sessionId = SessionId "sess-1"
+                      _meta = None }
+                )
+
+            match deleted with
+            | Ok _ -> ()
+            | Error e -> failwithf "DeleteSession failed: %A" e
+
+            do! agent.StopAsync()
+        }
+
+    [<Fact>]
+    let ``Client can resume session after initialization`` () =
+        task {
+            let (clientTransport, agentTransport) = Transport.DuplexTransport.CreatePair()
+
+            let handlers: Connection.AgentHandlers =
+                { onInitialize =
+                    fun _ ->
+                        task {
+                            return
+                                Ok(
+                                    mkInitializeResult
+                                        true
+                                        { list = None
+                                          close = None
+                                          delete = None
+                                          resume = Some { _meta = None }
+                                          additionalDirectories = None }
+                                )
+                        }
+                  onAuthenticate = fun _ -> task { return Error "not implemented" }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
+                  onNewSession = fun _ -> task { return Error "not implemented" }
+                  onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onResumeSession =
+                    fun p ->
+                        task {
+                            return
+                                Ok
+                                    { sessionId = p.sessionId
+                                      configOptions = None
+                                      modes = None
+                                      _meta = None }
+                        }
+                  onListSessions = fun _ -> task { return Error "not implemented" }
+                  onCloseSession = fun _ -> task { return Error "not implemented" }
+                  onDeleteSession = fun _ -> task { return Error "not implemented" }
+                  onPrompt = fun _ -> task { return Error "not implemented" }
+                  onCancel = fun _ -> task { () }
+                  onSetMode = fun _ -> task { return Error "not implemented" }
+                  onSetConfigOption = fun _ -> task { return Error "not implemented" } }
+
+            let agent = Connection.AgentConnection(agentTransport, handlers)
+            let client = Connection.ClientConnection(clientTransport)
+
+            let _ = agent.StartListening()
+
+            let! _ =
+                client.InitializeAsync(
+                    { protocolVersion = ProtocolVersion.current
+                      clientCapabilities =
+                        { fs =
+                            { readTextFile = true
+                              writeTextFile = true }
+                          terminal = true }
+                      clientInfo = None }
+                )
+
+            let! resumed =
+                client.ResumeSessionAsync(
+                    { sessionId = SessionId "resume-me"
+                      cwd = "/tmp"
+                      mcpServers = []
+                      additionalDirectories = [ "/extra" ]
+                      _meta = None }
+                )
+
+            match resumed with
+            | Ok r -> Assert.Equal("resume-me", SessionId.value r.sessionId)
+            | Error e -> failwithf "ResumeSession failed: %A" e
+
+            do! agent.StopAsync()
+        }
+
+    [<Fact>]
+    let ``Client can logout and agent responds`` () =
+        task {
+            let (clientTransport, agentTransport) = Transport.DuplexTransport.CreatePair()
+
+            let handlers: Connection.AgentHandlers =
+                { onInitialize = fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
+                  onAuthenticate = fun _ -> task { return Error "not implemented" }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
+                  onNewSession = fun _ -> task { return Error "not implemented" }
+                  onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
+                  onListSessions = fun _ -> task { return Error "not implemented" }
+                  onCloseSession = fun _ -> task { return Error "not implemented" }
+                  onDeleteSession = fun _ -> task { return Error "not implemented" }
+                  onPrompt = fun _ -> task { return Error "not implemented" }
+                  onCancel = fun _ -> task { () }
+                  onSetMode = fun _ -> task { return Error "not implemented" }
+                  onSetConfigOption = fun _ -> task { return Error "not implemented" } }
+
+            let agent = Connection.AgentConnection(agentTransport, handlers)
+            let client = Connection.ClientConnection(clientTransport)
+
+            let _ = agent.StartListening()
+
+            let! _ =
+                client.InitializeAsync(
+                    { protocolVersion = ProtocolVersion.current
+                      clientCapabilities =
+                        { fs =
+                            { readTextFile = true
+                              writeTextFile = true }
+                          terminal = true }
+                      clientInfo = None }
+                )
+
+            let! logoutResult = client.LogoutAsync({ _meta = None })
+
+            match logoutResult with
+            | Ok _ -> ()
+            | Error e -> failwithf "Logout failed: %A" e
+
+            do! agent.StopAsync()
+        }
+
+    [<Fact>]
     let ``Client can authenticate and agent responds`` () =
         task {
             let (clientTransport, agentTransport) = Transport.DuplexTransport.CreatePair()
@@ -516,9 +830,13 @@ module ConnectionTests =
                             receivedMethodId <- Some p.methodId
                             return Ok AuthenticateResult.empty
                         }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
                   onListSessions = fun _ -> task { return Error "not implemented" }
+                  onCloseSession = fun _ -> task { return Error "not implemented" }
+                  onDeleteSession = fun _ -> task { return Error "not implemented" }
                   onPrompt = fun _ -> task { return Error "not implemented" }
                   onCancel = fun _ -> task { () }
                   onSetMode = fun _ -> task { return Error "not implemented" }
