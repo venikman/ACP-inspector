@@ -115,7 +115,7 @@ module Protocol =
             let sessions' = ctx.sessions |> Map.add sid s'
             Ok { ctx with sessions = sessions' }
 
-    /// MVP Spec<Phase,Message> for ACP v0.11.3 "core slice" (see Domain.Spec.Schema).
+    /// MVP Spec<Phase,Message> for ACP v0.13.6 "core slice" (see Domain.Spec.Schema).
     /// Rules encoded:
     ///   - initialize must be first
     ///   - exactly one initialize result

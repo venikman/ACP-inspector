@@ -118,3 +118,49 @@ module TraceReplayTests =
                         let detail = errors |> List.map renderFinding |> String.concat "\n"
 
                         Assert.Fail($"{path}: found Error findings:\n{detail}")
+
+    /// Dedicated replay test for the 0.13.6-features trace.
+    /// Exercises session/resume, session/close, session/delete, logout,
+    /// usage_update, and an agent_message_chunk carrying a messageId.
+    /// The trace must decode cleanly and produce no Error-severity findings.
+    [<Fact>]
+    let ``0.13.6-features trace replays with clean decode and no error findings`` () =
+        let path = Path.Combine(traceDir, "0.13.6-features.jsonl")
+
+        if not (File.Exists path) then
+            Assert.Fail($"Trace fixture not found: {path}")
+        else
+            let lines = File.ReadAllLines path
+
+            let mutable codec = Codec.CodecState.empty
+            let mutable messages: Message list = []
+            let decodeErrors = ResizeArray<string>()
+
+            for idx, line in lines |> Seq.indexed do
+                if not (String.IsNullOrWhiteSpace line) then
+                    match tryParseFrame line with
+                    | None -> decodeErrors.Add($"line {idx + 1}: invalid trace frame JSON")
+                    | Some(dirRaw, json) ->
+                        match tryParseDirection dirRaw with
+                        | None -> decodeErrors.Add($"line {idx + 1}: unknown direction '{dirRaw}'")
+                        | Some dir ->
+                            match Codec.decode dir codec json with
+                            | Error e -> decodeErrors.Add($"line {idx + 1}: codec decode error: {e}")
+                            | Ok(codec', msg) ->
+                                codec <- codec'
+                                messages <- messages @ [ msg ]
+
+            if decodeErrors.Count > 0 then
+                Assert.Fail("Trace decode failures:\n" + String.Join("\n", decodeErrors))
+
+            // All 18 frames should decode successfully.
+            Assert.Equal(18, messages.Length)
+
+            let sid = SessionId "0.13.6-features"
+            let r = runWithValidation sid spec messages false None None
+
+            let errors = r.findings |> List.filter (fun f -> f.severity = Severity.Error)
+
+            if not errors.IsEmpty then
+                let detail = errors |> List.map renderFinding |> String.concat "\n"
+                Assert.Fail($"0.13.6-features trace has Error findings:\n{detail}")

@@ -3,7 +3,7 @@ namespace Acp
 open System
 open System.Text.Json.Nodes
 
-/// Domain model for ACP v0.11.3 (schema.json).
+/// Domain model for ACP v0.13.6 (schema.json).
 /// This is the typed, transport-agnostic meaning of ACP after JSON-RPC framing is decoded.
 module Domain =
 
@@ -14,7 +14,7 @@ module Domain =
         /// Update this when upgrading to a new ACP release.
         /// See: https://github.com/agentclientprotocol/agent-client-protocol/releases
         [<Literal>]
-        let Schema = "0.11.3"
+        let Schema = "0.13.6"
 
         /// JSON-RPC framing version used by the codec.
         [<Literal>]
