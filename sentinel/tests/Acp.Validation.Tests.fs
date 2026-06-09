@@ -70,7 +70,6 @@ module ValidationTests =
     let private mkPromptResult (sid: SessionId) (stopReason: StopReason) : SessionPromptResult =
         { sessionId = sid
           stopReason = stopReason
-          usage = None
           _meta = None }
 
     let private mkNewSessionResult (sid: SessionId) (modes: SessionModeState option) : NewSessionResult =

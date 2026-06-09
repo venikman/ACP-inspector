@@ -1703,27 +1703,16 @@ module internal CodecAcpJson =
         o["sessionId"] <- encodeSessionId p.sessionId
         o
 
-    let private tryGetObjectClone (o: JsonObject) (name: string) : JsonObject option =
-        match tryGet name o with
-        | Some(:? JsonObject as obj) ->
-            match obj.DeepClone() with
-            | :? JsonObject as clone -> Some clone
-            | _ -> None
-        | _ -> None
-
-    let private decodeSessionPromptResponse
-        (node: JsonNode)
-        : Result<StopReason * JsonObject option * JsonObject option, string> =
+    let private decodeSessionPromptResponse (node: JsonNode) : Result<StopReason * JsonObject option, string> =
         result {
             let! o = asObject node
             let! srNode = get "stopReason" o
             let! stopReason = decodeStopReason srNode
-            let usage = tryGetObjectClone o "usage"
 
             let meta =
                 tryGet "_meta" o |> Option.bind (fun n -> n |> asObject |> Result.toOption)
 
-            return stopReason, usage, meta
+            return stopReason, meta
         }
 
     // ---- Plan ----
@@ -2338,6 +2327,55 @@ module internal CodecAcpJson =
 
     // ---- Session update ----
 
+    let private decodeUsage (node: JsonNode) : Result<Usage, string> =
+        result {
+            let! o = asObject node
+            let! usedNode = get "used" o
+            let! used = asInt64 usedNode
+            let! sizeNode = get "size" o
+            let! size = asInt64 sizeNode
+
+            let! cost =
+                match tryGet "cost" o with
+                | None -> Ok None
+                | Some n ->
+                    result {
+                        let! co = asObject n
+                        let! amountNode = get "amount" co
+                        let! amount = asFloat amountNode
+                        let! currencyNode = get "currency" co
+                        let! currency = asString currencyNode
+                        return Some { amount = amount; currency = currency }
+                    }
+
+            let meta = tryGet "_meta" o |> Option.bind (fun n -> asObject n |> Result.toOption)
+
+            return
+                { used = used
+                  size = size
+                  cost = cost
+                  _meta = meta }
+        }
+
+    let private encodeUsage (u: Usage) : JsonObject =
+        let o = JsonObject()
+        o["used"] <- JsonValue.Create(u.used)
+        o["size"] <- JsonValue.Create(u.size)
+
+        match u.cost with
+        | None -> ()
+        | Some cost ->
+            let co = JsonObject()
+            co["amount"] <- JsonValue.Create(cost.amount)
+            co["currency"] <- JsonValue.Create(cost.currency)
+            o["cost"] <- co
+
+        match u._meta with
+        | None -> ()
+        | Some meta -> o["_meta"] <- meta.DeepClone()
+
+        o
+
     let private decodeSessionUpdate (node: JsonNode) : Result<SessionUpdate, string> =
         result {
             let! o = asObject node
@@ -2375,6 +2413,9 @@ module internal CodecAcpJson =
             | "current_mode_update" ->
                 let! u = decodeCurrentModeUpdate node
                 return SessionUpdate.CurrentModeUpdate u
+            | "usage_update" ->
+                let! u = decodeUsage node
+                return SessionUpdate.UsageUpdate u
             | other ->
                 let payload =
                     match o.DeepClone() with
@@ -2425,6 +2466,10 @@ module internal CodecAcpJson =
         | SessionUpdate.CurrentModeUpdate u ->
             let o = encodeCurrentModeUpdate u
             o["sessionUpdate"] <- JsonValue.Create("current_mode_update")
+            o
+        | SessionUpdate.UsageUpdate u ->
+            let o = encodeUsage u
+            o["sessionUpdate"] <- JsonValue.Create("usage_update")
             o
         | SessionUpdate.Ext(tag, payload) ->
             let o =
@@ -3033,11 +3078,10 @@ module internal CodecAcpJson =
             | None -> Error "missing result"
             | Some r ->
                 decodeSessionPromptResponse r
-                |> Result.map (fun (sr, usage, meta) ->
+                |> Result.map (fun (sr, meta) ->
                     AgentToClientMessage.SessionPromptResult
                         { sessionId = req.sessionId
                           stopReason = sr
-                          usage = usage
                           _meta = meta })
 
         | PendingClientRequest.SessionSetMode req ->
@@ -3433,16 +3477,6 @@ module internal CodecAcpJson =
                 o["id"] <- encodeRequestId id
                 let res = JsonObject()
                 res["stopReason"] <- encodeStopReason r.stopReason
-
-                match r.usage with
-                | None -> ()
-                | Some usage ->
-                    let payload =
-                        match usage.DeepClone() with
-                        | :? JsonObject as clone -> clone
-                        | _ -> JsonObject()
-
-                    res["usage"] <- payload
 
                 match r._meta with
                 | Some m -> res["_meta"] <- m.DeepClone()

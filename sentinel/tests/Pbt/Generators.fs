@@ -155,7 +155,6 @@ module Generators =
         |> G.map (fun sr ->
             { sessionId = sid
               stopReason = sr
-              usage = None
               _meta = None })
 
     let private genSessionUpdate (sid: SessionId) : Gen<SessionUpdateNotification> =

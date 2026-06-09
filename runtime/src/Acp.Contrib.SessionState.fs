@@ -229,6 +229,11 @@ module SessionState =
             | SessionUpdate.ConfigOptionUpdate update -> configOptions <- update.configOptions
             | SessionUpdate.AvailableCommandsUpdate update -> availableCommands <- update.availableCommands
             | SessionUpdate.CurrentModeUpdate update -> currentModeId <- Some update.currentModeId
+            | SessionUpdate.UsageUpdate usage ->
+                let payload = JsonObject()
+                payload["used"] <- JsonValue.Create(usage.used)
+                payload["size"] <- JsonValue.Create(usage.size)
+                applyUsageUpdate payload
             | SessionUpdate.Ext(tag, payload) ->
                 match tag with
                 | "session_info_update" -> applySessionInfoUpdate payload

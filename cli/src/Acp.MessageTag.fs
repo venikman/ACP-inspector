@@ -18,6 +18,7 @@ module MessageTag =
         | SessionUpdate.CurrentModeUpdate _ -> "current_mode_update"
         | SessionUpdate.SessionInfoUpdate _ -> "session_info_update"
         | SessionUpdate.ConfigOptionUpdate _ -> "config_option_update"
+        | SessionUpdate.UsageUpdate _ -> "usage_update"
         | SessionUpdate.Ext(tag, _) -> $"ext:{tag}"
 
     let render (msg: Message) =

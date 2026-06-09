@@ -75,7 +75,6 @@ module SessionProperties =
                             AgentToClientMessage.SessionPromptResult
                                 { sessionId = sid
                                   stopReason = StopReason.EndTurn
-                                  usage = None
                                   _meta = None }
                         ) ]
 
@@ -133,7 +132,6 @@ module SessionProperties =
                                 AgentToClientMessage.SessionPromptResult
                                     { sessionId = sid
                                       stopReason = sr
-                                      usage = None
                                       _meta = None }
                             ) ]
 

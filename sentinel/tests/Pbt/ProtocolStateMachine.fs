@@ -171,7 +171,6 @@ module ProtocolStateMachine =
                         AgentToClientMessage.SessionPromptResult
                             { sessionId = sid
                               stopReason = sr
-                              usage = None
                               _meta = None }
                     )
 

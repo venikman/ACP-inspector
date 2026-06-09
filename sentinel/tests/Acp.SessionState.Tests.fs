@@ -214,6 +214,23 @@ module SessionStateTests =
         Assert.Single(snapshot.usageUpdates) |> ignore
 
     [<Fact>]
+    let ``Apply typed UsageUpdate is tracked in usageUpdates snapshot`` () =
+        let acc = SessionState.SessionAccumulator()
+
+        let notify =
+            { sessionId = SessionId "s1"
+              update =
+                SessionUpdate.UsageUpdate
+                    { used = 100L
+                      size = 500L
+                      cost = Some { amount = 0.05; currency = "USD" }
+                      _meta = None }
+              _meta = None }
+
+        let snapshot = acc.Apply(notify)
+        Assert.Single(snapshot.usageUpdates) |> ignore
+
+    [<Fact>]
     let ``Apply updates tool call status`` () =
         let acc = SessionState.SessionAccumulator()
 

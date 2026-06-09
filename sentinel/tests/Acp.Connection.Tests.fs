@@ -65,7 +65,6 @@ module ConnectionTests =
                                 Ok
                                     { sessionId = p.sessionId
                                       stopReason = StopReason.EndTurn
-                                      usage = None
                                       _meta = None }
                         }
                   onCancel = fun _ -> task { () }
@@ -358,7 +357,6 @@ module ConnectionTests =
                                 Ok
                                     { sessionId = p.sessionId
                                       stopReason = StopReason.EndTurn
-                                      usage = None
                                       _meta = None }
                         }
                   onCancel = fun _ -> task { () }

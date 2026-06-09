@@ -535,7 +535,6 @@ module Domain =
             {
                 sessionId: SessionId
                 stopReason: StopReason
-                usage: JsonObject option
                 /// Draft RFD: _meta field for W3C trace context propagation (traceparent, tracestate, baggage).
                 _meta: JsonObject option
             }
@@ -598,6 +597,14 @@ module Domain =
 
         type ConfigOptionUpdate =
             { configOptions: SessionConfigOption list
+              _meta: JsonObject option }
+
+        type Cost = { amount: float; currency: string }
+
+        type Usage =
+            { used: int64
+              size: int64
+              cost: Cost option
               _meta: JsonObject option }
 
         // ---- Tool calls ----
@@ -699,6 +706,7 @@ module Domain =
             | ConfigOptionUpdate of ConfigOptionUpdate
             | AvailableCommandsUpdate of AvailableCommandsUpdate
             | CurrentModeUpdate of CurrentModeUpdate
+            | UsageUpdate of Usage
             /// Unknown update payload preserved for forward compatibility.
             | Ext of tag: string * payload: JsonObject
 

@@ -171,45 +171,6 @@ module CodecTests =
         | Message.FromAgent(AgentToClientMessage.SessionPromptResult r) ->
             Assert.Equal("s-1", SessionId.value r.sessionId)
             Assert.Equal(StopReason.EndTurn, r.stopReason)
-            Assert.True(r.usage.IsNone)
-        | other -> failwithf "unexpected message %A" other
-
-        Assert.True(state2.pendingClientRequests.IsEmpty)
-
-    [<Fact>]
-    let ``decode session prompt response preserves usage payload`` () =
-        let state0 = Codec.CodecState.empty
-
-        let promptReq =
-            """{"jsonrpc":"2.0","id":"p2","method":"session/prompt","params":{"sessionId":"s-2","prompt":[{"type":"text","text":"hi"}]}}"""
-
-        let state1, _ =
-            match Codec.decode Codec.Direction.FromClient state0 promptReq with
-            | Ok r -> r
-            | Error e -> failwithf "unexpected decode error: %A" e
-
-        let promptRes =
-            """{"jsonrpc":"2.0","id":"p2","result":{"stopReason":"end_turn","usage":{"inputTokens":5,"outputTokens":7}}}"""
-
-        let state2, msg2 =
-            match Codec.decode Codec.Direction.FromAgent state1 promptRes with
-            | Ok r -> r
-            | Error e -> failwithf "unexpected decode error: %A" e
-
-        match msg2 with
-        | Message.FromAgent(AgentToClientMessage.SessionPromptResult r) ->
-            Assert.Equal("s-2", SessionId.value r.sessionId)
-            Assert.Equal(StopReason.EndTurn, r.stopReason)
-            Assert.True(r.usage.IsSome)
-
-            match r.usage with
-            | None -> failwith "expected usage payload"
-            | Some usage ->
-                match usage["inputTokens"] with
-                | null -> failwith "expected inputTokens"
-                | node ->
-                    let value = (node :?> JsonValue).GetValue<int>()
-                    Assert.Equal(5, value)
         | other -> failwithf "unexpected message %A" other
 
         Assert.True(state2.pendingClientRequests.IsEmpty)
@@ -539,3 +500,49 @@ module CodecTests =
             | Acp.Domain.Prompting.SessionUpdate.AgentMessageChunk chunk -> Assert.True(chunk.messageId.IsNone)
             | other -> failwithf "unexpected session update %A" other
         | other -> failwithf "unexpected message %A" other
+
+    [<Fact>]
+    let ``decode typed usage update notification`` () =
+        let state0 = Codec.CodecState.empty
+
+        let raw =
+            """{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess-1","update":{"sessionUpdate":"usage_update","used":120,"size":200,"cost":{"amount":0.42,"currency":"USD"}}}}"""
+
+        let _, msg =
+            match Codec.decode Codec.Direction.FromAgent state0 raw with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg with
+        | Message.FromAgent(AgentToClientMessage.SessionUpdate notification) ->
+            match notification.update with
+            | Acp.Domain.Prompting.SessionUpdate.UsageUpdate usage ->
+                Assert.Equal(120L, usage.used)
+                Assert.Equal(200L, usage.size)
+
+                match usage.cost with
+                | Some cost ->
+                    Assert.Equal("USD", cost.currency)
+                    Assert.Equal(0.42, cost.amount, 3)
+                | None -> failwith "expected cost"
+            | other -> failwithf "unexpected session update %A" other
+        | other -> failwithf "unexpected message %A" other
+
+    [<Fact>]
+    let ``decode usage update without cost tolerates extras`` () =
+        let state0 = Codec.CodecState.empty
+
+        let raw =
+            """{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess-1","update":{"sessionUpdate":"usage_update","used":1,"size":2,"unknownField":true}}}"""
+
+        let _, msg =
+            match Codec.decode Codec.Direction.FromAgent state0 raw with
+            | Ok r -> r
+            | Error e -> failwithf "unexpected decode error: %A" e
+
+        match msg with
+        | Message.FromAgent(AgentToClientMessage.SessionUpdate n) ->
+            match n.update with
+            | Acp.Domain.Prompting.SessionUpdate.UsageUpdate usage -> Assert.True(usage.cost.IsNone)
+            | other -> failwithf "unexpected %A" other
+        | other -> failwithf "unexpected %A" other
