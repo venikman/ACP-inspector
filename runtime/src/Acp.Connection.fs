@@ -12,6 +12,7 @@ open Acp.Domain
 open Acp.Domain.JsonRpc
 open Acp.Domain.PrimitivesAndParties
 open Acp.Domain.Capabilities
+open Acp.Domain.Authentication
 open Acp.Domain.Initialization
 open Acp.Domain.SessionSetup
 open Acp.Domain.SessionModes
@@ -115,6 +116,7 @@ module Connection =
     /// Handlers for agent-side message processing.
     type AgentHandlers =
         { onInitialize: InitializeParams -> Task<Result<InitializeResult, string>>
+          onAuthenticate: AuthenticateParams -> Task<Result<AuthenticateResult, string>>
           onNewSession: NewSessionParams -> Task<Result<NewSessionResult, string>>
           onListSessions: ListSessionsRequest -> Task<Result<ListSessionsResponse, string>>
           onLoadSession: LoadSessionParams -> Task<Result<LoadSessionResult, string>>
@@ -358,6 +360,19 @@ module Connection =
                 | Error e -> return Error e
                 | Ok(Message.FromAgent(AgentToClientMessage.InitializeResult r)) -> return Ok r
                 | Ok(Message.FromAgent(AgentToClientMessage.InitializeError e)) ->
+                    return Error(ConnectionError.ProtocolError e.message)
+                | Ok other -> return Error(ConnectionError.ProtocolError(sprintf "Unexpected response: %A" other))
+            }
+
+        /// Send authenticate request.
+        member _.AuthenticateAsync(params': AuthenticateParams) : Task<Result<AuthenticateResult, ConnectionError>> =
+            task {
+                let! result = sendRequest (ClientToAgentMessage.Authenticate params')
+
+                match result with
+                | Error e -> return Error e
+                | Ok(Message.FromAgent(AgentToClientMessage.AuthenticateResult r)) -> return Ok r
+                | Ok(Message.FromAgent(AgentToClientMessage.AuthenticateError e)) ->
                     return Error(ConnectionError.ProtocolError e.message)
                 | Ok other -> return Error(ConnectionError.ProtocolError(sprintf "Unexpected response: %A" other))
             }
@@ -781,6 +796,20 @@ module Connection =
                                 sendResponse
                                     reqId
                                     (AgentToClientMessage.ProxyInitializeError
+                                        { code = -32603
+                                          message = msg
+                                          data = None })
+
+                    | ClientToAgentMessage.Authenticate p, Some reqId ->
+                        let! result = handlers.onAuthenticate p
+
+                        match result with
+                        | Ok r -> do! sendResponse reqId (AgentToClientMessage.AuthenticateResult r)
+                        | Error msg ->
+                            do!
+                                sendResponse
+                                    reqId
+                                    (AgentToClientMessage.AuthenticateError
                                         { code = -32603
                                           message = msg
                                           data = None })
