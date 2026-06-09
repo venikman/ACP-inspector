@@ -13,6 +13,7 @@ Agent-executable tasks for ACP Inspector maintenance and development.
 | [TASK-006](TASK-006-telemetry-export-panel.md)     | Telemetry Export Panel                  | ✅ Done     | Medium   | Team     |
 | [TASK-007](TASK-007-agent-registry.md)             | ACP Agent Registry Support              | ✅ Done     | Medium   | Team     |
 | [TASK-008](TASK-008-schema-pin-and-ci-watch.md)    | ACP Schema Pin + CI Watchers            | ✅ Done     | High     | Team     |
+| [TASK-009](TASK-009-acp-0.13-stable-parity.md)     | ACP 0.13 Stable Parity                  | Pending     | High     | Team     |
 
 ## Status Legend
 
