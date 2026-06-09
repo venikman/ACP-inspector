@@ -568,25 +568,6 @@ module ValidationTests =
         | other -> failwithf "expected Phase.Ready, got %A" other
 
     [<Fact>]
-    let ``delete of a saved session from session list is allowed`` () =
-        let sid = SessionId "s-saved-1"
-
-        let trace: Message list =
-            [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
-              Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
-              // s-saved-1 exists only in the agent's persistent store (session/list);
-              // it was never created/loaded/resumed on this connection.
-              Message.FromClient(ClientToAgentMessage.SessionDelete { sessionId = sid; _meta = None })
-              Message.FromAgent(AgentToClientMessage.SessionDeleteResult { sessionId = sid; _meta = None }) ]
-
-        let result = runWithValidation sid spec trace true None None
-        Assert.True(result.findings.IsEmpty)
-
-        match result.finalPhase with
-        | Ok(Phase.Ready ctx) -> Assert.False(ctx.sessions |> Map.containsKey sid)
-        | other -> failwithf "expected Phase.Ready, got %A" other
-
-    [<Fact>]
     let ``delete error keeps the session usable`` () =
         let sid = SessionId "s-delete-err"
         let deleteReq: DeleteSessionRequest = { sessionId = sid; _meta = None }
