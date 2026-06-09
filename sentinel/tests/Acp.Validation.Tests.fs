@@ -5,6 +5,7 @@ open Xunit
 open Acp.Domain
 open Acp.Domain.PrimitivesAndParties
 open Acp.Domain.Capabilities
+open Acp.Domain.Authentication
 open Acp.Domain.Initialization
 open Acp.Domain.SessionSetup
 open Acp.Domain.SessionModes
@@ -36,8 +37,12 @@ module ValidationTests =
         { loadSession = true
           mcpCapabilities = mcpCaps
           promptCapabilities = promptCaps
-          sessionCapabilities = SessionCapabilities.empty
-          auth = AgentAuthCapabilities.empty }
+          sessionCapabilities =
+            { SessionCapabilities.empty with
+                resume = Some { _meta = None }
+                close = Some { _meta = None }
+                delete = Some { _meta = None } }
+          auth = { logout = Some { _meta = None } } }
 
     let private clientInfo: ImplementationInfo =
         { name = "test-client"
@@ -598,6 +603,51 @@ module ValidationTests =
         | other -> failwithf "expected Phase.Ready, got %A" other
 
     [<Fact>]
+    let ``capability-gated session methods require advertisement`` () =
+        // ACP 0.13.6 gates resume/close/delete on advertised session capabilities;
+        // using one without the corresponding capability advertised must surface a
+        // sentinel warning.  session/list and session/load are intentionally NOT gated.
+        let sid = SessionId "s-nocap"
+
+        let bareInit: InitializeResult =
+            { initResult with
+                agentCapabilities =
+                    { agentCaps with
+                        sessionCapabilities = SessionCapabilities.empty
+                        auth = AgentAuthCapabilities.empty } }
+
+        let gated: (string * ClientToAgentMessage) list =
+            [ "session/resume",
+              ClientToAgentMessage.SessionResume
+                  { sessionId = sid
+                    cwd = "."
+                    mcpServers = []
+                    additionalDirectories = []
+                    _meta = None }
+              "session/close", ClientToAgentMessage.SessionClose { sessionId = sid; _meta = None }
+              "session/delete", ClientToAgentMessage.SessionDelete { sessionId = sid; _meta = None } ]
+
+        for (methodName, request) in gated do
+            let trace: Message list =
+                [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
+                  Message.FromAgent(AgentToClientMessage.InitializeResult bareInit)
+                  Message.FromClient request ]
+
+            let result = runWithValidation sid spec trace false None None
+
+            let capabilityFindings =
+                result.findings
+                |> List.filter (fun f ->
+                    match f.failure with
+                    | Some failure -> failure.code = "ACP.SESSION.CAPABILITY_NOT_ADVERTISED"
+                    | None -> false)
+
+            Assert.True(
+                capabilityFindings |> List.isEmpty |> not,
+                sprintf "expected ACP.SESSION.CAPABILITY_NOT_ADVERTISED finding for %s" methodName
+            )
+
+    [<Fact>]
     let ``delete trace stays in Phase.Ready and removes session`` () =
         let sid = SessionId "s-delete-1"
 
@@ -837,3 +887,88 @@ module ValidationTests =
                 | None -> false)
 
         Assert.True(unknownSessionFindings.IsEmpty, "expected no UnknownSession findings for delete of listed session")
+
+    // -----------------
+    // Capability-gated method checks
+    // -----------------
+
+    /// A non-advertising initResult: session capabilities are empty, no auth.logout.
+    let private nonAdvertisingAgentCaps: AgentCapabilities =
+        { loadSession = true
+          mcpCapabilities = mcpCaps
+          promptCapabilities = promptCaps
+          sessionCapabilities = SessionCapabilities.empty
+          auth = AgentAuthCapabilities.empty }
+
+    let private nonAdvertisingInitResult: InitializeResult =
+        { protocolVersion = ProtocolVersion.current
+          agentCapabilities = nonAdvertisingAgentCaps
+          agentInfo = Some agentInfo
+          authMethods = [] }
+
+    [<Fact>]
+    let ``session/resume against agent that did not advertise resume yields ACP.SESSION.CAPABILITY_NOT_ADVERTISED warning``
+        ()
+        =
+        let sid = SessionId "s-resume-no-cap"
+
+        let resumeParams: Acp.Domain.SessionSetup.ResumeSessionParams =
+            { sessionId = sid
+              cwd = "."
+              mcpServers = []
+              additionalDirectories = []
+              _meta = None }
+
+        let trace: Message list =
+            [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
+              Message.FromAgent(AgentToClientMessage.InitializeResult nonAdvertisingInitResult)
+              Message.FromClient(ClientToAgentMessage.SessionResume resumeParams) ]
+
+        let result = runWithValidation sid spec trace false None None
+
+        let capFindings =
+            result.findings
+            |> List.filter (fun f ->
+                f.lane = Lane.Session
+                && match f.failure with
+                   | Some failure -> failure.code = "ACP.SESSION.CAPABILITY_NOT_ADVERTISED"
+                   | None -> false)
+
+        match capFindings with
+        | [ f ] ->
+            Assert.Equal(Severity.Warning, f.severity)
+
+            match f.failure with
+            | Some failure -> Assert.Contains("session/resume", failure.message)
+            | None -> failwith "expected ValidationFailure"
+        | many -> failwithf "expected exactly one ACP.SESSION.CAPABILITY_NOT_ADVERTISED finding, got %d" many.Length
+
+    [<Fact>]
+    let ``logout against agent that did not advertise auth.logout yields ACP.AUTH.CAPABILITY_NOT_ADVERTISED warning``
+        ()
+        =
+        let sid = SessionId "s-logout-no-cap"
+
+        let trace: Message list =
+            [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
+              Message.FromAgent(AgentToClientMessage.InitializeResult nonAdvertisingInitResult)
+              Message.FromClient(ClientToAgentMessage.Logout { _meta = None }) ]
+
+        let result = runWithValidation sid spec trace false None None
+
+        let capFindings =
+            result.findings
+            |> List.filter (fun f ->
+                f.lane = Lane.Protocol
+                && match f.failure with
+                   | Some failure -> failure.code = "ACP.AUTH.CAPABILITY_NOT_ADVERTISED"
+                   | None -> false)
+
+        match capFindings with
+        | [ f ] ->
+            Assert.Equal(Severity.Warning, f.severity)
+
+            match f.failure with
+            | Some failure -> Assert.Contains("logout", failure.message)
+            | None -> failwith "expected ValidationFailure"
+        | many -> failwithf "expected exactly one ACP.AUTH.CAPABILITY_NOT_ADVERTISED finding, got %d" many.Length

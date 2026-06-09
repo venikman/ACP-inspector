@@ -473,6 +473,96 @@ module Validation =
 
         findings
 
+    /// Session/auth-lane invariant: capability-gated client requests must not be sent
+    /// unless the agent advertised the corresponding capability in its InitializeResult.
+    ///
+    /// Gated methods (added in ACP 0.13.6):
+    ///   session/resume  → agentInit.agentCapabilities.sessionCapabilities.resume
+    ///   session/close   → agentInit.agentCapabilities.sessionCapabilities.close
+    ///   session/delete  → agentInit.agentCapabilities.sessionCapabilities.delete
+    ///   logout          → agentInit.agentCapabilities.auth.logout
+    ///
+    /// Intentionally NOT gated: session/list (pre-existing, never gated by this codebase).
+    let private checkCapabilityGatedRequests (trace: SessionTrace) : ValidationFinding list =
+        // Extract the InitializeResult from the trace (first occurrence wins).
+        let agentInitOpt =
+            trace.messages
+            |> List.tryPick (function
+                | Message.FromAgent(AgentToClientMessage.InitializeResult r) -> Some r
+                | Message.FromAgent(AgentToClientMessage.ProxyInitializeResult r) -> Some r
+                | _ -> None)
+
+        match agentInitOpt with
+        | None -> []
+        | Some agentInit ->
+            let caps = agentInit.agentCapabilities
+            let mutable findings: ValidationFinding list = []
+
+            let addFinding traceIndex lane severity code message sidOpt =
+                let subject = Subject.Connection
+
+                let failure =
+                    { code = code
+                      message = message
+                      subject = subject }
+
+                findings <-
+                    findings
+                    @ [ { lane = lane
+                          severity = severity
+                          subject = subject
+                          failure = Some failure
+                          sessionId = sidOpt
+                          traceIndex = Some traceIndex
+                          note = None } ]
+
+            trace.messages
+            |> List.iteri (fun idx msg ->
+                match msg with
+                | Message.FromClient(ClientToAgentMessage.SessionResume p) ->
+                    if caps.sessionCapabilities.resume.IsNone then
+                        addFinding
+                            idx
+                            Lane.Session
+                            Severity.Warning
+                            "ACP.SESSION.CAPABILITY_NOT_ADVERTISED"
+                            "session/resume was called but the agent did not advertise sessionCapabilities.resume."
+                            (Some p.sessionId)
+
+                | Message.FromClient(ClientToAgentMessage.SessionClose p) ->
+                    if caps.sessionCapabilities.close.IsNone then
+                        addFinding
+                            idx
+                            Lane.Session
+                            Severity.Warning
+                            "ACP.SESSION.CAPABILITY_NOT_ADVERTISED"
+                            "session/close was called but the agent did not advertise sessionCapabilities.close."
+                            (Some p.sessionId)
+
+                | Message.FromClient(ClientToAgentMessage.SessionDelete p) ->
+                    if caps.sessionCapabilities.delete.IsNone then
+                        addFinding
+                            idx
+                            Lane.Session
+                            Severity.Warning
+                            "ACP.SESSION.CAPABILITY_NOT_ADVERTISED"
+                            "session/delete was called but the agent did not advertise sessionCapabilities.delete."
+                            (Some p.sessionId)
+
+                | Message.FromClient(ClientToAgentMessage.Logout _) ->
+                    if caps.auth.logout.IsNone then
+                        addFinding
+                            idx
+                            Lane.Protocol
+                            Severity.Warning
+                            "ACP.AUTH.CAPABILITY_NOT_ADVERTISED"
+                            "logout was called but the agent did not advertise auth.logout."
+                            None
+
+                | _ -> ())
+
+            findings
+
     // -----------------
     // Transport + metadata helpers (profile-aware, optional to call from runtime)
     // -----------------
@@ -663,6 +753,7 @@ module Validation =
         let sessionConcurrencyFindings = checkSessionPromptConcurrency trace
         let sessionModeFindings = checkSessionModes trace
         let extVariantFindings = checkExtVariants trace
+        let capabilityGatedFindings = checkCapabilityGatedRequests trace
 
         let combinedFindings =
             findings
@@ -670,6 +761,7 @@ module Validation =
             @ sessionConcurrencyFindings
             @ sessionModeFindings
             @ extVariantFindings
+            @ capabilityGatedFindings
 
         sw.Stop()
         Observability.recordValidationRun sessionIdText sw.Elapsed.TotalMilliseconds
