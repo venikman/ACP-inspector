@@ -291,8 +291,11 @@ Realize the **package boundaries** already designed in
   symbols/sourcelink); independent semver, with the **ACP schema target
   (`0.13.6`) recorded in package metadata** (e.g. a tag/property), not baked
   into the package version.
-- `dotnet pack -c Release` produces all four; a **publish dry-run**
-  (`--dry-run` / local feed push) succeeds in CI.
+- `dotnet pack -c Release -o ./artifacts` produces all four `.nupkg`; a
+  release-readiness check validates them and pushes to a **throwaway local
+  feed** (`dotnet nuget push -s ./local-feed ./artifacts/*.nupkg`) in CI.
+  Note: neither `dotnet pack` nor `dotnet nuget push` has a `--dry-run`
+  flag, so a local feed *is* the dry run.
 - **Gated publish:** actual push to nuget.org is **outward-facing and
   effectively irreversible** — it is a separate action requiring explicit
   user go. This spec produces release-ready, signed packages and a dry-run;
