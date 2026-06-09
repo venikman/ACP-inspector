@@ -214,8 +214,11 @@ module SessionStateTests =
         Assert.Single(snapshot.usageUpdates) |> ignore
 
     [<Fact>]
-    let ``Apply typed UsageUpdate is tracked in usageUpdates snapshot`` () =
+    let ``Apply typed UsageUpdate preserves cost and meta in usageUpdates snapshot`` () =
         let acc = SessionState.SessionAccumulator()
+
+        let meta = JsonObject()
+        meta["traceparent"] <- JsonValue.Create("00-abc-def-01")
 
         let notify =
             { sessionId = SessionId "s1"
@@ -224,11 +227,18 @@ module SessionStateTests =
                     { used = 100L
                       size = 500L
                       cost = Some { amount = 0.05; currency = "USD" }
-                      _meta = None }
+                      _meta = Some meta }
               _meta = None }
 
         let snapshot = acc.Apply(notify)
-        Assert.Single(snapshot.usageUpdates) |> ignore
+        let payload = Assert.Single(snapshot.usageUpdates)
+        Assert.Equal(100L, payload["used"].GetValue<int64>())
+        Assert.Equal(500L, payload["size"].GetValue<int64>())
+        let cost = payload["cost"]
+        Assert.Equal(0.05, cost["amount"].GetValue<float>(), 3)
+        Assert.Equal("USD", cost["currency"].GetValue<string>())
+        let storedMeta = payload["_meta"]
+        Assert.Equal("00-abc-def-01", storedMeta["traceparent"].GetValue<string>())
 
     [<Fact>]
     let ``Apply updates tool call status`` () =
