@@ -57,6 +57,7 @@ module ConnectionTests =
 
                             return Ok(mkInitializeResult false SessionCapabilities.empty)
                         }
+                  onAuthenticate = fun _ -> task { return Error "not implemented" }
                   onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Ok(mkNewSessionResult (SessionId "test-session")) }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
@@ -120,6 +121,7 @@ module ConnectionTests =
 
             let handlers: Connection.AgentHandlers =
                 { onInitialize = fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
+                  onAuthenticate = fun _ -> task { return Error "not implemented" }
                   onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Ok(mkNewSessionResult (SessionId "new-session-123")) }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
@@ -171,6 +173,7 @@ module ConnectionTests =
 
             let handlers: Connection.AgentHandlers =
                 { onInitialize = fun _ -> task { return Ok(mkInitializeResult true SessionCapabilities.empty) }
+                  onAuthenticate = fun _ -> task { return Error "not implemented" }
                   onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession =
@@ -243,6 +246,7 @@ module ConnectionTests =
                                           additionalDirectories = None }
                                 )
                         }
+                  onAuthenticate = fun _ -> task { return Error "not implemented" }
                   onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
@@ -308,6 +312,7 @@ module ConnectionTests =
 
             let handlers: Connection.AgentHandlers =
                 { onInitialize = fun _ -> task { return Ok(mkInitializeResult true SessionCapabilities.empty) }
+                  onAuthenticate = fun _ -> task { return Error "not implemented" }
                   onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
@@ -387,6 +392,7 @@ module ConnectionTests =
 
             let handlers: Connection.AgentHandlers =
                 { onInitialize = fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
+                  onAuthenticate = fun _ -> task { return Error "not implemented" }
                   onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Ok(mkNewSessionResult (SessionId "s1")) }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
@@ -462,6 +468,7 @@ module ConnectionTests =
 
             let handlers: Connection.AgentHandlers =
                 { onInitialize = fun _ -> task { return Error "not called" }
+                  onAuthenticate = fun _ -> task { return Error "not implemented" }
                   onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not called" }
                   onLoadSession = fun _ -> task { return Error "not called" }
@@ -504,6 +511,7 @@ module ConnectionTests =
 
             let handlers: Connection.AgentHandlers =
                 { onInitialize = fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
+                  onAuthenticate = fun _ -> task { return Error "not implemented" }
                   onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not called" }
                   onLoadSession = fun _ -> task { return Error "not called" }
@@ -570,6 +578,7 @@ module ConnectionTests =
                                           additionalDirectories = None }
                                 )
                         }
+                  onAuthenticate = fun _ -> task { return Error "not implemented" }
                   onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
@@ -638,6 +647,7 @@ module ConnectionTests =
                                           additionalDirectories = None }
                                 )
                         }
+                  onAuthenticate = fun _ -> task { return Error "not implemented" }
                   onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
@@ -706,6 +716,7 @@ module ConnectionTests =
                                           additionalDirectories = None }
                                 )
                         }
+                  onAuthenticate = fun _ -> task { return Error "not implemented" }
                   onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
@@ -766,6 +777,7 @@ module ConnectionTests =
 
             let handlers: Connection.AgentHandlers =
                 { onInitialize = fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
+                  onAuthenticate = fun _ -> task { return Error "not implemented" }
                   onLogout = fun _ -> task { return Ok LogoutResult.empty }
                   onNewSession = fun _ -> task { return Error "not implemented" }
                   onLoadSession = fun _ -> task { return Error "not implemented" }
@@ -799,6 +811,66 @@ module ConnectionTests =
             match logoutResult with
             | Ok _ -> ()
             | Error e -> failwithf "Logout failed: %A" e
+
+            do! agent.StopAsync()
+        }
+
+    [<Fact>]
+    let ``Client can authenticate and agent responds`` () =
+        task {
+            let (clientTransport, agentTransport) = Transport.DuplexTransport.CreatePair()
+
+            let mutable receivedMethodId: string option = None
+
+            let handlers: Connection.AgentHandlers =
+                { onInitialize = fun _ -> task { return Ok(mkInitializeResult false SessionCapabilities.empty) }
+                  onAuthenticate =
+                    fun p ->
+                        task {
+                            receivedMethodId <- Some p.methodId
+                            return Ok AuthenticateResult.empty
+                        }
+                  onLogout = fun _ -> task { return Ok LogoutResult.empty }
+                  onNewSession = fun _ -> task { return Error "not implemented" }
+                  onLoadSession = fun _ -> task { return Error "not implemented" }
+                  onResumeSession = fun _ -> task { return Error "not implemented" }
+                  onListSessions = fun _ -> task { return Error "not implemented" }
+                  onCloseSession = fun _ -> task { return Error "not implemented" }
+                  onDeleteSession = fun _ -> task { return Error "not implemented" }
+                  onPrompt = fun _ -> task { return Error "not implemented" }
+                  onCancel = fun _ -> task { () }
+                  onSetMode = fun _ -> task { return Error "not implemented" }
+                  onSetConfigOption = fun _ -> task { return Error "not implemented" } }
+
+            let agent = Connection.AgentConnection(agentTransport, handlers)
+            let client = Connection.ClientConnection(clientTransport)
+
+            let _ = agent.StartListening()
+
+            let! _ =
+                client.InitializeAsync(
+                    { protocolVersion = ProtocolVersion.current
+                      clientCapabilities =
+                        { fs =
+                            { readTextFile = true
+                              writeTextFile = true }
+                          terminal = true }
+                      clientInfo = None }
+                )
+
+            // Bounded wait: a missing dispatch arm means no reply ever arrives,
+            // which would otherwise hang the test run instead of failing it.
+            try
+                let! authResult =
+                    client.AuthenticateAsync({ methodId = "api-key" }).WaitAsync(TimeSpan.FromSeconds(5.0))
+
+                match authResult with
+                | Ok _ -> ()
+                | Error e -> failwithf "Authenticate failed: %A" e
+            with :? TimeoutException ->
+                failwith "Agent never responded to authenticate request"
+
+            Assert.Equal(Some "api-key", receivedMethodId)
 
             do! agent.StopAsync()
         }
