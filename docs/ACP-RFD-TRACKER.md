@@ -1,10 +1,10 @@
 # ACP RFD Tracker
 
 **Last Updated**: 2026-06-09
-**Current ACP Schema Target**: `0.11.3` (pinned in code)
+**Current ACP Schema Target**: `0.13.6` (pinned in code)
 **Protocol Version**: `1`
 **Current Upstream Stable ACP Release**: `0.13.6` (2026-06-05)
-**Latest Upstream Review**: Issues #38 and #40 reviewed on 2026-06-09
+**Latest Upstream Review**: Issues #38 and #40 reviewed/closed on 2026-06-09
 
 ## Overview
 
@@ -26,20 +26,20 @@ ACP Inspector follows **stable-first + gated unstable**:
 2. **Unstable ACP** is accepted only when it is behind a clear compatibility gate or preserved as an opaque extension payload
 3. **Unknown variants** render as raw JSON (forward-compatible, no crashes)
 
-## Claim Scope
-
-- ACP Inspector currently promises typed stable parity for ACP `0.11.3`.
-- Upstream stable ACP has advanced to `0.13.6`.
-- The schema pin remains `0.11.3` until the `0.13.x` stable gaps below are implemented and tested.
-- Items listed as stable gaps are not customer-facing typed support yet; where possible, they are preserved as opaque extension payloads.
-
 ## Stable ACP Snapshot
 
 | Feature | Status | Notes |
 | ------- | ------ | ----- |
 | Initialize handshake | ✅ Implemented | `clientInfo` / `agentInfo`, `protocolVersion = 1` |
 | Session lifecycle | ✅ Implemented | `session/new`, `session/list`, `session/load`, `session/cancel` |
-| Prompt turns | ✅ Implemented | `session/prompt`, streaming `session/update`, prompt-result usage payload |
+| Session close | ✅ Implemented | `session/close` — frees the session once the agent confirms; connection stays `Ready`; stabilized in 0.12.2 |
+| Session resume | ✅ Implemented | `session/resume` — reattaches existing session; stabilized in 0.12.2 |
+| Session delete | ✅ Implemented | `session/delete` — removes the session once the agent confirms; stabilized in 0.13.6 |
+| Logout | ✅ Implemented | `logout` method + `AgentCapabilities.auth.logout` marker; stabilized in 0.13.3 |
+| Optional message IDs | ✅ Implemented | `ContentChunk.messageId` optional field; stabilized in 0.13.6 |
+| Typed session usage updates | ✅ Implemented | `usage_update` with `used`/`size`/`cost`; stabilized in 0.13.6 |
+| Additional directories | ✅ Implemented | `additionalDirectories` on new/load/resume params and `SessionInfo`; stabilized in 0.13.5 |
+| Prompt turns | ✅ Implemented | `session/prompt`, streaming `session/update` |
 | File system and terminal tools | ✅ Implemented | Request/response flow in runtime + codec |
 | Permission requests | ✅ Implemented | `session/request_permission` |
 | Agent plans | ✅ Implemented | `plan` session update modeled as first-class type |
@@ -47,59 +47,50 @@ ACP Inspector follows **stable-first + gated unstable**:
 | Session config options | ✅ Implemented | Typed `configOptions`, `session/set_config_option`, `config_option_update` |
 | Session info updates | ✅ Implemented | Typed `session_info_update` through codec, protocol, runtime, and session snapshots |
 | Session modes | ✅ Implemented | Supported for backward compatibility alongside config options |
-| Session close/resume/delete | Gap | Stabilized upstream after `0.11.3`; not yet modeled as first-class requests/responses |
-| Logout | Gap | Stabilized upstream after `0.11.3`; not yet modeled as an auth capability/method |
-| Additional session directories | Gap | Stabilized upstream after `0.11.3`; not yet modeled on lifecycle requests/session info |
-| Session usage update | Gap | `usage_update` is preserved as an opaque update; typed `UsageUpdate` / `Cost` support is pending |
-| Optional message IDs | Gap | Stabilized upstream after `0.11.3`; `MessageId` is not yet modeled in content/update shapes |
 | Protocol state machine | ✅ Implemented | Full `Phase` tracking in `Acp.Protocol.fs` |
 
 ## Current Stable Parity Gaps
 
-No known stable parity gaps are open against ACP `0.11.3` in the currently implemented surface.
+No known stable parity gaps are open against ACP `0.13.6` in the currently implemented surface.
 
-Against current upstream stable ACP `0.13.6`, the active gaps are:
+Areas to keep watching:
 
-- `session/close` and `session/resume` stabilized in `0.12.2`.
-- `logout` stabilized in `0.13.3`.
-- `additionalDirectories` for session lifecycle/session info stabilized in `0.13.5`.
-- Optional `MessageId`, typed session `UsageUpdate` / `Cost`, and `session/delete` stabilized in `0.13.6`.
+- If upstream adds new stable session metadata fields, extend `Acp.Domain`, codec mappings, and session snapshots together.
+- Keep `modes` compatibility tests alongside `configOptions` tests until ACP formally removes legacy interoperability expectations.
 
-These gaps need one coordinated implementation pass across `Acp.Domain`, codec mappings, runtime/session state, protocol-state handling, and tests before `Acp.Domain.Spec.Schema` can honestly move to `0.13.6`.
-
-## Selected Unstable Support
+## Selected Unstable / Gated Support
 
 | Feature | Status | Current handling |
 | ------- | ------ | ---------------- |
+| `providers` | Unstable | Not implemented as stable types; preserved as opaque extension payload |
+| MCP-over-ACP | Unstable | Not implemented; unknown variants surface as `Ext` informational findings |
+| Plan operations (`plan_update` v2) | Unstable | Not implemented as stable; opaque via `SessionUpdate.Ext` |
+| `session/fork` | Unstable | Not implemented; opaque via `Ext` |
 | Proxy chains | Unstable | Implemented as first-class protocol extensions |
 | Telemetry export guidance | Unstable | Documented and surfaced in inspector output |
 | Registry support | RFD completed upstream, integration remains product-specific | Optional tooling/docs support |
 | Streamable HTTP transport | Still unstable upstream | Not implemented |
-| MCP-over-ACP | Unstable upstream | Not implemented |
-| Plan operations and v2 protocol experiments | Unstable upstream | Not implemented |
-| Elicitation | Unstable upstream | Not implemented |
+| Elicitation shapes | Unstable upstream | Not implemented |
 
 ## Changelog Notes That Matter for This Repo
 
 - **`0.10.8`** stabilized Session Config Options.
 - **`0.11.1`** stabilized `session/list` and `session_info_update`.
-- **`0.11.3`** is the current ACP Inspector schema pin and implemented stable contract.
-- **`0.11.4` - `0.11.7`** added unstable work such as additional directories, elicitation, and providers; no pin-only stable upgrade was safe.
+- **`0.11.3`** pinned schema baseline for this repo as of 2026-03-19.
 - **`0.12.2`** stabilized `session/close` and `session/resume`.
-- **`0.13.3`** stabilized `logout`.
-- **`0.13.5`** stabilized session `additionalDirectories`.
-- **`0.13.6`** stabilized optional message IDs, session usage updates, and `session/delete`.
+- **`0.13.3`** stabilized `logout` + `AgentCapabilities.auth.logout` capability marker.
+- **`0.13.5`** stabilized `additionalDirectories` on session new/load/resume params and `SessionInfo`.
+- **`0.13.6`** stabilized `session/delete`, optional `ContentChunk.messageId`, and typed `usage_update` (used/size/cost). Current upstream stable release as of 2026-06-05.
 
 ## Upstream Review Evidence
 
-- Issue #38 is still valid, but stale in scope: the repo is pinned at `0.11.3`, while upstream latest is `0.13.6`.
-- Issue #40 is still valid: the rendered `https://agentclientprotocol.com/rfds` page hash is now `78134d4e1e76bcbc3ece7611ad0ab7b916e7e27a5f50f93c62821c2c46e6ea54`, different from the issue's recorded `31140fdd5bbb07913f0b692e46bb558a2da4baca7fe278a750a30916748d6471`.
-- Upstream RFD inventory changed since `0.11.3`, including additional directories, custom LLM endpoint, model config category, plan operations, streamable HTTP/WebSocket transport, updates, and v2 RFD material.
+- Issue #38 is resolved: ACP Inspector is now pinned to `0.13.6`, matching upstream stable, and the CI drift-dedupe fix is tracked below.
+- Issue #40 is resolved: the RFD page change was reviewed against live upstream content, and the resulting stable/gated feature movements are reflected in the snapshot above.
 
 ## Near-Term Implementation Order
 
-1. Maintain the schema pin at `0.11.3` until the stable `0.13.x` gaps are implemented.
-2. Execute [TASK-009](tasks/TASK-009-acp-0.13-stable-parity.md) as a coordinated domain/codec/runtime/test pass.
+1. Maintain the schema pin at the current upstream stable release.
+2. Keep typed support for `session/list`, session config options, and typed session info updates covered by regression tests.
 3. Preserve `modes` backward compatibility while preferring `configOptions` in docs and examples.
 4. Re-check upstream stable ACP on each release and update this tracker when the contract changes.
 
@@ -126,8 +117,9 @@ These gaps need one coordinated implementation pass across `Acp.Domain`, codec m
 - [x] Add CI job that alerts on RFD updates (scrape agentclientprotocol.com/rfds)
 - [x] Pin schema version in `protocol/src/Acp.Domain.fs`
 - [x] Upgrade the pinned schema from `0.10.5` to current stable ACP (`0.11.3`)
-- [x] Review issues #38 and #40 against current upstream ACP (`0.13.6`)
-- [ ] Implement the `0.13.x` stable parity gaps before bumping the schema pin
+- [x] Upgrade the pinned schema from `0.11.3` to current stable ACP (`0.13.6`)
+- [x] Fix CI drift-dedupe bug: drift workflow now reopens and edits the canonical issue instead of early-exiting on an existing (possibly closed) issue (fixes #38)
+- [x] Review issue #40 against current upstream RFD inventory and reflect the stable/gated movements above
 
 ## References
 

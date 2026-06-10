@@ -303,8 +303,23 @@ let ``Ignores non-tool-call updates`` () =
 
     // Apply various non-tool-call updates
     let textContent = ContentBlock.Text { text = "Hello"; annotations = None }
-    tracker.Apply(makeNotification (SessionUpdate.UserMessageChunk { content = textContent }))
-    tracker.Apply(makeNotification (SessionUpdate.AgentMessageChunk { content = textContent }))
+
+    tracker.Apply(
+        makeNotification (
+            SessionUpdate.UserMessageChunk
+                { content = textContent
+                  messageId = None }
+        )
+    )
+
+    tracker.Apply(
+        makeNotification (
+            SessionUpdate.AgentMessageChunk
+                { content = textContent
+                  messageId = None }
+        )
+    )
+
     tracker.Apply(makeNotification (SessionUpdate.Plan { entries = [] }))
 
     Assert.Empty(tracker.All())

@@ -97,7 +97,8 @@ module Generators =
         { loadSession = true
           mcpCapabilities = mcpCaps
           promptCapabilities = promptCaps
-          sessionCapabilities = SessionCapabilities.empty }
+          sessionCapabilities = SessionCapabilities.empty
+          auth = AgentAuthCapabilities.empty }
 
     let private clientInfo: ImplementationInfo =
         { name = "pbt-client"
@@ -135,13 +136,17 @@ module Generators =
               authMethods = [] }
 
     let private genNewSessionParams: Gen<NewSessionParams> =
-        G.constant { cwd = "."; mcpServers = [] }
+        G.constant
+            { cwd = "."
+              mcpServers = []
+              additionalDirectories = [] }
 
     let private genLoadSessionParams (sid: SessionId) : Gen<LoadSessionParams> =
         G.constant
             { sessionId = sid
               cwd = "."
-              mcpServers = [] }
+              mcpServers = []
+              additionalDirectories = [] }
 
     let private genSessionPromptParams (sid: SessionId) : Gen<SessionPromptParams> =
         genContentBlocks
@@ -155,11 +160,12 @@ module Generators =
         |> G.map (fun sr ->
             { sessionId = sid
               stopReason = sr
-              usage = None
               _meta = None })
 
     let private genSessionUpdate (sid: SessionId) : Gen<SessionUpdateNotification> =
-        let genChunk = genContentBlock |> G.map (fun cb -> ({ content = cb }: ContentChunk))
+        let genChunk =
+            genContentBlock
+            |> G.map (fun cb -> ({ content = cb; messageId = None }: ContentChunk))
 
         let genUpdate =
             G.frequency
@@ -342,7 +348,12 @@ module Generators =
                   else
                       0,
                       G.constant (
-                          Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] }),
+                          Message.FromClient(
+                              ClientToAgentMessage.SessionNew
+                                  { cwd = "."
+                                    mcpServers = []
+                                    additionalDirectories = [] }
+                          ),
                           Ready sessions
                       )
                   if inflight.Length > 0 then
@@ -350,7 +361,12 @@ module Generators =
                   else
                       0,
                       G.constant (
-                          Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] }),
+                          Message.FromClient(
+                              ClientToAgentMessage.SessionNew
+                                  { cwd = "."
+                                    mcpServers = []
+                                    additionalDirectories = [] }
+                          ),
                           Ready sessions
                       )
                   if inflight.Length > 0 then
@@ -358,7 +374,12 @@ module Generators =
                   else
                       0,
                       G.constant (
-                          Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] }),
+                          Message.FromClient(
+                              ClientToAgentMessage.SessionNew
+                                  { cwd = "."
+                                    mcpServers = []
+                                    additionalDirectories = [] }
+                          ),
                           Ready sessions
                       )
                   if known.Length > 0 then
@@ -366,7 +387,12 @@ module Generators =
                   else
                       0,
                       G.constant (
-                          Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] }),
+                          Message.FromClient(
+                              ClientToAgentMessage.SessionNew
+                                  { cwd = "."
+                                    mcpServers = []
+                                    additionalDirectories = [] }
+                          ),
                           Ready sessions
                       )
                   if inflight.Length > 0 then
@@ -374,7 +400,12 @@ module Generators =
                   else
                       0,
                       G.constant (
-                          Message.FromClient(ClientToAgentMessage.SessionNew { cwd = "."; mcpServers = [] }),
+                          Message.FromClient(
+                              ClientToAgentMessage.SessionNew
+                                  { cwd = "."
+                                    mcpServers = []
+                                    additionalDirectories = [] }
+                          ),
                           Ready sessions
                       ) ]
                 |> List.filter (fun (w, _) -> w > 0)
