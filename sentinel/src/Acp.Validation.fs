@@ -519,6 +519,32 @@ module Validation =
             trace.messages
             |> List.iteri (fun idx msg ->
                 match msg with
+                | Message.FromClient(ClientToAgentMessage.SessionNew p) ->
+                    if
+                        not (List.isEmpty p.additionalDirectories)
+                        && caps.sessionCapabilities.additionalDirectories.IsNone
+                    then
+                        addFinding
+                            idx
+                            Lane.Session
+                            Severity.Warning
+                            "ACP.SESSION.CAPABILITY_NOT_ADVERTISED"
+                            "session/new supplied additionalDirectories but the agent did not advertise sessionCapabilities.additionalDirectories."
+                            None
+
+                | Message.FromClient(ClientToAgentMessage.SessionLoad p) ->
+                    if
+                        not (List.isEmpty p.additionalDirectories)
+                        && caps.sessionCapabilities.additionalDirectories.IsNone
+                    then
+                        addFinding
+                            idx
+                            Lane.Session
+                            Severity.Warning
+                            "ACP.SESSION.CAPABILITY_NOT_ADVERTISED"
+                            "session/load supplied additionalDirectories but the agent did not advertise sessionCapabilities.additionalDirectories."
+                            (Some p.sessionId)
+
                 | Message.FromClient(ClientToAgentMessage.SessionResume p) ->
                     if caps.sessionCapabilities.resume.IsNone then
                         addFinding
@@ -527,6 +553,18 @@ module Validation =
                             Severity.Warning
                             "ACP.SESSION.CAPABILITY_NOT_ADVERTISED"
                             "session/resume was called but the agent did not advertise sessionCapabilities.resume."
+                            (Some p.sessionId)
+
+                    if
+                        not (List.isEmpty p.additionalDirectories)
+                        && caps.sessionCapabilities.additionalDirectories.IsNone
+                    then
+                        addFinding
+                            idx
+                            Lane.Session
+                            Severity.Warning
+                            "ACP.SESSION.CAPABILITY_NOT_ADVERTISED"
+                            "session/resume supplied additionalDirectories but the agent did not advertise sessionCapabilities.additionalDirectories."
                             (Some p.sessionId)
 
                 | Message.FromClient(ClientToAgentMessage.SessionClose p) ->

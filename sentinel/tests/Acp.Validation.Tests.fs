@@ -972,3 +972,129 @@ module ValidationTests =
             | Some failure -> Assert.Contains("logout", failure.message)
             | None -> failwith "expected ValidationFailure"
         | many -> failwithf "expected exactly one ACP.AUTH.CAPABILITY_NOT_ADVERTISED finding, got %d" many.Length
+
+    let private additionalDirectoriesFindings (findings: ValidationFinding list) =
+        findings
+        |> List.filter (fun f ->
+            match f.failure with
+            | Some failure ->
+                failure.code = "ACP.SESSION.CAPABILITY_NOT_ADVERTISED"
+                && failure.message.Contains "additionalDirectories"
+            | None -> false)
+
+    [<Fact>]
+    let ``additionalDirectories without advertised capability yields ACP.SESSION.CAPABILITY_NOT_ADVERTISED warning``
+        ()
+        =
+        // Default initResult advertises resume/close/delete but NOT
+        // sessionCapabilities.additionalDirectories.
+        let sid = SessionId "s-adddirs-no-cap"
+
+        let methods: (string * ClientToAgentMessage) list =
+            [ "session/new",
+              ClientToAgentMessage.SessionNew
+                  { cwd = "."
+                    mcpServers = []
+                    additionalDirectories = [ "/extra" ] }
+              "session/load",
+              ClientToAgentMessage.SessionLoad
+                  { sessionId = sid
+                    cwd = "."
+                    mcpServers = []
+                    additionalDirectories = [ "/extra" ] }
+              "session/resume",
+              ClientToAgentMessage.SessionResume
+                  { sessionId = sid
+                    cwd = "."
+                    mcpServers = []
+                    additionalDirectories = [ "/extra" ]
+                    _meta = None } ]
+
+        for (methodName, request) in methods do
+            let trace: Message list =
+                [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
+                  Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
+                  Message.FromClient request ]
+
+            let result = runWithValidation sid spec trace false None None
+
+            match additionalDirectoriesFindings result.findings with
+            | [ f ] ->
+                Assert.Equal(Severity.Warning, f.severity)
+
+                match f.failure with
+                | Some failure -> Assert.Contains(methodName, failure.message)
+                | None -> failwith "expected ValidationFailure"
+            | many ->
+                failwithf
+                    "expected exactly one additionalDirectories capability finding for %s, got %d"
+                    methodName
+                    many.Length
+
+    [<Fact>]
+    let ``additionalDirectories with advertised capability yields no capability warning`` () =
+        let sid = SessionId "s-adddirs-cap"
+
+        let advertisingInitResult: InitializeResult =
+            { initResult with
+                agentCapabilities =
+                    { agentCaps with
+                        sessionCapabilities =
+                            { agentCaps.sessionCapabilities with
+                                additionalDirectories = Some { _meta = None } } } }
+
+        let trace: Message list =
+            [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
+              Message.FromAgent(AgentToClientMessage.InitializeResult advertisingInitResult)
+              Message.FromClient(
+                  ClientToAgentMessage.SessionNew
+                      { cwd = "."
+                        mcpServers = []
+                        additionalDirectories = [ "/extra" ] }
+              )
+              Message.FromClient(
+                  ClientToAgentMessage.SessionResume
+                      { sessionId = sid
+                        cwd = "."
+                        mcpServers = []
+                        additionalDirectories = [ "/extra" ]
+                        _meta = None }
+              ) ]
+
+        let result = runWithValidation sid spec trace false None None
+
+        Assert.True(
+            additionalDirectoriesFindings result.findings |> List.isEmpty,
+            "expected no additionalDirectories capability finding when the capability is advertised"
+        )
+
+    [<Fact>]
+    let ``empty additionalDirectories yields no capability warning`` () =
+        // Empty list == omitted per the A7 schema note; must not warn even when
+        // the capability is not advertised.
+        let sid = SessionId "s-adddirs-empty"
+
+        let trace: Message list =
+            [ Message.FromClient(ClientToAgentMessage.Initialize initParams)
+              Message.FromAgent(AgentToClientMessage.InitializeResult initResult)
+              Message.FromClient(
+                  ClientToAgentMessage.SessionNew
+                      { cwd = "."
+                        mcpServers = []
+                        additionalDirectories = [] }
+              )
+              Message.FromClient(
+                  ClientToAgentMessage.SessionResume
+                      { sessionId = sid
+                        cwd = "."
+                        mcpServers = []
+                        additionalDirectories = []
+                        _meta = None }
+              ) ]
+
+        let result = runWithValidation sid spec trace false None None
+
+        Assert.True(
+            additionalDirectoriesFindings result.findings |> List.isEmpty,
+            "expected no additionalDirectories capability finding for empty additionalDirectories"
+        )
