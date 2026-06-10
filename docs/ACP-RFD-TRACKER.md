@@ -4,6 +4,7 @@
 **Current ACP Schema Target**: `0.13.6` (pinned in code)
 **Protocol Version**: `1`
 **Current Upstream Stable ACP Release**: `0.13.6` (2026-06-05)
+**Latest Upstream Review**: Issues #38 and #40 reviewed/closed on 2026-06-09
 
 ## Overview
 
@@ -81,6 +82,11 @@ Areas to keep watching:
 - **`0.13.5`** stabilized `additionalDirectories` on session new/load/resume params and `SessionInfo`.
 - **`0.13.6`** stabilized `session/delete`, optional `ContentChunk.messageId`, and typed `usage_update` (used/size/cost). Current upstream stable release as of 2026-06-05.
 
+## Upstream Review Evidence
+
+- Issue #38 is resolved: ACP Inspector is now pinned to `0.13.6`, matching upstream stable, and the CI drift-dedupe fix is tracked below.
+- Issue #40 is resolved: the RFD page change was reviewed against live upstream content, and the resulting stable/gated feature movements are reflected in the snapshot above.
+
 ## Near-Term Implementation Order
 
 1. Maintain the schema pin at the current upstream stable release.
@@ -113,6 +119,7 @@ Areas to keep watching:
 - [x] Upgrade the pinned schema from `0.10.5` to current stable ACP (`0.11.3`)
 - [x] Upgrade the pinned schema from `0.11.3` to current stable ACP (`0.13.6`)
 - [x] Fix CI drift-dedupe bug: drift workflow now reopens and edits the canonical issue instead of early-exiting on an existing (possibly closed) issue (fixes #38)
+- [x] Review issue #40 against current upstream RFD inventory and reflect the stable/gated movements above
 
 ## References
 
