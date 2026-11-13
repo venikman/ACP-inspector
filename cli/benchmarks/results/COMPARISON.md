@@ -112,6 +112,17 @@ The F# SDK is doing **real protocol work**:
 - Request/response ID tracking
 - Session state management
 
+**The throughput fixture mix also differs.** Because the stateful F# codec
+rejects reused request ids, F# `--mode throughput` cycles a seven-message valid
+conversation — three requests with distinct ids, their three responses, and one
+notification — while Rust/TypeScript/Python cycle four request/notification
+fixtures with no responses. Per-message cost differs between those mixes, so
+the throughput rows compare different workloads even beyond the validation gap
+(`--mode codec` still cycles the same four fixtures in every language). The F#
+throughput numbers recorded above predate this change: they were measured with
+the old four-fixture stream, in which every `session/new` decode failed on a
+duplicate request id and was counted as a success.
+
 ### Why F# Appears Slower
 
 Two factors compound:
