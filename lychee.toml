@@ -5,7 +5,9 @@
 scheme = ["file"]
 offline = true
 no_progress = true
-include_fragments = true
+# lychee >= 0.20 takes a mode here, not a bool; "anchor-only" matches the old
+# `true` behavior (check `#section` anchors, not text fragments).
+include_fragments = "anchor-only"
 
 exclude_path = [
   '(^|/)node_modules/',
