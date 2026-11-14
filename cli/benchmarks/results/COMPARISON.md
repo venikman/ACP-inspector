@@ -112,16 +112,25 @@ The F# SDK is doing **real protocol work**:
 - Request/response ID tracking
 - Session state management
 
-**The throughput fixture mix also differs.** Because the stateful F# codec
-rejects reused request ids, F# `--mode throughput` cycles a seven-message valid
-conversation — three requests with distinct ids, their three responses, and one
-notification — while Rust/TypeScript/Python cycle four request/notification
-fixtures with no responses. Per-message cost differs between those mixes, so
-the throughput rows compare different workloads even beyond the validation gap
-(`--mode codec` still cycles the same four fixtures in every language). The F#
-throughput numbers recorded above predate this change: they were measured with
-the old four-fixture stream, in which every `session/new` decode failed on a
-duplicate request id and was counted as a success.
+**The throughput fixture mix also differs.** The stateful F# codec rejects a
+request whose id is still pending, so F# `--mode throughput` cycles a
+seven-message valid conversation — three requests with distinct ids, their
+three responses, and one notification — while Rust/TypeScript/Python cycle four
+request/notification fixtures with no responses. Per-message cost differs
+between those mixes, so the throughput rows compare different workloads even
+beyond the validation gap (`--mode codec` still cycles the same four message
+kinds in every language).
+
+**The recorded F# throughput and codec rows include failed decodes.** When the
+numbers above were taken, two of the four F# fixtures were invalid:
+`session/new` reused the still-pending id of `initialize`, and the
+`session/update` fixture used a shape the codec rejects. Half of the throughput
+decodes therefore failed and were counted as successes, and a quarter of the
+codec decodes failed and were silently dropped, so both rows partly time the
+error path. The fixtures are valid now and any decode error fails the run
+(non-zero exit, plus status `"error"` in throughput, codec, raw-json and tokens
+modes), but the tables have not been re-measured. The cold-start and tokens
+rows are unaffected.
 
 ### Why F# Appears Slower
 
