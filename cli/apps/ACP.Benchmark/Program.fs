@@ -11,14 +11,23 @@ open Acp.Codec
 let initializeRequest =
     """{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":1,"clientCapabilities":{"fs":{"readTextFile":true,"writeTextFile":true},"terminal":true},"clientInfo":{"name":"benchmark","version":"1.0.0"}},"id":1}"""
 
+let initializeResponse =
+    """{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":1,"agentCapabilities":{"loadSession":true,"mcpCapabilities":{"http":false,"sse":false},"promptCapabilities":{"audio":false,"image":false,"embeddedContext":false}},"authMethods":[]}}"""
+
 let sessionNewRequest =
-    """{"jsonrpc":"2.0","method":"session/new","params":{"cwd":"/tmp","mcpServers":[]},"id":1}"""
+    """{"jsonrpc":"2.0","method":"session/new","params":{"cwd":"/tmp","mcpServers":[]},"id":2}"""
+
+let sessionNewResponse =
+    """{"jsonrpc":"2.0","id":2,"result":{"sessionId":"sess-001"}}"""
 
 let sessionUpdateNotification =
     """{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess-001","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"Hello, this is a test message for codec benchmarking."}}}}"""
 
 let promptRequest =
-    """{"jsonrpc":"2.0","method":"session/prompt","params":{"sessionId":"sess-001","prompt":[{"type":"text","text":"What is 2+2?"}]},"id":2}"""
+    """{"jsonrpc":"2.0","method":"session/prompt","params":{"sessionId":"sess-001","prompt":[{"type":"text","text":"What is 2+2?"}]},"id":3}"""
+
+let promptResponse =
+    """{"jsonrpc":"2.0","id":3,"result":{"sessionId":"sess-001","stopReason":"end_turn"}}"""
 
 // Simulated streaming token content (realistic LLM output)
 let makeTokenUpdate (tokenCount: int) =
@@ -70,7 +79,7 @@ let runRoundtrip () =
                   _meta = None }
 
         let encodeResult =
-            Codec.encode (Some(Domain.JsonRpc.RequestId.Number 1L)) (Domain.Messaging.Message.FromAgent responseMsg)
+            Codec.encode (Some(Domain.JsonRpc.RequestId.Number 2L)) (Domain.Messaging.Message.FromAgent responseMsg)
 
         sw.Stop()
 
@@ -87,15 +96,21 @@ let runRoundtrip () =
 
 /// Throughput benchmark: process N messages
 let runThroughput (count: int) =
+    // A valid ACP conversation: responses retire pending request ids so the
+    // stateful codec accepts the stream no matter how many times it cycles.
     let messages =
         [| initializeRequest, Direction.FromClient
+           initializeResponse, Direction.FromAgent
            sessionNewRequest, Direction.FromClient
+           sessionNewResponse, Direction.FromAgent
+           promptRequest, Direction.FromClient
            sessionUpdateNotification, Direction.FromAgent
-           promptRequest, Direction.FromClient |]
+           promptResponse, Direction.FromAgent |]
 
     let sw = Stopwatch.StartNew()
     let mutable state = CodecState.empty
     let mutable decoded = 0
+    let mutable errors = 0
 
     for i in 0 .. (count - 1) do
         let (msg, direction) = messages[i % messages.Length]
@@ -105,9 +120,9 @@ let runThroughput (count: int) =
             state <- newState
             decoded <- decoded + 1
         | Error _ ->
-            // Reset state on error (e.g., duplicate id)
-            state <- CodecState.empty
-            decoded <- decoded + 1
+            // Continue with existing state to detect stateful decode issues
+            // (resetting masks bugs where codec state becomes corrupted)
+            errors <- errors + 1
 
     sw.Stop()
 
@@ -118,12 +133,14 @@ let runThroughput (count: int) =
             float decoded * 1000.0
 
     printfn
-        """{"status":"ok","mode":"throughput","count":%d,"elapsed_ms":%d,"msgs_per_sec":%.0f}"""
+        """{"status":"%s","mode":"throughput","count":%d,"errors":%d,"elapsed_ms":%d,"msgs_per_sec":%.0f}"""
+        (if errors = 0 then "ok" else "error")
         decoded
+        errors
         sw.ElapsedMilliseconds
         msgsPerSec
 
-    0
+    if errors = 0 then 0 else 1
 
 /// Codec benchmark: pure encode/decode performance
 let runCodec (count: int) =
@@ -135,6 +152,7 @@ let runCodec (count: int) =
 
     let sw = Stopwatch.StartNew()
     let mutable ops = 0
+    let mutable errors = 0
 
     for i in 0 .. (count - 1) do
         let (msg, direction) = messages[i % messages.Length]
@@ -142,7 +160,7 @@ let runCodec (count: int) =
         // Decode
         match Codec.decode direction CodecState.empty msg with
         | Ok _ -> ops <- ops + 1
-        | Error _ -> ()
+        | Error _ -> errors <- errors + 1
 
         // Encode (session new response)
         let responseMsg =
@@ -158,7 +176,7 @@ let runCodec (count: int) =
                 (Domain.Messaging.Message.FromAgent responseMsg)
         with
         | Ok _ -> ops <- ops + 1
-        | Error _ -> ()
+        | Error _ -> errors <- errors + 1
 
     sw.Stop()
 
@@ -169,12 +187,14 @@ let runCodec (count: int) =
             float ops * 1000.0
 
     printfn
-        """{"status":"ok","mode":"codec","ops":%d,"elapsed_ms":%d,"ops_per_sec":%.0f}"""
+        """{"status":"%s","mode":"codec","ops":%d,"errors":%d,"elapsed_ms":%d,"ops_per_sec":%.0f}"""
+        (if errors = 0 then "ok" else "error")
         ops
+        errors
         sw.ElapsedMilliseconds
         opsPerSec
 
-    0
+    if errors = 0 then 0 else 1
 
 /// Raw JSON benchmark: pure System.Text.Json parsing (no ACP validation)
 /// This isolates .NET runtime overhead from codec logic
@@ -187,24 +207,27 @@ let runRawJson (count: int) =
 
     let sw = Stopwatch.StartNew()
     let mutable ops = 0
+    let mutable errors = 0
 
     for i in 0 .. (count - 1) do
         let msg = messages[i % messages.Length]
 
-        // Raw JSON parse only (like TS/Python/Rust benchmarks do)
-        let doc = System.Text.Json.JsonDocument.Parse(msg)
-        doc.Dispose()
-        ops <- ops + 1
+        try
+            // Raw JSON parse only (like TS/Python/Rust benchmarks do)
+            use doc = System.Text.Json.JsonDocument.Parse(msg)
+            ops <- ops + 1
 
-        // Raw JSON serialize
-        let response =
-            System.Text.Json.JsonSerializer.Serialize(
-                {| jsonrpc = "2.0"
-                   result = {| sessionId = "sess-bench" |}
-                   id = i |}
-            )
+            // Raw JSON serialize
+            let response =
+                System.Text.Json.JsonSerializer.Serialize(
+                    {| jsonrpc = "2.0"
+                       result = {| sessionId = "sess-bench" |}
+                       id = i |}
+                )
 
-        ops <- ops + 1
+            ops <- ops + 1
+        with _ ->
+            errors <- errors + 1
 
     sw.Stop()
 
@@ -215,12 +238,14 @@ let runRawJson (count: int) =
             float ops * 1000.0
 
     printfn
-        """{"status":"ok","mode":"raw-json","ops":%d,"elapsed_ms":%d,"ops_per_sec":%.0f}"""
+        """{"status":"%s","mode":"raw-json","ops":%d,"errors":%d,"elapsed_ms":%d,"ops_per_sec":%.0f}"""
+        (if errors = 0 then "ok" else "error")
         ops
+        errors
         sw.ElapsedMilliseconds
         opsPerSec
 
-    0
+    if errors = 0 then 0 else 1
 
 /// Token throughput benchmark: measure tokens/sec through SDK
 /// Simulates streaming LLM output with content chunks
@@ -230,6 +255,7 @@ let runTokens (count: int) (tokensPerMessage: int) =
 
     let sw = Stopwatch.StartNew()
     let mutable decoded = 0
+    let mutable errors = 0
     let mutable totalTokens = 0L
 
     for _ in 1..count do
@@ -237,7 +263,7 @@ let runTokens (count: int) (tokensPerMessage: int) =
         | Ok _ ->
             decoded <- decoded + 1
             totalTokens <- totalTokens + int64 tokensPerMessage
-        | Error _ -> ()
+        | Error _ -> errors <- errors + 1
 
     sw.Stop()
 
@@ -256,15 +282,17 @@ let runTokens (count: int) (tokensPerMessage: int) =
             float decoded * 1000.0
 
     printfn
-        """{"status":"ok","mode":"tokens","messages":%d,"tokens_per_msg":%d,"total_tokens":%d,"elapsed_ms":%d,"tokens_per_sec":%.0f,"msgs_per_sec":%.0f}"""
+        """{"status":"%s","mode":"tokens","messages":%d,"errors":%d,"tokens_per_msg":%d,"total_tokens":%d,"elapsed_ms":%d,"tokens_per_sec":%.0f,"msgs_per_sec":%.0f}"""
+        (if errors = 0 then "ok" else "error")
         decoded
+        errors
         tokensPerMessage
         totalTokens
         sw.ElapsedMilliseconds
         tokensPerSec
         msgsPerSec
 
-    0
+    if errors = 0 then 0 else 1
 
 /// Parse command line arguments
 let parseArgs (args: string[]) =

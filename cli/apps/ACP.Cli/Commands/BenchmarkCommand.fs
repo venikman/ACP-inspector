@@ -54,14 +54,23 @@ type BenchmarkArgs =
 let private initializeRequest =
     """{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":1,"clientCapabilities":{"fs":{"readTextFile":true,"writeTextFile":true},"terminal":true},"clientInfo":{"name":"benchmark","version":"1.0.0"}},"id":1}"""
 
+let private initializeResponse =
+    """{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":1,"agentCapabilities":{"loadSession":true,"mcpCapabilities":{"http":false,"sse":false},"promptCapabilities":{"audio":false,"image":false,"embeddedContext":false}},"authMethods":[]}}"""
+
 let private sessionNewRequest =
-    """{"jsonrpc":"2.0","method":"session/new","params":{"cwd":"/tmp","mcpServers":[]},"id":1}"""
+    """{"jsonrpc":"2.0","method":"session/new","params":{"cwd":"/tmp","mcpServers":[]},"id":2}"""
+
+let private sessionNewResponse =
+    """{"jsonrpc":"2.0","id":2,"result":{"sessionId":"sess-001"}}"""
 
 let private sessionUpdateNotification =
-    """{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess-001","update":{"type":"agentMessage","message":{"type":"text","text":"Hello, this is a test message for codec benchmarking."}}}}"""
+    """{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess-001","update":{"sessionUpdate":"agent_message_chunk","messageId":"msg-001","content":{"type":"text","text":"Hello, this is a test message for codec benchmarking."}}}}"""
 
 let private promptRequest =
-    """{"jsonrpc":"2.0","method":"session/prompt","params":{"sessionId":"sess-001","prompt":[{"type":"text","text":"What is 2+2?"}]},"id":2}"""
+    """{"jsonrpc":"2.0","method":"session/prompt","params":{"sessionId":"sess-001","prompt":[{"type":"text","text":"What is 2+2?"}]},"id":3}"""
+
+let private promptResponse =
+    """{"jsonrpc":"2.0","id":3,"result":{"sessionId":"sess-001","stopReason":"end_turn"}}"""
 
 let private makeTokenUpdate (tokenCount: int) =
     let text = String.replicate tokenCount "word "
@@ -106,7 +115,7 @@ let private runRoundtrip () =
                   _meta = None }
 
         let encodeResult =
-            Codec.encode (Some(JsonRpc.RequestId.Number 1L)) (Messaging.Message.FromAgent responseMsg)
+            Codec.encode (Some(JsonRpc.RequestId.Number 2L)) (Messaging.Message.FromAgent responseMsg)
 
         sw.Stop()
 
@@ -122,11 +131,16 @@ let private runRoundtrip () =
         1
 
 let private runThroughput (count: int) =
+    // A valid ACP conversation: responses retire pending request ids so the
+    // stateful codec accepts the stream no matter how many times it cycles.
     let messages =
         [| initializeRequest, Direction.FromClient
+           initializeResponse, Direction.FromAgent
            sessionNewRequest, Direction.FromClient
+           sessionNewResponse, Direction.FromAgent
+           promptRequest, Direction.FromClient
            sessionUpdateNotification, Direction.FromAgent
-           promptRequest, Direction.FromClient |]
+           promptResponse, Direction.FromAgent |]
 
     let sw = Stopwatch.StartNew()
     let mutable state = CodecState.empty
@@ -154,13 +168,14 @@ let private runThroughput (count: int) =
             float decoded * 1000.0
 
     printfn
-        """{"status":"ok","mode":"throughput","count":%d,"errors":%d,"elapsed_ms":%d,"msgs_per_sec":%.0f}"""
+        """{"status":"%s","mode":"throughput","count":%d,"errors":%d,"elapsed_ms":%d,"msgs_per_sec":%.0f}"""
+        (if errors = 0 then "ok" else "error")
         decoded
         errors
         sw.ElapsedMilliseconds
         msgsPerSec
 
-    0
+    if errors = 0 then 0 else 1
 
 let private runCodec (count: int) =
     let messages =
@@ -200,13 +215,14 @@ let private runCodec (count: int) =
             float ops * 1000.0
 
     printfn
-        """{"status":"ok","mode":"codec","ops":%d,"errors":%d,"elapsed_ms":%d,"ops_per_sec":%.0f}"""
+        """{"status":"%s","mode":"codec","ops":%d,"errors":%d,"elapsed_ms":%d,"ops_per_sec":%.0f}"""
+        (if errors = 0 then "ok" else "error")
         ops
         errors
         sw.ElapsedMilliseconds
         opsPerSec
 
-    0
+    if errors = 0 then 0 else 1
 
 let private runRawJson (count: int) =
     let messages =
@@ -246,13 +262,14 @@ let private runRawJson (count: int) =
             float ops * 1000.0
 
     printfn
-        """{"status":"ok","mode":"raw-json","ops":%d,"errors":%d,"elapsed_ms":%d,"ops_per_sec":%.0f}"""
+        """{"status":"%s","mode":"raw-json","ops":%d,"errors":%d,"elapsed_ms":%d,"ops_per_sec":%.0f}"""
+        (if errors = 0 then "ok" else "error")
         ops
         errors
         sw.ElapsedMilliseconds
         opsPerSec
 
-    0
+    if errors = 0 then 0 else 1
 
 let private runTokens (count: int) (tokensPerMessage: int) =
     let message = makeTokenUpdate tokensPerMessage
@@ -286,7 +303,8 @@ let private runTokens (count: int) (tokensPerMessage: int) =
             float decoded * 1000.0
 
     printfn
-        """{"status":"ok","mode":"tokens","messages":%d,"errors":%d,"tokens_per_msg":%d,"total_tokens":%d,"elapsed_ms":%d,"tokens_per_sec":%.0f,"msgs_per_sec":%.0f}"""
+        """{"status":"%s","mode":"tokens","messages":%d,"errors":%d,"tokens_per_msg":%d,"total_tokens":%d,"elapsed_ms":%d,"tokens_per_sec":%.0f,"msgs_per_sec":%.0f}"""
+        (if errors = 0 then "ok" else "error")
         decoded
         errors
         tokensPerMessage
@@ -295,7 +313,7 @@ let private runTokens (count: int) (tokensPerMessage: int) =
         tokensPerSec
         msgsPerSec
 
-    0
+    if errors = 0 then 0 else 1
 
 /// Execute the benchmark command to measure ACP codec and protocol performance.
 ///
